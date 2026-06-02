@@ -148,30 +148,17 @@ class SpinButton(WidgetMask, Gtk.SpinButton):
         super(SpinButton, self).set_value(newval)
 
 
-class HScale(WidgetMask, Gtk.Scale):
+class Scale(WidgetMask, Gtk.Scale):
     def __init__(self, *args, **kwdargs):
         WidgetMask.__init__(self)
-        Gtk.Scale.__init__(self, Gtk.ORIENTATION_HORIZONTAL, *args, **kwdargs)
+        Gtk.Scale.__init__(self, *args, **kwdargs)
 
     def set_value(self, newval):
         oldval = self.get_value()
         if oldval != newval:
             self.change()
 
-        super(HScale, self).set_value(newval)
-
-
-class VScale(WidgetMask, Gtk.Scale):
-    def __init__(self, *args, **kwdargs):
-        WidgetMask.__init__(self)
-        Gtk.Scale.__init__(self, Gtk.ORIENTATION_VERTICAL, *args, **kwdargs)
-
-    def set_value(self, newval):
-        oldval = self.get_value()
-        if oldval != newval:
-            self.change()
-
-        super(VScale, self).set_value(newval)
+        super(Scale, self).set_value(newval)
 
 
 class ComboBox(WidgetMask, Gtk.ComboBox):
@@ -2034,9 +2021,16 @@ def set_default_style():
     try:
         style_provider.load_from_data(css_data)
 
-        Gtk.StyleContext.add_provider_for_screen(
-            Gdk.Screen.get_default(), style_provider,
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        # GTK 4 dropped ``add_provider_for_screen`` /
+        # ``Gdk.Screen``; the equivalent is
+        # ``add_provider_for_display`` with the default display.
+        # Using ``STYLE_PROVIDER_PRIORITY_USER`` (1000) so our
+        # chrome rules win over the theme's more specific
+        # selectors — at APPLICATION (800) the theme often beats
+        # us on specificity.
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(), style_provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_USER
         )
 
     except Exception:

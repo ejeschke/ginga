@@ -7,11 +7,11 @@
 import sys
 import traceback
 import threading
-import logging
 import time
 
 from ginga.misc import Task, Future, Callback
 from ginga.toolkit import toolkit
+from ginga.misc import log
 from collections import deque
 
 import queue as Queue
@@ -33,7 +33,7 @@ class GwMain(Callback.Callbacks):
 
         # You can pass in a logger if you prefer to do so
         if logger is None:
-            logger = logging.getLogger('GwMain')
+            logger = log.NullLogger()
         self.logger = logger
 
         if not ev_quit:

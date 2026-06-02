@@ -4,9 +4,8 @@
 # viewer.py -- maintains information about registered viewers for data
 #
 import uuid
-import logging
 
-from ginga.misc import Bunch, Callback, Settings
+from ginga.misc import Bunch, Callback, Settings, log
 
 # this holds registered viewers
 viewer_db = {}
@@ -48,7 +47,7 @@ class ViewerBase(Callback.Callbacks):
         if logger is not None:
             self.logger = logger
         else:
-            self.logger = logging.Logger('ViewerLogger')
+            self.logger = log.NullLogger()
 
         # Create settings and set defaults
         if settings is None:

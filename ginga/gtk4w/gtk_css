@@ -81,3 +81,54 @@ button:checked {
                                       #e8e8e8 100%);
     border-color: #777;
 }
+
+
+/*
+ * Toolbar gets a bit of padding so its children don't crowd the
+ * edges, matching the prior default.
+ */
+toolbar {
+    padding: 2px;
+}
+
+
+/*
+ * Gtk.Expander: style the clickable header (the ``title`` node
+ * inside ``expander-widget > box``) with the same button gradient
+ * as standalone buttons, so the gtk4 native Expander reads like
+ * the gtk3 custom-built one (ToggleButton + triangle icon).  The
+ * node tree in gtk4 is:
+ *
+ *   expander-widget
+ *   ╰── box
+ *       ├── title             <- the clickable header
+ *       │   ├── expander      <- the arrow indicator (yes, confusingly
+ *       │   │                    the same node name as the arrow alone)
+ *       │   ╰── <label widget>
+ *       ╰── <child>
+ */
+expander-widget > box > title {
+    padding: 4px 8px;
+    background-image: linear-gradient(to bottom,
+                                      #fafafa 0%,
+                                      #e4e4e4 100%);
+    background-color: transparent;
+    border: 1px solid #aaa;
+    border-radius: 3px;
+    color: #222;
+}
+
+expander-widget > box > title:hover {
+    background-image: linear-gradient(to bottom,
+                                      #ffffff 0%,
+                                      #ececec 100%);
+    border-color: #888;
+}
+
+expander-widget > box > title:checked,
+expander-widget > box > title:active {
+    background-image: linear-gradient(to bottom,
+                                      #d8d8d8 0%,
+                                      #e8e8e8 100%);
+    border-color: #777;
+}

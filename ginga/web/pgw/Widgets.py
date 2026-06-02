@@ -505,6 +505,12 @@ class StatusBar(WidgetMixin, PGW.StatusBar):
         super().clear()
 
 
+# Recognised values for the ``widget`` field of a column
+# descriptor — kept in sync with the same constant in the qtw /
+# gtk3w / gtk4w wrappers.
+_CELL_WIDGETS = ('checkbox', 'combobox', 'progress', 'button')
+
+
 class TreeView(WidgetMixin, PGW.TreeView):
     def __init__(self, *args, auto_expand=False, sortable=False,
                  selection='single', use_alt_row_color=False,
@@ -679,6 +685,10 @@ class TableView(WidgetMixin, PGW.TableView):
         # Cell-selection + clipboard callbacks (cell modes).
         self.on('cell_selected', self._cb_redirect_cell_selected)
         self._enable_callback('cell_selected')
+        # Action-shaped widget cells (currently: button) fire
+        # cell_action(table, row_dict, col_key) on click.
+        self.on('cell_action', self._cb_redirect_cell_action)
+        self._enable_callback('cell_action')
         for name in ('copy', 'cut', 'paste'):
             self.on(name, self._cb_redirect_clipboard, name)
             self._enable_callback(name)
@@ -689,11 +699,21 @@ class TableView(WidgetMixin, PGW.TableView):
     def _normalise_columns(columns):
         """Accept dicts, tuples, or strings (same forms as the qtw
         wrapper) and return a list of dicts the underlying
-        pgwidgets-js TableView understands."""
+        pgwidgets-js TableView understands.
+
+        Optional dict keys: ``halign``, ``editable``, ``widget``
+        (one of ``_CELL_WIDGETS`` or None) and widget-specific
+        extras: ``choices``, ``min``, ``max``, ``text``.
+        """
         out = []
         for i, col in enumerate(columns):
             if isinstance(col, dict):
                 key = col.get('key') or col.get('label') or f'col{i}'
+                widget = col.get('widget')
+                if widget is not None and widget not in _CELL_WIDGETS:
+                    raise ValueError(
+                        f"unknown column widget {widget!r} "
+                        f"(expected one of {_CELL_WIDGETS})")
                 d = {
                     'label': col.get('label', key),
                     'key': key,
@@ -703,6 +723,14 @@ class TableView(WidgetMixin, PGW.TableView):
                     d['halign'] = col['halign']
                 if 'editable' in col:
                     d['editable'] = bool(col['editable'])
+                if widget is not None:
+                    d['widget'] = widget
+                    if 'choices' in col:
+                        d['choices'] = list(col['choices'])
+                    for opt in ('min', 'max', 'text',
+                                'enabled_key', 'visible_key'):
+                        if opt in col:
+                            d[opt] = col[opt]
             elif isinstance(col, (tuple, list)):
                 label = col[0]
                 key = col[1] if len(col) > 1 else label
@@ -977,6 +1005,18 @@ class TableView(WidgetMixin, PGW.TableView):
     def _cb_redirect_scrolled(self, h_pct, v_pct):
         self._make_callback('scrolled', h_pct, v_pct)
 
+    def _cb_redirect_cell_action(self, path, col_key):
+        """JS fires ``cell_action(path, col_key)`` when the user
+        clicks a button-shaped widget cell.  Resolve ``path`` to
+        the row dict and re-emit as ``cell_action(table, row_dict,
+        col_key)`` to match the qtw signature."""
+        idx_path = self._from_pgw_path(path)
+        idx = idx_path[0] if idx_path else None
+        row = (dict(self._rows[idx])
+               if idx is not None and 0 <= idx < len(self._rows)
+               else None)
+        self._make_callback('cell_action', row, col_key)
+
     def _cb_redirect_cell_selected(self, cells):
         # JS sends ``[{path, col_key, value}, ...]`` with pgw-style
         # paths.  Normalise paths to integer row indices to match
@@ -1043,11 +1083,13 @@ class TableView(WidgetMixin, PGW.TableView):
     # path-taking methods need our integer-index ↔ pgw-row-key
     # boundary conversion.
 
-    def set_cell_color(self, path, col_key, fg=None, bg=None):
-        super().set_cell_color(self._to_pgw_path(path), col_key, fg, bg)
+    def set_cell_color(self, path, col_key, fg=None, bg=None, bold=None):
+        super().set_cell_color(self._to_pgw_path(path), col_key,
+                               fg=fg, bg=bg, bold=bold)
 
-    def set_row_color(self, path, fg=None, bg=None):
-        super().set_row_color(self._to_pgw_path(path), fg, bg)
+    def set_row_color(self, path, fg=None, bg=None, bold=None):
+        super().set_row_color(self._to_pgw_path(path),
+                              fg=fg, bg=bg, bold=bold)
 
     def clear_cell_color(self, path, col_key):
         super().clear_cell_color(self._to_pgw_path(path), col_key)

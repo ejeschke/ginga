@@ -145,6 +145,7 @@ class PlotViewBase(ViewerBase):
         self.figure = figure
 
         self.artist_dct = dict()
+        self.ax = None
         if addaxis:
             bg = self.settings.get('plot_bg', 'white')
             self.ax = self.figure.add_subplot(111, facecolor=bg)
@@ -351,6 +352,8 @@ class PlotViewBase(ViewerBase):
             self.redraw()
 
     def _set_variable_font_sizes(self):
+        if self.ax is None:
+            return
         # recalculate font sizes if left to variable setting
         width, height = self.get_window_size()
         title_font_size = self.t_['plot_title_fontsize']

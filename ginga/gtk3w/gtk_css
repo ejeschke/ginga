@@ -93,6 +93,17 @@ toolbar {
 
 
 /*
+ * Notebook (TabWidget): tint the currently selected tab a touch
+ * lighter than the chrome-grey bar so the active tab is visually
+ * distinguishable.  Matches the slight outline gtk4 gives the
+ * selected tab by default.
+ */
+notebook tab:checked {
+    background-color: #f4f4f4;
+}
+
+
+/*
  * Force the scrollbar steppers visible (some themes hide them by
  * default).
  */

@@ -4,7 +4,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-import logging
+from ginga.misc import log
 
 
 __all__ = ['BaseIOHandler']
@@ -22,8 +22,7 @@ class BaseIOHandler(object):
         # we need a valid logger.  If one is not provided, make a
         # null logger
         if logger is None:
-            logger = logging.getLogger('io_base')
-            logger.addHandler(logging.NullHandler())
+            logger = log.NullLogger()
 
         self.logger = logger
 

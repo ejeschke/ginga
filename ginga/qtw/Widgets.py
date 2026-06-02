@@ -1447,6 +1447,60 @@ class TreeView(WidgetBase):
 # user column key.
 _ROW_NUM_KEY = '_row_num_'
 
+# Recognised values for the ``widget`` field of a column descriptor.
+# A column without ``widget`` set renders as plain text (the long-
+# standing behaviour); a column with ``widget`` set hosts a real
+# Qt widget per cell.  Keep this in sync with the same constant in
+# the pgw / gtk3w / gtk4w wrappers.
+_CELL_WIDGETS = ('checkbox', 'combobox', 'progress', 'button')
+
+
+_DEBUG_WIDGET_CELLS = False
+
+
+class _CellWrapper(QtGui.QWidget):
+    """Container for widget-typed TableView cells.
+
+    Paints its own background in ``paintEvent`` (fillRect with the
+    current cell colour).  Qt's ``setItemWidget`` covers the cell
+    rect with this widget — the QTreeWidgetItem's background brush
+    is not composited under it, and stylesheet / palette tweaks
+    don't reliably re-render after the initial paint.  Painting
+    directly in paintEvent is the only technique that works
+    consistently across platform styles.
+
+    The colour is stored on the instance; ``set_cell_color`` is
+    called from ``_paint_widget_cell`` and from the install path."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._bg_color = None
+        self._fg_color = None
+
+    def set_cell_color(self, fg, bg):
+        self._bg_color = bg
+        self._fg_color = fg
+        if fg is not None:
+            qfg = QtHelp.QColor(fg)
+            pal = self.palette()
+            pal.setColor(QtHelp.QPalette.WindowText, qfg)
+            pal.setColor(QtHelp.QPalette.ButtonText, qfg)
+            self.setPalette(pal)
+            layout = self.layout()
+            if layout is not None:
+                for i in range(layout.count()):
+                    child = layout.itemAt(i).widget()
+                    if child is not None:
+                        child.setPalette(pal)
+        self.update()
+
+    def paintEvent(self, event):
+        if self._bg_color is not None:
+            p = QtHelp.QPainter(self)
+            p.fillRect(self.rect(), QtHelp.QColor(self._bg_color))
+            p.end()
+        super().paintEvent(event)
+
 
 class TableView(TreeView):
     """Flat tabular view, API-compatible with the pgw TableView.
@@ -1581,6 +1635,13 @@ class TableView(TreeView):
         self._col_color_map = {}      # col_key              -> {fg,bg}
         self._table_color = None      # {fg,bg} | None
 
+        # Per-cell embedded widgets (for ``widget``-typed columns).
+        # Keyed by ``(id(item), col_key)`` so they survive sort and
+        # are wiped on row delete / clear / set_rows alongside the
+        # item itself.  Qt owns the lifetime of the widget once
+        # ``setItemWidget`` is called — we just drop the reference.
+        self._cell_widgets = {}
+
         # Replace TreeView's 'activated' / 'changed' wiring with
         # the table-oriented signatures.  Connect to additional
         # signals for 'scrolled'.
@@ -1588,8 +1649,11 @@ class TableView(TreeView):
         tv.horizontalScrollBar().valueChanged.connect(self._scroll_cb)
 
         # New callbacks (in addition to those TreeView enables).
+        # ``cell_action`` fires when the user clicks a ``widget``
+        # cell that's action-shaped (currently: ``button``).
         for cbname in ('cell_edited', 'scrolled',
-                       'cell_selected', 'copy', 'cut', 'paste'):
+                       'cell_selected', 'cell_action',
+                       'copy', 'cut', 'paste'):
             self.enable_callback(cbname)
 
         # Explicit anchor for cell-mode Shift-extends.  Qt has its
@@ -1665,27 +1729,58 @@ class TableView(TreeView):
 
     @staticmethod
     def _normalise_columns(columns):
-        """Accept dicts, tuples, or strings; return list of dicts."""
+        """Accept dicts, tuples, or strings; return list of dicts.
+
+        Recognised dict keys: ``label``, ``key``, ``type`` (data
+        type — ``'string'`` / ``'number'`` / ``'bool'`` / ``'icon'``
+        etc.), ``halign``, ``editable``, ``widget`` (presentation —
+        one of ``_CELL_WIDGETS`` or None), and widget-specific
+        extras: ``choices`` (combobox), ``min`` / ``max`` (progress),
+        ``text`` (button default label).
+        """
         out = []
         for i, col in enumerate(columns):
             if isinstance(col, dict):
                 key = col.get('key') or col.get('label') or f'col{i}'
+                widget = col.get('widget')
+                if widget is not None and widget not in _CELL_WIDGETS:
+                    raise WidgetError(
+                        f"unknown column widget {widget!r} "
+                        f"(expected one of {_CELL_WIDGETS})")
                 d = {
                     'label': col.get('label', key),
                     'key': key,
                     'type': col.get('type', 'string'),
                     'halign': col.get('halign'),
                     'editable': bool(col.get('editable', False)),
+                    'widget': widget,
+                    'choices': (list(col['choices'])
+                                if 'choices' in col else None),
+                    'min': col.get('min'),
+                    'max': col.get('max'),
+                    'text': col.get('text'),
+                    # Per-row gates for widget cells: name of a
+                    # row-dict field whose truthiness controls
+                    # whether the embedded widget is enabled /
+                    # visible.  ``None`` means "always on".
+                    'enabled_key': col.get('enabled_key'),
+                    'visible_key': col.get('visible_key'),
                 }
             elif isinstance(col, (tuple, list)):
                 label = col[0]
                 key = col[1] if len(col) > 1 else label
                 dtype = col[2] if len(col) > 2 else 'string'
                 d = {'label': label, 'key': key, 'type': dtype,
-                     'halign': None, 'editable': False}
+                     'halign': None, 'editable': False,
+                     'widget': None, 'choices': None,
+                     'min': None, 'max': None, 'text': None,
+                     'enabled_key': None, 'visible_key': None}
             elif isinstance(col, str):
                 d = {'label': col, 'key': col, 'type': 'string',
-                     'halign': None, 'editable': False}
+                     'halign': None, 'editable': False,
+                     'widget': None, 'choices': None,
+                     'min': None, 'max': None, 'text': None,
+                     'enabled_key': None, 'visible_key': None}
             else:
                 raise WidgetError(
                     f"unrecognised column descriptor: {col!r}")
@@ -1704,11 +1799,18 @@ class TableView(TreeView):
         return [c['key'] for c in self._user_columns]
 
     def _item_to_row_dict(self, item):
-        """Reconstruct a row dict from a QTreeWidgetItem."""
+        """Reconstruct a row dict from a QTreeWidgetItem.  For
+        widget-typed cells, read the live value off the embedded
+        widget instead of the (placeholder) text."""
         offset = self._col_offset()
         row = {}
         for j, col in enumerate(self._user_columns):
-            row[col['key']] = item.text(j + offset)
+            col_key = col['key']
+            w = self._cell_widgets.get((id(item), col_key))
+            if w is not None:
+                row[col_key] = self._read_widget_value(col, w)
+            else:
+                row[col_key] = item.text(j + offset)
         return row
 
     def _apply_editable_flags(self, item):
@@ -1877,6 +1979,9 @@ class TableView(TreeView):
         # each new row via _apply_row_colors.
         self._cell_color_map.clear()
         self._row_color_map.clear()
+        # Same for embedded cell widgets — their host items just
+        # went away, so the widgets are destroyed by Qt.
+        self._cell_widgets.clear()
         for i, row in enumerate(rows):
             self._append_one(row)
 
@@ -1888,9 +1993,10 @@ class TableView(TreeView):
 
     def insert_row(self, idx, values):
         tv = self.widget
-        item = self._make_row_item(values)
+        item, row_dict = self._make_row_item(values)
         tv.insertTopLevelItem(idx, item)
         self._apply_editable_flags(item)
+        self._install_widget_cells(item, row_dict)
         self._apply_row_colors(item)
         self._renumber_row_column()
 
@@ -1899,13 +2005,15 @@ class TableView(TreeView):
         if not (0 <= idx < tv.topLevelItemCount()):
             raise WidgetError(f"row index {idx} out of range")
         item = tv.takeTopLevelItem(idx)
-        # Drop dangling colour entries that referenced this item.
+        # Drop dangling colour + widget entries that referenced
+        # this item.
         if item is not None:
             iid = id(item)
             self._row_color_map.pop(iid, None)
             for key in [k for k in self._cell_color_map
                         if k[0] == iid]:
                 del self._cell_color_map[key]
+            self._drop_widget_cells_for(item)
         self._renumber_row_column()
 
     def get_row_count(self):
@@ -1928,22 +2036,62 @@ class TableView(TreeView):
             raise WidgetError(f"row index {row} out of range")
         if not (0 <= col < len(self._user_columns)):
             raise WidgetError(f"column index {col} out of range")
+        col_spec = self._user_columns[col]
+        col_idx = col + self._col_offset()
+        # Widget cells: push the value through to the embedded
+        # widget so the display reflects the change.  Signals are
+        # blocked so this programmatic update doesn't fire
+        # cell_edited (which is for user-initiated changes).
+        w = self._cell_widgets.get((id(item), col_spec['key']))
+        if w is not None:
+            w.blockSignals(True)
+            try:
+                self._write_widget_value(col_spec, w, value)
+            finally:
+                w.blockSignals(False)
+            item.setData(col_idx, QtCore.Qt.UserRole, value)
+            return
         text = '' if value is None else str(value)
-        item.setText(col + self._col_offset(), text)
+        item.setText(col_idx, text)
         # Mirror to UserRole so the next cell_edited callback can
         # report old_value correctly.
-        item.setData(col + self._col_offset(), QtCore.Qt.UserRole, text)
+        item.setData(col_idx, QtCore.Qt.UserRole, text)
+
+    def _write_widget_value(self, col, w, value):
+        wtype = col['widget']
+        if wtype == 'checkbox':
+            w.setChecked(bool(value))
+        elif wtype == 'combobox':
+            if value is not None:
+                w.setCurrentText(str(value))
+        elif wtype == 'progress':
+            try:
+                w.setValue(int(value) if value is not None
+                           else w.minimum())
+            except (TypeError, ValueError):
+                pass
+        elif wtype == 'button':
+            if value is not None:
+                w.setText(str(value))
 
     def _append_one(self, values):
         tv = self.widget
-        item = self._make_row_item(values)
+        item, row_dict = self._make_row_item(values)
         tv.addTopLevelItem(item)
         self._apply_editable_flags(item)
+        # Widget cells need the item to be in the tree before
+        # ``setItemWidget`` will accept it.  Install widgets
+        # *before* applying colours so ``_apply_color_to_cell``
+        # can also paint the wrapper containers in one pass.
+        self._install_widget_cells(item, row_dict)
         self._apply_row_colors(item)
         self._renumber_row_column()
 
     def _make_row_item(self, values):
-        """Build a TreeWidgetItem from a row dict-or-sequence."""
+        """Build a TreeWidgetItem from a row dict-or-sequence.
+        Returns ``(item, row_dict)`` — the row_dict is needed by
+        callers who install widget cells after the item is added
+        to the tree."""
         if isinstance(values, dict):
             row_dict = values
         elif isinstance(values, (list, tuple)):
@@ -1956,6 +2104,15 @@ class TableView(TreeView):
         offset = self._col_offset()
         for j, col in enumerate(self._user_columns):
             val = row_dict.get(col['key'], '')
+            # Widget-typed columns don't show text — the embedded
+            # widget is installed over the cell in
+            # ``_install_widget_cells`` and any cell text would
+            # bleed out around it.  Leave the cell text empty;
+            # ``_install_widget_cells`` populates UserRole with the
+            # typed value for cell_edited's old_value tracking.
+            if col.get('widget'):
+                item.setText(j + offset, '')
+                continue
             text = '' if val is None else str(val)
             item.setText(j + offset, text)
             # Stash the value in Qt.UserRole so cell_edited can
@@ -1963,9 +2120,200 @@ class TableView(TreeView):
             item.setData(j + offset, QtCore.Qt.UserRole, text)
         # The row-number text is filled in by _renumber_row_column
         # after the item is in the tree.
-        return item
+        return item, row_dict
+
+    # ----- embedded widget cells ------------------------------
+    #
+    # Columns whose descriptor carries ``widget='checkbox' |
+    # 'combobox' | 'progress' | 'button'`` host a real Qt widget
+    # per cell (installed via QTreeWidget.setItemWidget).  The
+    # widget is the source-of-truth for the cell's value; we sync
+    # it back into the QTreeWidgetItem's UserRole storage on every
+    # change so the rest of the wrapper (cell_edited, get_row,
+    # copy/paste) keeps working uniformly.
+
+    def _install_widget_cells(self, item, row_dict):
+        """Walk widget-typed columns and create+install a Qt
+        widget per cell on ``item``.  Caller must have already
+        added ``item`` to the tree.
+
+        Honours the per-column ``visible_key`` and ``enabled_key``
+        gates: if ``visible_key`` is set and the named row field
+        is falsy, no widget is installed (the cell stays empty);
+        if ``enabled_key`` is set, the embedded widget's enabled
+        state mirrors that field."""
+        offset = self._col_offset()
+        for j, col in enumerate(self._user_columns):
+            if not col.get('widget'):
+                continue
+            col_idx = j + offset
+            col_key = col['key']
+            visible_key = col.get('visible_key')
+            if visible_key is not None \
+                    and not row_dict.get(visible_key, True):
+                continue
+            value = row_dict.get(col_key)
+            inner = self._make_cell_widget(col, value, item, col_key)
+            enabled_key = col.get('enabled_key')
+            if enabled_key is not None:
+                inner.setEnabled(bool(row_dict.get(enabled_key, True)))
+            # Wrap inner in a _CellWrapper that paints its own bg
+            # in paintEvent.  Resolve the cell colour *before*
+            # setItemWidget so the very first paint already has
+            # the correct background — Qt caches the first paint
+            # of a widget hosted in setItemWidget, so painting
+            # in the wrapper's __init__ is far more reliable than
+            # repainting it later.
+            container = self._wrap_cell_widget(inner, col)
+            self._cell_widgets[(id(item), col_key)] = inner
+            fg0, bg0, _bold0 = self._resolve_cell_color(item, j)
+            container.set_cell_color(fg0, bg0)
+            self.widget.setItemWidget(item, col_idx, container)
+            # Stash the typed value in UserRole so cell_edited
+            # ``old_value`` reads correctly on the first change.
+            item.setData(col_idx, QtCore.Qt.UserRole, value)
+            if _DEBUG_WIDGET_CELLS:
+                print(f'[widget-cell] install item={id(item):#x} '
+                      f'col_key={col_key} col_idx={col_idx} '
+                      f'container={id(container):#x} '
+                      f'widget_type={col.get("widget")} '
+                      f'initial fg={fg0} bg={bg0}')
+
+    def _paint_widget_cell(self, container, fg, bg):
+        """Push the resolved cell colour onto a ``_CellWrapper``
+        and force a repaint.  The wrapper's ``paintEvent`` then
+        fills the cell with ``bg``.  A bare ``update()`` is not
+        always enough — Qt sometimes caches the first paint of a
+        widget hosted via ``setItemWidget`` — so we also poke the
+        tree's viewport to invalidate that cache."""
+        if isinstance(container, _CellWrapper):
+            container.set_cell_color(fg, bg)
+        viewport = self.widget.viewport()
+        if viewport is not None:
+            viewport.update()
+
+    @staticmethod
+    def _wrap_cell_widget(inner, col):
+        """Place ``inner`` in a ``_CellWrapper`` container that
+        paints its own bg in ``paintEvent``.  Layout policy
+        depends on widget type: small widgets (checkbox) are
+        centered; wide widgets (combobox, progress, button) fill
+        the cell."""
+        container = _CellWrapper()
+        layout = QtGui.QHBoxLayout(container)
+        layout.setContentsMargins(2, 0, 2, 0)
+        layout.setSpacing(0)
+        wtype = col.get('widget')
+        if wtype == 'checkbox':
+            # Center small toggles within the cell.
+            layout.addStretch()
+            layout.addWidget(inner)
+            layout.addStretch()
+        else:
+            # Combobox / progress / button stretch to fill so they
+            # don't look orphaned in a wide cell.
+            layout.addWidget(inner)
+        return container
+
+    def _make_cell_widget(self, col, value, item, col_key):
+        wtype = col['widget']
+        if wtype == 'checkbox':
+            w = QtGui.QCheckBox()
+            w.setChecked(bool(value))
+            w.setStyleSheet('background: transparent;')
+            w.stateChanged.connect(
+                lambda _state, it=item, ck=col_key:
+                    self._on_cell_widget_changed(it, ck))
+            return w
+        if wtype == 'combobox':
+            w = QtGui.QComboBox()
+            choices = col.get('choices') or []
+            for ch in choices:
+                w.addItem(str(ch))
+            if value is not None and str(value) in [str(c) for c in choices]:
+                w.setCurrentText(str(value))
+            w.currentIndexChanged.connect(
+                lambda _i, it=item, ck=col_key:
+                    self._on_cell_widget_changed(it, ck))
+            return w
+        if wtype == 'progress':
+            w = QtGui.QProgressBar()
+            lo = col.get('min', 0) or 0
+            hi = col.get('max', 100) if col.get('max') is not None else 100
+            w.setRange(int(lo), int(hi))
+            try:
+                w.setValue(int(value) if value is not None else int(lo))
+            except (TypeError, ValueError):
+                w.setValue(int(lo))
+            return w
+        if wtype == 'button':
+            label = (str(value) if value is not None
+                     else (col.get('text') or ''))
+            w = QtGui.QPushButton(label)
+            w.clicked.connect(
+                lambda _checked=False, it=item, ck=col_key:
+                    self._on_cell_widget_clicked(it, ck))
+            return w
+        raise WidgetError(f"unknown cell widget type: {wtype!r}")
+
+    def _read_widget_value(self, col, w):
+        wtype = col['widget']
+        if wtype == 'checkbox':
+            return bool(w.isChecked())
+        if wtype == 'combobox':
+            return w.currentText()
+        if wtype == 'progress':
+            return int(w.value())
+        if wtype == 'button':
+            # No persistent value — return the current label so
+            # round-trips through get_row() preserve it.
+            return w.text()
+        return None
+
+    def _on_cell_widget_changed(self, item, col_key):
+        """Fire cell_edited(table, [row], col_key, old, new) when
+        an editable widget cell mutates."""
+        w = self._cell_widgets.get((id(item), col_key))
+        if w is None:
+            return
+        try:
+            j = self._user_col_keys().index(col_key)
+        except ValueError:
+            return
+        col = self._user_columns[j]
+        col_idx = j + self._col_offset()
+        new_value = self._read_widget_value(col, w)
+        old_value = item.data(col_idx, QtCore.Qt.UserRole)
+        if old_value == new_value:
+            return
+        item.setData(col_idx, QtCore.Qt.UserRole, new_value)
+        row_idx = self.widget.indexOfTopLevelItem(item)
+        if row_idx < 0:
+            return
+        self.make_callback('cell_edited', [row_idx], col_key,
+                           old_value, new_value)
+
+    def _on_cell_widget_clicked(self, item, col_key):
+        """Fire cell_action(table, row_dict, col_key) on button
+        cells."""
+        row_idx = self.widget.indexOfTopLevelItem(item)
+        if row_idx < 0:
+            return
+        row = self._item_to_row_dict(item)
+        self.make_callback('cell_action', row, col_key)
+
+    def _drop_widget_cells_for(self, item):
+        """Drop widget-cell entries for an item that's about to
+        be removed."""
+        iid = id(item)
+        for key in [k for k in self._cell_widgets if k[0] == iid]:
+            del self._cell_widgets[key]
 
     def clear(self):
+        # Qt destroys the embedded cell widgets when the items
+        # holding them are cleared; drop our refs so we don't
+        # keep dangling handles to deleted C++ objects.
+        self._cell_widgets.clear()
         super().clear()
 
     # ----- selection -------------------------------------------
@@ -2053,39 +2401,37 @@ class TableView(TreeView):
 
     def _resolve_cell_color(self, item, user_col):
         """Walk cell → row → column → table to produce the
-        merged ``(fg, bg)`` colour pair for one item / user-col.
-        Either component may be ``None`` (meaning "no override at
-        this layer" — the underlying widget palette wins)."""
+        merged ``(fg, bg, bold)`` style triple for one item /
+        user-col.  Each component may be ``None`` (meaning "no
+        override at this layer" — the underlying widget palette /
+        default font wins)."""
         iid = id(item)
         col_key = (self._user_columns[user_col]['key']
                    if 0 <= user_col < len(self._user_columns)
                    else None)
-        fg = bg = None
-        cs = self._cell_color_map.get((iid, user_col))
-        if cs:
-            fg = cs.get('fg'); bg = cs.get('bg')
-        if fg is None or bg is None:
-            rs = self._row_color_map.get(iid)
-            if rs:
-                if fg is None: fg = rs.get('fg')
-                if bg is None: bg = rs.get('bg')
-        if fg is None or bg is None:
-            cls = self._col_color_map.get(col_key)
-            if cls:
-                if fg is None: fg = cls.get('fg')
-                if bg is None: bg = cls.get('bg')
-        if fg is None or bg is None:
-            if self._table_color:
-                if fg is None: fg = self._table_color.get('fg')
-                if bg is None: bg = self._table_color.get('bg')
-        return fg, bg
+        fg = bg = bold = None
+
+        def _absorb(d):
+            nonlocal fg, bg, bold
+            if not d:
+                return
+            if fg is None: fg = d.get('fg')
+            if bg is None: bg = d.get('bg')
+            if bold is None: bold = d.get('bold')
+
+        _absorb(self._cell_color_map.get((iid, user_col)))
+        _absorb(self._row_color_map.get(iid))
+        _absorb(self._col_color_map.get(col_key))
+        _absorb(self._table_color)
+        return fg, bg, bold
 
     def _apply_color_to_cell(self, item, user_col):
-        """Write the resolved colour to the QTreeWidgetItem.  Always
-        overwrites — a ``None`` resolved value installs a default
-        (invalid) brush, which clears the item's override and lets
-        the widget palette show through again."""
-        fg, bg = self._resolve_cell_color(item, user_col)
+        """Write the resolved colour + weight to the
+        QTreeWidgetItem.  Always overwrites — a ``None`` resolved
+        value installs a default (invalid) brush or unbolds the
+        cell font, clearing the item's override and letting the
+        widget palette / default font show through again."""
+        fg, bg, bold = self._resolve_cell_color(item, user_col)
         col = user_col + self._col_offset()
         # ``QtGui`` in this module is actually qtpy.QtWidgets;
         # QBrush / QColor live in qtpy.QtGui and are re-exported
@@ -2096,6 +2442,27 @@ class TableView(TreeView):
         item.setBackground(col,
                            QtHelp.QBrush(QtHelp.QColor(bg)) if bg
                            else QtHelp.QBrush())
+        # Per-cell font weight.  ``item.font(col)`` returns the
+        # widget's current font (typeface, size); we toggle the
+        # bold bit without disturbing anything else.
+        font = item.font(col)
+        font.setBold(bool(bold))
+        item.setFont(col, font)
+        # For widget cells, the embedded widget paints over the
+        # item brush — Qt doesn't composite the delegate background
+        # through ``setItemWidget`` content.  Mirror the resolved
+        # bg onto the wrapper container so the cell colour shows
+        # behind the widget, and propagate fg into the inner
+        # widget's palette so labels (button text / checkbox box)
+        # contrast against the new bg.
+        container = self.widget.itemWidget(item, col)
+        if _DEBUG_WIDGET_CELLS:
+            print(f'[widget-cell] _apply_color_to_cell '
+                  f'item={id(item):#x} user_col={user_col} '
+                  f'col={col} fg={fg} bg={bg} '
+                  f'container={None if container is None else hex(id(container))}')
+        if container is not None:
+            self._paint_widget_cell(container, fg, bg)
 
     def _apply_row_colors(self, item):
         """Paint every user-column cell of a single item according
@@ -2116,7 +2483,7 @@ class TableView(TreeView):
                 continue
             self._apply_row_colors(item)
 
-    def set_cell_color(self, path, col_key, fg=None, bg=None):
+    def set_cell_color(self, path, col_key, fg=None, bg=None, bold=None):
         idx = self._resolve_to_row_index(path)
         if idx is None:
             return
@@ -2127,13 +2494,13 @@ class TableView(TreeView):
         if item is None:
             return
         key = (id(item), user_col)
-        if fg is None and bg is None:
+        if fg is None and bg is None and bold is None:
             self._cell_color_map.pop(key, None)
         else:
-            self._cell_color_map[key] = {'fg': fg, 'bg': bg}
+            self._cell_color_map[key] = {'fg': fg, 'bg': bg, 'bold': bold}
         self._apply_color_to_cell(item, user_col)
 
-    def set_row_color(self, path, fg=None, bg=None):
+    def set_row_color(self, path, fg=None, bg=None, bold=None):
         idx = self._resolve_to_row_index(path)
         if idx is None:
             return
@@ -2141,19 +2508,20 @@ class TableView(TreeView):
         if item is None:
             return
         iid = id(item)
-        if fg is None and bg is None:
+        if fg is None and bg is None and bold is None:
             self._row_color_map.pop(iid, None)
         else:
-            self._row_color_map[iid] = {'fg': fg, 'bg': bg}
+            self._row_color_map[iid] = {'fg': fg, 'bg': bg, 'bold': bold}
         self._apply_row_colors(item)
 
-    def set_column_color(self, col_key, fg=None, bg=None):
+    def set_column_color(self, col_key, fg=None, bg=None, bold=None):
         if col_key not in self._user_col_keys():
             return
-        if fg is None and bg is None:
+        if fg is None and bg is None and bold is None:
             self._col_color_map.pop(col_key, None)
         else:
-            self._col_color_map[col_key] = {'fg': fg, 'bg': bg}
+            self._col_color_map[col_key] = {'fg': fg, 'bg': bg,
+                                            'bold': bold}
         user_col = self._user_col_keys().index(col_key)
         tv = self.widget
         for row in range(tv.topLevelItemCount()):
@@ -2161,11 +2529,11 @@ class TableView(TreeView):
             if item is not None:
                 self._apply_color_to_cell(item, user_col)
 
-    def set_table_color(self, fg=None, bg=None):
-        if fg is None and bg is None:
+    def set_table_color(self, fg=None, bg=None, bold=None):
+        if fg is None and bg is None and bold is None:
             self._table_color = None
         else:
-            self._table_color = {'fg': fg, 'bg': bg}
+            self._table_color = {'fg': fg, 'bg': bg, 'bold': bold}
         self._apply_all_colors()
 
     def clear_cell_color(self, path, col_key):
