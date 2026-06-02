@@ -27,30 +27,29 @@ class NullLogger(object):
         self.f_out = f_out
         self.handlers = []
 
-    def debug(self, msg):
+    def debug(self, msg, *args):
         if self.f_out:
             self.f_out.write("| D | %s\n" % msg)
             self.f_out.flush()
 
-    def info(self, msg):
+    def info(self, msg, *args):
         if self.f_out:
             self.f_out.write("| I | %s\n" % msg)
             self.f_out.flush()
 
-    def warning(self, msg):
+    def warning(self, msg, *args):
         if self.f_out:
             self.f_out.write("| W | %s\n" % msg)
             self.f_out.flush()
 
-    def warn(self, msg):
-        return self.warning(msg)
+    warn = warning
 
-    def error(self, msg, exc_info=False):
+    def error(self, msg, *args, exc_info=False):
         if self.f_out:
             self.f_out.write("| E | %s\n" % msg)
             self.f_out.flush()
 
-    def critical(self, msg):
+    def critical(self, *args, msg):
         if self.f_out:
             self.f_out.write("| C | %s\n" % msg)
             self.f_out.flush()

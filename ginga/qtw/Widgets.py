@@ -57,6 +57,34 @@ class WidgetBase(Callback.Callbacks):
     def set_tooltip(self, text):
         self.widget.setToolTip(text)
 
+    def set_bg(self, color):
+        """Set the widget's background colour.  ``color`` is a CSS
+        string (``'#rrggbb'``, ``'red'``, ``'rgba(...)'``, …) or
+        ``None`` to clear the override.
+
+        Uses ``setAutoFillBackground(True)`` + palette ``Window``
+        role — the reliable mechanism that paints plain
+        ``QWidget`` (Box / HBox / VBox containers) as well as
+        every other widget class.  Stylesheets on plain QWidget
+        are ignored without ``WA_StyledBackground`` *and* a
+        ``paintEvent`` override, so palette is the simpler path.
+
+        Themed widgets (Button, ComboBox, …) paint their own
+        multi-state backgrounds via the platform style; on those,
+        a generic ``set_bg`` may be partially overridden by hover /
+        active states.  For uniform styling on themed widgets,
+        use their widget-specific style API instead."""
+        if color is None:
+            self.widget.setAutoFillBackground(False)
+            # Reset to the application default palette so any
+            # previously applied Window colour goes away.
+            self.widget.setPalette(QtGui.QApplication.palette(self.widget))
+        else:
+            self.widget.setAutoFillBackground(True)
+            pal = self.widget.palette()
+            pal.setColor(QtHelp.QPalette.Window, QtHelp.QColor(color))
+            self.widget.setPalette(pal)
+
     def get_enabled(self):
         self.widget.isEnabled()
 
@@ -421,14 +449,32 @@ class Label(WidgetBase):
 
     def set_halign(self, align):
         align = align.lower()
+        # Mask the horizontal-alignment bits out of the current
+        # value and OR in the new flag, so the existing vertical
+        # bits (set via ``set_valign``) survive.
+        cur = self.widget.alignment() & ~QtCore.Qt.AlignHorizontal_Mask
         if align == 'left':
-            self.widget.setAlignment(QtCore.Qt.AlignLeft)
+            cur |= QtCore.Qt.AlignLeft
         elif align == 'center':
-            self.widget.setAlignment(QtCore.Qt.AlignHCenter)
+            cur |= QtCore.Qt.AlignHCenter
         elif align == 'right':
-            self.widget.setAlignment(QtCore.Qt.AlignRight)
+            cur |= QtCore.Qt.AlignRight
         else:
             raise ValueError(f"Don't understand alignment '{align}'")
+        self.widget.setAlignment(cur)
+
+    def set_valign(self, align):
+        align = align.lower()
+        cur = self.widget.alignment() & ~QtCore.Qt.AlignVertical_Mask
+        if align == 'top':
+            cur |= QtCore.Qt.AlignTop
+        elif align == 'center':
+            cur |= QtCore.Qt.AlignVCenter
+        elif align == 'bottom':
+            cur |= QtCore.Qt.AlignBottom
+        else:
+            raise ValueError(f"Don't understand alignment '{align}'")
+        self.widget.setAlignment(cur)
 
 
 class Button(WidgetBase):

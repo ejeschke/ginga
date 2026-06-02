@@ -235,7 +235,7 @@ if in_situ_web:
         """Application class when we are running *in-situ* in the browser."""
 
         def __init__(self, logger=None, host='localhost', port=9909,
-                     ws_port=None, settings=None, token='none'):
+                     ws_port=None, settings=None, token=None):
             ApplicationBase.__init__(self, logger=logger, host=host, port=port,
                                      ws_port=ws_port, settings=settings)
 
@@ -258,6 +258,8 @@ else:
             if http_server is None:
                 http_server = self.settings.get('http_server', False)
                 self.use_http_server = http_server
+            if token is None:
+                token = self.settings.get('token', None)
 
             PGW_Application.__init__(self, ws_port=ws_port, ws_sock=ws_sock,
                                      http_port=port, host=host,

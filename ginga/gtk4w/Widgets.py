@@ -84,6 +84,21 @@ class WidgetBase(Callback.Callbacks):
     def set_tooltip(self, text):
         self.widget.set_tooltip_text(text)
 
+    def set_bg(self, color):
+        """Set the widget's background colour.  ``color`` is a CSS
+        string (``'#rrggbb'``, ``'red'``, ``'rgba(...)'``, …) or
+        ``None`` to clear the override.
+
+        Implemented via ``GtkHelp.modify_bg``, which attaches a
+        per-widget ``CssProvider`` to the widget's style context
+        with a class-scoped rule — so it works on transparent
+        containers (``Gtk.Box``, ``Gtk.Grid``) too.
+
+        Themed widgets paint multi-state backgrounds; a generic
+        ``set_bg`` may be partially overridden by hover / active
+        states on those."""
+        GtkHelp.modify_bg(self.widget, color)
+
     def get_enabled(self):
         self.widget.get_sensitive()
 
@@ -496,6 +511,22 @@ class Label(WidgetBase):
             self.label.set_justify(Gtk.Justification.RIGHT)
         else:
             raise ValueError(f"Don't understand alignment '{align}'")
+
+    def set_valign(self, align):
+        align = align.lower()
+        # GtkWidget's valign property positions the label within
+        # whatever vertical space the parent allocates — only
+        # visible when the parent gives the label more height
+        # than the text needs (e.g. inside a stretched Box cell).
+        if align == 'top':
+            gtk_align = Gtk.Align.START
+        elif align == 'center':
+            gtk_align = Gtk.Align.CENTER
+        elif align == 'bottom':
+            gtk_align = Gtk.Align.END
+        else:
+            raise ValueError(f"Don't understand alignment '{align}'")
+        self.label.set_valign(gtk_align)
 
 
 class Button(WidgetBase):

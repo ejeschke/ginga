@@ -1992,12 +1992,33 @@ def modify_bg(widget, color):
     context = widget.get_style_context()
     if color is not None:
         context.add_class("custom_bg")
-        css_data = "*.custom_bg { background-image: none; background-color: %s; }" % (color)
+        css_color = _coerce_css_color(color)
+        css_data = ("*.custom_bg { background-image: none; "
+                    "background-color: %s; }" % (css_color,))
         css_provider = Gtk.CssProvider()
         css_provider.load_from_data(css_data.encode())
         context.add_provider(css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
     else:
         context.remove_class("custom_bg")
+
+
+def _coerce_css_color(color):
+    """GTK CSS only accepts ``#rrggbb`` hex, named colours, or
+    ``rgb()``/``rgba()`` functional forms — it rejects the 8-char
+    ``#rrggbbaa`` hex that ``ginga.colors.get_hex(alpha=...)``
+    produces.  Coerce that form into ``rgba(r, g, b, a)``; pass
+    everything else through unchanged."""
+    if (isinstance(color, str) and len(color) == 9
+            and color.startswith('#')):
+        try:
+            r = int(color[1:3], 16)
+            g = int(color[3:5], 16)
+            b = int(color[5:7], 16)
+            a = int(color[7:9], 16) / 255.0
+        except ValueError:
+            return color
+        return f'rgba({r}, {g}, {b}, {a:.3f})'
+    return color
 
 
 def set_border_width(widget, pix):
