@@ -1811,6 +1811,10 @@ class TableView(TreeView):
                     # visible.  ``None`` means "always on".
                     'enabled_key': col.get('enabled_key'),
                     'visible_key': col.get('visible_key'),
+                    # Initial column width in pixels.  Applied
+                    # once at column-setup time; users can resize
+                    # afterwards.  ``None`` lets the view pick.
+                    'colwidth': col.get('colwidth'),
                 }
             elif isinstance(col, (tuple, list)):
                 label = col[0]
@@ -1820,13 +1824,15 @@ class TableView(TreeView):
                      'halign': None, 'editable': False,
                      'widget': None, 'choices': None,
                      'min': None, 'max': None, 'text': None,
-                     'enabled_key': None, 'visible_key': None}
+                     'enabled_key': None, 'visible_key': None,
+                     'colwidth': None}
             elif isinstance(col, str):
                 d = {'label': col, 'key': col, 'type': 'string',
                      'halign': None, 'editable': False,
                      'widget': None, 'choices': None,
                      'min': None, 'max': None, 'text': None,
-                     'enabled_key': None, 'visible_key': None}
+                     'enabled_key': None, 'visible_key': None,
+                     'colwidth': None}
             else:
                 raise WidgetError(
                     f"unrecognised column descriptor: {col!r}")
@@ -1947,8 +1953,24 @@ class TableView(TreeView):
             tv.header().setSectionsClickable(True)
         if self._show_row_numbers:
             self._configure_row_number_column()
+        self._apply_initial_colwidths()
         if rows is not None:
             self.set_rows(rows)
+
+    def _apply_initial_colwidths(self):
+        """Apply any per-column ``colwidth`` declared on the
+        column descriptors.  Strings are accepted but only the
+        numeric form is meaningful here — qt column widths are
+        pixel integers (matching ``set_column_width``)."""
+        for i, col in enumerate(self._user_columns):
+            w = col.get('colwidth')
+            if w is None:
+                continue
+            try:
+                px = int(w)
+            except (TypeError, ValueError):
+                continue
+            self.set_column_width(i, px)
 
     def _configure_row_number_column(self):
         tv = self.widget

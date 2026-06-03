@@ -1721,7 +1721,8 @@ class TableView(TreeView):
                      'max': col.get('max'),
                      'text': col.get('text'),
                      'enabled_key': col.get('enabled_key'),
-                     'visible_key': col.get('visible_key')}
+                     'visible_key': col.get('visible_key'),
+                     'colwidth': col.get('colwidth')}
             elif isinstance(col, (tuple, list)):
                 label = col[0]
                 key = col[1] if len(col) > 1 else label
@@ -1730,13 +1731,15 @@ class TableView(TreeView):
                      'halign': None, 'editable': False,
                      'widget': None, 'choices': None,
                      'min': None, 'max': None, 'text': None,
-                     'enabled_key': None, 'visible_key': None}
+                     'enabled_key': None, 'visible_key': None,
+                     'colwidth': None}
             elif isinstance(col, str):
                 d = {'label': col, 'key': col, 'type': 'string',
                      'halign': None, 'editable': False,
                      'widget': None, 'choices': None,
                      'min': None, 'max': None, 'text': None,
-                     'enabled_key': None, 'visible_key': None}
+                     'enabled_key': None, 'visible_key': None,
+                     'colwidth': None}
             else:
                 raise WidgetError(
                     f"unrecognised column descriptor: {col!r}")
@@ -1796,6 +1799,7 @@ class TableView(TreeView):
                             cell.set_property('xalign', 0.0)
         if self._show_row_numbers:
             self._configure_row_number_column()
+        self._apply_initial_colwidths()
         # GTK4 lost ``button-press-event``; we use a GestureClick
         # controller instead.  Attach once and reuse for the
         # lifetime of the TableView.
@@ -1893,6 +1897,19 @@ class TableView(TreeView):
             return
         col.set_sizing(Gtk.TreeViewColumnSizing.FIXED)
         col.set_fixed_width(width)
+
+    def _apply_initial_colwidths(self):
+        """Apply any per-column ``colwidth`` declared on the
+        column descriptors.  Pixel integers only."""
+        for i, col in enumerate(self._user_columns):
+            w = col.get('colwidth')
+            if w is None:
+                continue
+            try:
+                px = int(w)
+            except (TypeError, ValueError):
+                continue
+            self.set_column_width(i, px)
 
     # ----- row management --------------------------------------
 
