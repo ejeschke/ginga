@@ -2858,6 +2858,10 @@ class Box(ContainerBase):
             self.widget = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         else:
             self.widget = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        # Cross-axis alignment to apply to each child as it joins
+        # the box (and to existing children when ``set_align`` is
+        # called).  ``None`` means use Gtk's default (FILL).
+        self._cross_align = None
 
     def set_spacing(self, val):
         self.widget.set_spacing(val)
@@ -2873,6 +2877,7 @@ class Box(ContainerBase):
         self.widget.append(child_w)
         self.widget.reorder_child(child_w, idx)
         self.children.insert(idx, child)
+        self._apply_cross_align(child_w)
         self.make_callback('widget-added', child)
 
     def add_widget(self, child, stretch=0):
@@ -2886,7 +2891,43 @@ class Box(ContainerBase):
         else:
             child_w.set_vexpand(expand)
         self.widget.append(child_w)
+        self._apply_cross_align(child_w)
         self.make_callback('widget-added', child)
+
+    def set_align(self, align):
+        """Cross-axis alignment for children of this Box.  Accepts
+        ``'top'`` / ``'center'`` / ``'bottom'`` on a horizontal
+        box, ``'left'`` / ``'center'`` / ``'right'`` on a vertical
+        box.  Mismatch raises ``ValueError``."""
+        self._cross_align = self._resolve_align(align)
+        for child in self.get_children():
+            self._apply_cross_align(child.get_widget())
+
+    def _resolve_align(self, align):
+        align = align.lower()
+        if self.orientation == 'horizontal':
+            mapping = {'top':    Gtk.Align.START,
+                       'center': Gtk.Align.CENTER,
+                       'bottom': Gtk.Align.END}
+            expected = "'top' | 'center' | 'bottom'"
+        else:
+            mapping = {'left':   Gtk.Align.START,
+                       'center': Gtk.Align.CENTER,
+                       'right':  Gtk.Align.END}
+            expected = "'left' | 'center' | 'right'"
+        if align not in mapping:
+            raise ValueError(
+                f"{self.orientation} Box.set_align expects {expected}, "
+                f"got {align!r}")
+        return mapping[align]
+
+    def _apply_cross_align(self, child_w):
+        if self._cross_align is None:
+            return
+        if self.orientation == 'horizontal':
+            child_w.set_valign(self._cross_align)
+        else:
+            child_w.set_halign(self._cross_align)
 
 
 class VBox(Box):

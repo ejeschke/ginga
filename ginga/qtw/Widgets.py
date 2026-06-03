@@ -3212,6 +3212,36 @@ class Box(ContainerBase):
     def set_spacing(self, val):
         self.layout.setSpacing(val)
 
+    def set_align(self, align):
+        """Cross-axis alignment for the children laid out in this
+        Box.  Accepted values depend on the Box's ``orientation``:
+
+        * horizontal box → ``'top'`` / ``'center'`` / ``'bottom'``
+        * vertical box   → ``'left'`` / ``'center'`` / ``'right'``
+
+        Only visible when the Box's parent gives it more cross-axis
+        space than the children need."""
+        flag = self._resolve_align(align)
+        self.layout.setAlignment(flag)
+
+    def _resolve_align(self, align):
+        align = align.lower()
+        if self.orientation == 'horizontal':
+            mapping = {'top':    QtCore.Qt.AlignTop,
+                       'center': QtCore.Qt.AlignVCenter,
+                       'bottom': QtCore.Qt.AlignBottom}
+            expected = "'top' | 'center' | 'bottom'"
+        else:
+            mapping = {'left':   QtCore.Qt.AlignLeft,
+                       'center': QtCore.Qt.AlignHCenter,
+                       'right':  QtCore.Qt.AlignRight}
+            expected = "'left' | 'center' | 'right'"
+        if align not in mapping:
+            raise ValueError(
+                f"{self.orientation} Box.set_align expects {expected}, "
+                f"got {align!r}")
+        return mapping[align]
+
 
 class HBox(Box):
     def __init__(self):
