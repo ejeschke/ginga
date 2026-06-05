@@ -16,6 +16,7 @@ class GingaViewerWidget(Widgets.Image):
     """
 
     def __init__(self, viewer=None, width=600, height=600):
+        # NOTE: width and height are ignored
         super().__init__(interactive=True, use_animation_frame=True)
 
         super().set_expanding(True, True)
@@ -39,6 +40,7 @@ class GingaViewerWidget(Widgets.Image):
 class GingaScrolledViewerWidget(ScrolledView):
 
     def __init__(self, viewer=None, width=600, height=600):
+        # NOTE: width and height are ignored
 
         if viewer is None:
             viewer = CanvasView()

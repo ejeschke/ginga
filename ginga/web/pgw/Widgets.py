@@ -725,6 +725,8 @@ class TableView(WidgetMixin, PGW.TableView):
                     d['halign'] = col['halign']
                 if 'editable' in col:
                     d['editable'] = bool(col['editable'])
+                if 'colwidth' in col:
+                    d['colwidth'] = col['colwidth']
                 if widget is not None:
                     d['widget'] = widget
                     if 'choices' in col:

@@ -198,11 +198,9 @@ class ImageViewPg(ImageView.ImageViewBase):
             self.redraw(whence=0)
 
     def resize(self, width, height):
-        """Resize our window to width x height.
+        """Manual call to resize our window to width x height.
         May not work---depending on how the HTML5 canvas is embedded.
         """
-        # this shouldn't be needed
-        #self.configure_window(width, height)
         self.pgcanvas.resize(width, height)
 
 
@@ -621,6 +619,8 @@ class ScrolledViewPg(Widgets.AbstractScrollArea):
         # and embed it in our scroll area
         self.set_widget(self.viewer_w)
 
+        self.set_expanding(True, True)
+
         self.timer_scroll_lock = threading.RLock()
         if in_situ_web:
             self.timer_scroll = Widgets.Timer()
@@ -631,9 +631,11 @@ class ScrolledViewPg(Widgets.AbstractScrollArea):
         # callback when the user scrolls
         self.add_callback('scrolled', self._scrolled_cb)
         # callback when the user maps our scroll area
-        self.add_callback('map', self._map_cb)
+        # NOTE: does not appear to be needed with the latest pgwidgets
+        # self.add_callback('map', self._map_cb)
         # callback when the user resizes our scroll area
-        self.add_callback('area-resize', self._resize_cb)
+        # NOTE: does not appear to be needed with the latest pgwidgets
+        # self.add_callback('area-resize', self._resize_cb)
 
         # callback when the viewer redraws
         self.viewer.add_callback('redraw', self._calc_scrollbars)
@@ -643,16 +645,16 @@ class ScrolledViewPg(Widgets.AbstractScrollArea):
 
         self._calc_scrollbars(viewer, 0)
 
-    def _map_cb(self, mywidget, event):
-        """Resize the viewer widget when the ScrolledView is mapped."""
-        wd, ht = event['width'], event['height']
-        if self.viewer_w is not None:
-            self.viewer_w.resize(wd, ht)
+    # def _map_cb(self, mywidget, event):
+    #     """Resize the viewer widget when the ScrolledView is mapped."""
+    #     wd, ht = event['width'], event['height']
+    #     if self.viewer_w is not None:
+    #         self.viewer_w.resize(wd, ht)
 
-    def _resize_cb(self, mywidget, wd, ht, v_thmb_wd, h_thmb_wd):
-        """Resize the viewer widget when the ScrolledView is resized."""
-        if self.viewer_w is not None:
-            self.viewer_w.resize(wd, ht)
+    # def _resize_cb(self, mywidget, wd, ht, v_thmb_wd, h_thmb_wd):
+    #     """Resize the viewer widget when the ScrolledView is resized."""
+    #     if self.viewer_w is not None:
+    #         self.viewer_w.resize(wd, ht)
 
     def _scrolled_cb(self, mywidget, scroll_h_pct, scroll_v_pct):
         """Gets called when our scroll bars are manipulated."""

@@ -277,8 +277,6 @@ class PlotViewBase(ViewerBase):
             self.time_last_resize = time.time()
 
             fig = self.get_figure()
-            # fig.set_size_inches(float(wd_px) / fig.dpi, float(ht_px) / fig.dpi,
-            #                     forward=True)
             fig.set_size_inches(float(wd_px) / fig.dpi, float(ht_px) / fig.dpi)
             self.logger.debug("figure resized to %dx%d" % (wd_px, ht_px))
 

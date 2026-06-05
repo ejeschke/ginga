@@ -1501,9 +1501,6 @@ _ROW_NUM_KEY = '_row_num_'
 _CELL_WIDGETS = ('checkbox', 'combobox', 'progress', 'button')
 
 
-_DEBUG_WIDGET_CELLS = False
-
-
 class _CellWrapper(QtGui.QWidget):
     """Container for widget-typed TableView cells.
 
@@ -2240,12 +2237,6 @@ class TableView(TreeView):
             # Stash the typed value in UserRole so cell_edited
             # ``old_value`` reads correctly on the first change.
             item.setData(col_idx, QtCore.Qt.UserRole, value)
-            if _DEBUG_WIDGET_CELLS:
-                print(f'[widget-cell] install item={id(item):#x} '
-                      f'col_key={col_key} col_idx={col_idx} '
-                      f'container={id(container):#x} '
-                      f'widget_type={col.get("widget")} '
-                      f'initial fg={fg0} bg={bg0}')
 
     def _paint_widget_cell(self, container, fg, bg):
         """Push the resolved cell colour onto a ``_CellWrapper``
@@ -2524,11 +2515,6 @@ class TableView(TreeView):
         # widget's palette so labels (button text / checkbox box)
         # contrast against the new bg.
         container = self.widget.itemWidget(item, col)
-        if _DEBUG_WIDGET_CELLS:
-            print(f'[widget-cell] _apply_color_to_cell '
-                  f'item={id(item):#x} user_col={user_col} '
-                  f'col={col} fg={fg} bg={bg} '
-                  f'container={None if container is None else hex(id(container))}')
         if container is not None:
             self._paint_widget_cell(container, fg, bg)
 
