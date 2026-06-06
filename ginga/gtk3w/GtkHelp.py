@@ -1963,8 +1963,8 @@ def _coerce_css_color(color):
     ``ginga.colors.get_hex(alpha=...)`` produces.  Coerce that
     form into an ``rgba(r, g, b, a)`` string; pass everything
     else through unchanged."""
-    if (isinstance(color, str) and len(color) == 9
-            and color.startswith('#')):
+    if (isinstance(color, str) and len(color) == 9 and
+        color.startswith('#')):
         try:
             r = int(color[1:3], 16)
             g = int(color[3:5], 16)

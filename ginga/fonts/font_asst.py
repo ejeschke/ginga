@@ -147,7 +147,6 @@ def parse_font(font_str):
     """
     match = font_regex.match(font_str)
     if not match:
-        print(f"font spec '{font_str}' doesn't match expected format")
         raise ValueError(f"font spec '{font_str}' doesn't match expected format")
 
     family, style, weight = get_font_attrs(font_str)
@@ -243,6 +242,7 @@ for weight in ["Bold", "BoldItalic", "Italic"]:
 # house font needs to be available
 add_substitutes('house', ['ubuntu mono', 'monospace', 'courier new', 'courier'])
 add_substitutes('fixed', ['ubuntu mono', 'monospace', 'courier new', 'courier'])
+add_substitutes('monospace', ['ubuntu mono', 'monospace', 'courier new', 'courier'])
 add_substitutes('sans', ['roboto', 'arial', 'helvetica'])
 add_substitutes('sans serif', ['roboto', 'arial', 'helvetica'])
 add_substitutes('sans-serif', ['roboto', 'arial', 'helvetica'])

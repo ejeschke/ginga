@@ -16,6 +16,7 @@ from ginga import colors
 from ginga.util.paths import icondir as ginga_icon_dir
 from ginga.misc import Callback, Bunch, Settings, LineHistory
 from ginga.util.paths import icondir, app_icon_path
+from ginga.fonts import font_asst
 from ginga.util.syncops import Shelf
 
 from gi.repository import Gtk
@@ -2583,9 +2584,12 @@ class TableView(TreeView):
             nonlocal fg, bg, bold
             if not d:
                 return
-            if fg is None: fg = d.get('fg')
-            if bg is None: bg = d.get('bg')
-            if bold is None: bold = d.get('bold')
+            if fg is None:
+                fg = d.get('fg')
+            if bg is None:
+                bg = d.get('bg')
+            if bold is None:
+                bold = d.get('bold')
 
         if row_id is not None:
             _absorb(self._cell_colors.get((row_id, col_key)))
@@ -2906,14 +2910,14 @@ class Box(ContainerBase):
     def _resolve_align(self, align):
         align = align.lower()
         if self.orientation == 'horizontal':
-            mapping = {'top':    Gtk.Align.START,
+            mapping = {'top': Gtk.Align.START,
                        'center': Gtk.Align.CENTER,
                        'bottom': Gtk.Align.END}
             expected = "'top' | 'center' | 'bottom'"
         else:
-            mapping = {'left':   Gtk.Align.START,
+            mapping = {'left': Gtk.Align.START,
                        'center': Gtk.Align.CENTER,
-                       'right':  Gtk.Align.END}
+                       'right': Gtk.Align.END}
             expected = "'left' | 'center' | 'right'"
         if align not in mapping:
             raise ValueError(
@@ -4111,6 +4115,16 @@ class Application(Callback.Callbacks):
 
     def is_web_backend(self):
         return False
+
+    def register_font(self, family, path, weight='normal', style='normal'):
+        # This is almost a no-op for Gtk3--no easy way to load a font
+        # we'll just register it in case there is a way to do that in
+        # the future
+        f_key = font_asst.add_loadable_font(path, family, style=style,
+                                            weight=weight)  # noqa
+
+    def set_default_font(self, family, size=None, weight=None, style=None):
+        font_asst.add_alias('sans', family.lower())
 
     def _mainloop(self):
         GLib.idle_add(self._boot_periodic)

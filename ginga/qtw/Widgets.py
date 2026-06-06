@@ -17,6 +17,7 @@ from ginga import colors
 from ginga.util.paths import icondir as ginga_icon_dir
 from ginga.misc import Callback, Bunch, Settings, LineHistory
 from ginga.util.paths import icondir, app_icon_path
+from ginga.fonts import font_asst
 
 __all__ = ['WidgetError', 'Widget', 'WidgetBase', 'TextEntry', 'TextEntrySet',
            'TextArea', 'Label', 'Button', 'ComboBox', 'Timer',
@@ -2474,9 +2475,12 @@ class TableView(TreeView):
             nonlocal fg, bg, bold
             if not d:
                 return
-            if fg is None: fg = d.get('fg')
-            if bg is None: bg = d.get('bg')
-            if bold is None: bold = d.get('bold')
+            if fg is None:
+                fg = d.get('fg')
+            if bg is None:
+                bg = d.get('bg')
+            if bold is None:
+                bold = d.get('bold')
 
         _absorb(self._cell_color_map.get((iid, user_col)))
         _absorb(self._row_color_map.get(iid))
@@ -3213,14 +3217,14 @@ class Box(ContainerBase):
     def _resolve_align(self, align):
         align = align.lower()
         if self.orientation == 'horizontal':
-            mapping = {'top':    QtCore.Qt.AlignTop,
+            mapping = {'top': QtCore.Qt.AlignTop,
                        'center': QtCore.Qt.AlignVCenter,
                        'bottom': QtCore.Qt.AlignBottom}
             expected = "'top' | 'center' | 'bottom'"
         else:
-            mapping = {'left':   QtCore.Qt.AlignLeft,
+            mapping = {'left': QtCore.Qt.AlignLeft,
                        'center': QtCore.Qt.AlignHCenter,
-                       'right':  QtCore.Qt.AlignRight}
+                       'right': QtCore.Qt.AlignRight}
             expected = "'left' | 'center' | 'right'"
         if align not in mapping:
             raise ValueError(
@@ -4322,6 +4326,14 @@ class Application(Callback.Callbacks):
 
     def is_web_backend(self):
         return False
+
+    def register_font(self, family, path, weight='normal', style='normal'):
+        f_key = font_asst.add_loadable_font(path, family, style=style,
+                                            weight=weight)
+        QtHelp.load_font(f_key)
+
+    def set_default_font(self, family, size=None, weight=None, style=None):
+        font_asst.add_alias('sans', family.lower())
 
     def mainloop(self):
         self._qtapp.exec()

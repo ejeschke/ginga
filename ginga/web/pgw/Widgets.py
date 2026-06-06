@@ -24,6 +24,7 @@ from ginga.misc.Callback import Callbacks
 from ginga.misc import Bunch, Settings
 from ginga.web.pgw import PgHelp
 from ginga.util.paths import icondir, app_icon_path
+from ginga.fonts import font_asst
 
 __all__ = ['WidgetError', 'Widget', 'WidgetBase', 'TextEntry', 'TextEntrySet',
            'TextArea', 'TextSource', 'Dial', 'Label', 'Button', 'ComboBox',
@@ -239,6 +240,13 @@ if in_situ_web:
             ApplicationBase.__init__(self, logger=logger, host=host, port=port,
                                      ws_port=ws_port, settings=settings)
 
+    def register_font(self, family, path, weight='normal', style='normal'):
+        # no-op for now
+        pass
+
+    def set_default_font(self, family, size=None, weight=None, style=None):
+        font_asst.add_alias('sans', family.lower())
+
     FileBrowser = PGW.FileDialog  # noqa
 
 else:
@@ -271,6 +279,13 @@ else:
             self.default_session = self.create_session(session_id=_session_id,
                                                        token=token)
             _session = self.default_session
+
+            if self.settings.get('load_bundled_fonts', False):
+                # add bundled fonts
+                for key in font_asst.get_loadable_fonts():
+                    finfo = font_asst.get_font_info(key)
+                    self.register_font(finfo.name, finfo.font_path,
+                                       style=finfo.style, weight=finfo.weight)
 
         def get_screen_size(self):
             return self.default_session.get_screen_size()
