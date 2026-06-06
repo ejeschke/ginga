@@ -5,7 +5,7 @@ import pytest
 import ginga.misc.Callback as Callback
 
 
-class TestCallbacks(object):
+class TestCallbacks:
 
     def test_init(self):
         test_callbacks = Callback.Callbacks()

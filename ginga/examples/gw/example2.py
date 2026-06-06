@@ -17,7 +17,7 @@ from ginga.util.loader import load_data, handle_drop_event
 from ginga.locale.localize import _tr
 
 
-class FitsViewer(object):
+class FitsViewer:
 
     def __init__(self, logger, render='widget'):
         self.logger = logger

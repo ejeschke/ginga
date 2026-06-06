@@ -220,7 +220,7 @@ class RenderContextBase:
         pass
 
 
-class RendererBase(object):
+class RendererBase:
     """Base class from which all Renderer classes are derived."""
 
     def __init__(self, viewer):

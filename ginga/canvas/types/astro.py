@@ -643,7 +643,7 @@ class Crosshair(CrosshairP):
                             format=format, **kwdargs)
 
 
-class AnnulusMixin(object):
+class AnnulusMixin:
 
     def contains_pt(self, pt):
         """Containment test."""

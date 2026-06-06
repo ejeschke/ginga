@@ -35,7 +35,7 @@ DND_TARGET_TYPE_TEXT = 0
 DND_TARGET_TYPE_URIS = 1
 
 
-class WidgetMask(object):
+class WidgetMask:
     def __init__(self, *args):
         self.cb_fn = None
         self.cb_args = []
@@ -1555,7 +1555,7 @@ class IndexDial(Dial):
         return idx
 
 
-class FileSelection(object):
+class FileSelection:
 
     def __init__(self, parent_w, action=Gtk.FileChooserAction.OPEN,
                  title="Select a file", all_at_once=False):

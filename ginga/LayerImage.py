@@ -11,7 +11,7 @@ from ginga import BaseImage
 from ginga.misc import Bunch
 
 
-class LayerImage(object):
+class LayerImage:
     """Mixin class for BaseImage subclasses.  Adds layers and alpha/rgb
     compositing.
     """

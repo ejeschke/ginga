@@ -68,7 +68,7 @@ class Setting(Callback.Callbacks):
         return str(self.value)
 
 
-class SettingGroup(object):
+class SettingGroup:
 
     def __init__(self, name=None, logger=None, preffile=None):
         self.name = name
@@ -278,7 +278,7 @@ class SettingGroup(object):
             self.logger.error(errmsg)
 
 
-class Preferences(object):
+class Preferences:
 
     def __init__(self, basefolder=None, logger=None):
         self.folder = basefolder

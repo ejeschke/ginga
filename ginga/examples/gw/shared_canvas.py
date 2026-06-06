@@ -12,7 +12,7 @@ from ginga.misc import log
 from ginga.util.loader import load_data, handle_drop_event
 
 
-class FitsViewer(object):
+class FitsViewer:
 
     def __init__(self, logger):
         self.logger = logger

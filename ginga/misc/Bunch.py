@@ -10,7 +10,7 @@ import threading
 import ast
 
 
-class caselessDict(object):
+class caselessDict:
     """
     Case-insensitive dictionary.  Adapted from
     http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/66315
@@ -144,7 +144,7 @@ class caselessDict(object):
         return caselessDict(self.dict)
 
 
-class Bunch(object):
+class Bunch:
     """Often we want to just collect a bunch of stuff together, naming each
     item of the bunch; a dictionary's OK for that, but a small do-nothing
     class is even handier, and prettier to use.
@@ -320,7 +320,7 @@ class Bunch(object):
         return Bunch(inDict=self.tbl)
 
 
-class threadSafeBunch(object):
+class threadSafeBunch:
     """Like a Bunch, but with thread safety built-in.  Multiple threads can
     try to read and write the bunch concurrently and it all just works.
     """
@@ -555,7 +555,7 @@ class threadSafeBunch(object):
 
 # Undoubtedly there are more dictionary interface methods ...
 
-class threadSafeList(object):
+class threadSafeList:
     """Like a list, but thread-safe.
     """
 

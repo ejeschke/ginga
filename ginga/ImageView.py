@@ -3671,7 +3671,7 @@ class ImageViewBase(ViewerBase):
     get_datarect = get_data_rect
 
 
-class SuppressRedraw(object):
+class SuppressRedraw:
     def __init__(self, viewer):
         self.viewer = viewer
 

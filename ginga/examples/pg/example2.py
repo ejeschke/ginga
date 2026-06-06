@@ -18,7 +18,7 @@ from ginga.web.pgw import Widgets, Viewers
 from ginga.util.loader import load_data, handle_drop_event
 
 
-class FitsViewer(object):
+class FitsViewer:
 
     def __init__(self, logger, window):
         self.logger = logger

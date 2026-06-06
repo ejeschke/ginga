@@ -15,7 +15,7 @@ class TimerError(Exception):
     pass
 
 
-class TimerFactory(object):
+class TimerFactory:
 
     def __init__(self, ev_quit=None, logger=None):
         # ev_quit retained for past and possible future use

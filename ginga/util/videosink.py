@@ -4,7 +4,7 @@
 import subprocess  # nosec
 
 
-class VideoSink(object):
+class VideoSink:
 
     def __init__(self, size, filename="output", rate=2, byteorder="Y8"):
         self.size = size

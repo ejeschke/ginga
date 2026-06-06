@@ -14,7 +14,7 @@ class StageError(Exception):
     pass
 
 
-class Stage(object):
+class Stage:
     """Class to handle a pipeline stage."""
 
     _stagename = 'generic'

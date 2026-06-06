@@ -202,7 +202,7 @@ class HBox(QWidget):
         self.layout().setSpacing(val)
 
 
-class FileSelection(object):
+class FileSelection:
     """Handle Load Image file dialog from File menu."""
     # TODO: deprecate the functionality when all_at_once == False
     # and make the default to be True
@@ -265,7 +265,7 @@ class FileSelection(object):
             self.cb(all_paths)
 
 
-class DirectorySelection(object):
+class DirectorySelection:
     """Handle directory selection dialog."""
     def __init__(self, parent_w):
         self.parent = parent_w

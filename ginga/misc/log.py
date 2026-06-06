@@ -15,7 +15,7 @@ log_maxsize = 20 * 1024 * 1024
 log_backups = 4
 
 
-class NullLogger(object):
+class NullLogger:
     """
     The NullLogger can be used in the place of a "real" logging module logger
     if the code just uses the standard levels/methods for logging.

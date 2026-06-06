@@ -15,7 +15,7 @@ from ginga.util.evloop import get_ioloop
 default_timer_interval_msec = 10
 
 
-class TimerFactory(object):
+class TimerFactory:
     """
     As long as Jupyter notebooks use Tornado we can count on using the
     tornado io loop to help us implement a timer.  But if that ever changes

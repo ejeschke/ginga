@@ -8,7 +8,7 @@ from numpy.testing import assert_allclose
 import ginga.colors
 
 
-class TestColors(object):
+class TestColors:
     def setup_class(self):
         self.logger = logging.getLogger("TestColors")
         self.color_list_length = len(ginga.colors.color_dict)

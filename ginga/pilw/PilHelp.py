@@ -65,7 +65,7 @@ def get_color(color, alpha=1.0):
     return (int(r * 255), int(g * 255), int(b * 255), int(alpha * 255))
 
 
-class PilContext(object):
+class PilContext:
 
     def __init__(self, surface):
         self.set_canvas(surface)

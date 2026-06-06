@@ -26,7 +26,7 @@ from ginga.web.pgw.ImageViewPg import CanvasView, ScrolledViewPg
 from ginga.util.loader import load_data
 
 
-class FitsViewer(object):
+class FitsViewer:
 
     def __init__(self, logger, session):
         self.logger = logger

@@ -32,7 +32,7 @@ class AutoCutsError(Exception):
     pass
 
 
-class AutoCutsBase(object):
+class AutoCutsBase:
     """Base class for auto cuts algorithms."""
 
     @classmethod

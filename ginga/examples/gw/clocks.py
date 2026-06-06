@@ -29,7 +29,7 @@ from ginga.util.paths import ginga_home
 width, height = 300, 230
 
 
-class Clock(object):
+class Clock:
 
     def __init__(self, app, logger, timezone_info, color='lightgreen',
                  font='Liberation Sans', show_seconds=False):
@@ -124,7 +124,7 @@ class Clock(object):
         self.viewer.redraw(whence=3)
 
 
-class ClockApp(object):
+class ClockApp:
 
     def __init__(self, logger, settings, options):
         self.logger = logger

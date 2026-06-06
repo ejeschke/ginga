@@ -397,7 +397,7 @@ class ImageViewQt(ImageView.ImageViewBase):
         self.imgwin.setFocus()
 
 
-class RenderMixin(object):
+class RenderMixin:
 
     def showEvent(self, event):
         self.viewer.map_event(self, event)

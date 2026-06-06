@@ -17,7 +17,7 @@ class Empty(Exception):
     pass
 
 
-class Datasrc(object):
+class Datasrc:
     """Class to handle internal data cache."""
     def __init__(self, length=0):
         self.length = length

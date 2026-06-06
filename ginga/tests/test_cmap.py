@@ -7,7 +7,7 @@ import ginga.cmap
 from ginga.cmap import ColorMap
 
 
-class TestCmap(object):
+class TestCmap:
 
     def setup_class(self):
         pass

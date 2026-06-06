@@ -7,7 +7,7 @@ from ginga import ColorDist as cd
 
 
 # Some of the code is based on https://github.com/ejeschke/ginga/pull/346
-class TestColorDist(object):
+class TestColorDist:
     def setup_class(self):
         self.hashsize = 256
         self.colorlen = 256

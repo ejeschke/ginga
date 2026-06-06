@@ -12,7 +12,7 @@ class CallbackError(Exception):
     pass
 
 
-class Callbacks(object):
+class Callbacks:
 
     def __init__(self):
         self.cb = {}
@@ -179,7 +179,7 @@ class Callbacks(object):
     make_ui_callback = make_callback
 
 
-class SuppressCallback(object):
+class SuppressCallback:
     def __init__(self, cb_obj, cb_name, defer_type=None):
         self.cb_obj = cb_obj
         self.cb_name = cb_name

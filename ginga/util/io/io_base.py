@@ -10,7 +10,7 @@ from ginga.misc import log
 __all__ = ['BaseIOHandler']
 
 
-class BaseIOHandler(object):
+class BaseIOHandler:
 
     # a short string that identifies this kind of opener
     # subclass should override this

@@ -12,7 +12,7 @@ from ginga.util.paths import icondir
 from ginga import events
 
 
-class ImageViewBindings(object):
+class ImageViewBindings:
     """Configurable event handling (bindings) for UI events.
 
     This module handles the mapping of user interface events (keyboard,

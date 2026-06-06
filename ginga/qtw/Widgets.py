@@ -4040,7 +4040,7 @@ class Menubar(ContainerBase):
         return self.menus[name]
 
 
-class TopLevelMixin(object):
+class TopLevelMixin:
 
     def __init__(self, title=None):
 

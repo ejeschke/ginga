@@ -23,7 +23,7 @@ class TransformError(Exception):
     pass
 
 
-class BaseTransform(object):
+class BaseTransform:
 
     def __init__(self):
         super(BaseTransform, self).__init__()

@@ -13,7 +13,7 @@ class CanvasError(Exception):
     pass
 
 
-class CanvasMixin(object):
+class CanvasMixin:
     """A CanvasMixin is combined with the CompoundMixin to make a
     tag-addressible canvas-like interface.  This mixin should precede the
     CompoundMixin in the inheritance (and so, method resolution) order.

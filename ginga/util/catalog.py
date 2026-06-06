@@ -40,7 +40,7 @@ class SourceError(Exception):
     pass
 
 
-class Star(object):
+class Star:
     def __init__(self, **kwdargs):
         starInfo = {}
         starInfo.update(kwdargs)
@@ -60,7 +60,7 @@ class Star(object):
         return key in self.starInfo
 
 
-class AstroqueryCatalogServer(object):
+class AstroqueryCatalogServer:
     """For queries using the ``astroquery.catalog`` function."""
 
     kind = 'astroquery.catalog'
@@ -405,7 +405,7 @@ class AstroqueryVizierCatalogServer(AstroqueryCatalogServer):
         return starlist, info
 
 
-class AstroqueryImageServer(object):
+class AstroqueryImageServer:
     """For queries using the ``astroquery.vo_conesearch`` function."""
 
     kind = 'astroquery.image'
@@ -507,7 +507,7 @@ class AstroqueryImageServer(object):
         return fitspath
 
 
-class AstroqueryNameServer(object):
+class AstroqueryNameServer:
     """For object name lookups using `astroquery`"""
 
     kind = 'astroquery.names'
@@ -554,7 +554,7 @@ class AstroqueryNameServer(object):
         return ra, dec
 
 
-class URLServer(object):
+class URLServer:
 
     kind = 'url'
 
@@ -793,7 +793,7 @@ class CatalogServer(URLServer):
         return (results, info)
 
 
-class ServerBank(object):
+class ServerBank:
 
     def __init__(self, logger):
         self.logger = logger

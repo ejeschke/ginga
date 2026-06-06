@@ -232,7 +232,7 @@ class EnhancedCanvasView(BasicCanvasView):
         self.readout.set_text(text)
 
 
-class ViewerFactory(object):
+class ViewerFactory:
     """
     This is a factory class that churns out web viewers for a web
     application.
@@ -381,7 +381,7 @@ class FileHandler(tornado.web.RequestHandler):
             v_info.viewer.load_fits(path)
 
 
-class WebServer(object):
+class WebServer:
 
     def __init__(self, app, factory,
                  host='localhost', port=9909, ev_quit=None,

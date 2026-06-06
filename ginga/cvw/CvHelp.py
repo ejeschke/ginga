@@ -32,7 +32,7 @@ def load_font(font_name, font_file):
     return font_name
 
 
-class CvContext(object):
+class CvContext:
 
     def __init__(self, canvas):
         self.canvas = canvas

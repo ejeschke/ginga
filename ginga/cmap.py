@@ -13237,7 +13237,7 @@ class ColorMapError(Exception):
     pass
 
 
-class ColorMap(object):
+class ColorMap:
     """Class to handle color maps."""
 
     def __init__(self, name, clst):

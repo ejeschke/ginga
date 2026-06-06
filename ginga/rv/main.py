@@ -842,7 +842,7 @@ class ReferenceViewer:
                               # this only takes effect if we are using
                               # the pgwidgets backend
                               http_server=True,
-                              # token='none',
+                              token='none',
                               load_bundled_fonts=True,
                               min_threads=2,
                               num_threads=max(os.cpu_count(), 10),

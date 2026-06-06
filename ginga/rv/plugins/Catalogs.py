@@ -1072,7 +1072,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         return 'catalogs'
 
 
-class CatalogListing(object):
+class CatalogListing:
 
     def __init__(self, logger, container):
         super(CatalogListing, self).__init__()

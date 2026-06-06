@@ -117,7 +117,7 @@ class stepTask(Task.Task):
         return res
 
 
-class TestTask01(object):
+class TestTask01:
 
     def setup_class(self):
         """

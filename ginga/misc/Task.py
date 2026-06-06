@@ -700,7 +700,7 @@ class PriorityQueue(Queue.PriorityQueue):
 
 # ------------ WORKER THREADS ------------
 
-class WorkerThread(object):
+class WorkerThread:
     """Container for a thread in which to call the execute() method of a task.
     A WorkerThread object waits on the task queue, executes a task when it
     appears, and repeats.  A call to start() is necessary to start servicing
@@ -847,7 +847,7 @@ class WorkerThread(object):
 
 # ------------ THREAD POOL ------------
 
-class ThreadPool(object):
+class ThreadPool:
     """A simple thread pool for executing tasks asynchronously.
 
     self.status states:

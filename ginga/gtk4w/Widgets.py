@@ -3764,7 +3764,7 @@ class Menubar(ContainerBase):
         return self.menus[name]
 
 
-class TopLevelMixin(object):
+class TopLevelMixin:
 
     def __init__(self, title=None):
         self._fullscreen = False
@@ -4425,7 +4425,7 @@ class FileDialog(Dialog):
     #         self.make_callback('activated', paths)
 
 
-class SaveDialog(object):
+class SaveDialog:
     # TODO: deprecate and use only FileDialog
     def __init__(self, title='Save File', selectedfilter=None):
         action = Gtk.FileChooserAction.SAVE
@@ -4470,7 +4470,7 @@ class SaveDialog(object):
             return None
 
 
-class DragPackage(object):
+class DragPackage:
     def __init__(self, src_widget, selection):
         self.src_widget = src_widget
         self._selection = selection
@@ -4485,7 +4485,7 @@ class DragPackage(object):
         pass
 
 
-class WidgetMoveEvent(object):
+class WidgetMoveEvent:
     def __init__(self, src_widget, child):
         self.src_widget = src_widget
         self.child = child

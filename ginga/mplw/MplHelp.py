@@ -52,7 +52,7 @@ def get_cached_font(font_name, font_size):
     return font_name
 
 
-class MplContext(object):
+class MplContext:
 
     def __init__(self, axes):
         self.axes = axes

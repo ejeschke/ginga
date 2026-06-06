@@ -30,7 +30,7 @@ _logger = logging.getLogger(__name__)
 
 
 @functools.total_ordering
-class Timer (object):
+class Timer :
     def __init__(self, heap, jitter, action, *args, **kwargs):
         self.jitter = jitter
         self.action = action
@@ -98,7 +98,7 @@ class Timer (object):
         return had_run
 
 
-class TimerHeap(object):
+class TimerHeap:
     def __init__(self, desc='A Timer Heap', logger=None):
         self.desc = desc
         if logger is None:
