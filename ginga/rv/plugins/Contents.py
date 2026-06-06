@@ -181,11 +181,12 @@ class Contents(GingaPlugin.GlobalPlugin):
         if len(res_dict) == 0:
             return res
         for chname in res_dict.keys():
+            channel = self.fv.get_channel(chname)
             img_dict = res_dict[chname]
             if len(img_dict) == 0:
                 continue
             for imname in img_dict.keys():
-                bnch = img_dict[imname]
+                bnch = channel.get_image_info(imname)
                 res.append((chname, bnch))
         return res
 
@@ -196,11 +197,10 @@ class Contents(GingaPlugin.GlobalPlugin):
             # empty channel
             return
         imname = names[0]
-        bnch = d[chname][imname]
-        if 'node' in bnch.keys():
-            # double-clicked on header
-            return
-        path = bnch.path
+
+        channel = self.fv.get_channel(chname)
+        bnch = channel.get_image_info(imname)
+        path = bnch['path']
         self.logger.debug("chname=%s name=%s path=%s" % (
             chname, imname, path))
 
@@ -233,11 +233,7 @@ class Contents(GingaPlugin.GlobalPlugin):
                             image_future=bnch.image_future)
 
     def get_info(self, chname, name, image, info):
-        path = info.get('path', None)
-        future = info.get('image_future', None)
-
-        bnch = Bunch.Bunch(CHNAME=chname, imname=name, path=path,
-                           image_future=future)
+        dct = dict(CHNAME=chname)
 
         # Get header keywords of interest
         if image is not None:
@@ -246,19 +242,19 @@ class Contents(GingaPlugin.GlobalPlugin):
             header = {}
 
         for hdr, key in self.columns:
-            bnch[key] = str(header.get(key, 'N/A'))
+            dct[key] = str(header.get(key, 'N/A'))
 
         # name should always be available
-        bnch.NAME = name
+        dct['NAME'] = name
 
         # Modified timestamp will be set if image data is modified
         timestamp = info.time_modified
         if timestamp is not None:
             # Z: Zulu time, GMT, UTC
             timestamp = timestamp.strftime('%Y-%m-%d %H:%M:%SZ')
-        bnch.MODIFIED = timestamp
+        dct['MODIFIED'] = timestamp
 
-        return bnch
+        return dct
 
     def recreate_toc(self):
         self.logger.debug("Recreating table of contents...")
@@ -301,7 +297,7 @@ class Contents(GingaPlugin.GlobalPlugin):
             if nothumb:
                 return
 
-        bnch = self.get_info(chname, name, image, image_info)
+        dct = self.get_info(chname, name, image, image_info)
 
         if chname not in self.name_dict:
             # channel does not exist yet in contents
@@ -312,7 +308,7 @@ class Contents(GingaPlugin.GlobalPlugin):
         else:
             file_dict = self.name_dict[chname]
 
-        info_dct = {key: bnch[key] for hdr, key in self.columns}
+        info_dct = {key: dct[key] for hdr, key in self.columns}
         if name not in file_dict:
             # new image
             file_dict[name] = info_dct
@@ -537,7 +533,7 @@ class Contents(GingaPlugin.GlobalPlugin):
             self.fv.show_error("Please select some images first")
             return
 
-        l_img = ["%s/%s" % (tup[0], tup[1].imname) for tup in images]
+        l_img = ["%s/%s" % (tup[0], tup[1].name) for tup in images]
 
         verb = action.capitalize()
         l_img.insert(0, "%s images\n" % (verb))
@@ -591,11 +587,11 @@ class Contents(GingaPlugin.GlobalPlugin):
         for chname, info in images:
             src_channel = self.fv.get_channel(chname)
             if action == 'copy':
-                src_channel.copy_image_to(info.imname, dst_channel)
+                src_channel.copy_image_to(info.name, dst_channel)
             elif action == 'move':
-                src_channel.move_image_to(info.imname, dst_channel)
+                src_channel.move_image_to(info.name, dst_channel)
             elif action == 'remove':
-                src_channel.remove_image(info.imname)
+                src_channel.remove_image(info.name)
 
     def start(self):
         self.recreate_toc()
