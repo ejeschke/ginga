@@ -78,7 +78,11 @@ class CallbackMixin(Callbacks):
         if Callbacks.has_callback(self, name):
             Callbacks.add_callback(self, name, cb_fn, *args, **kwargs)
         else:
-            PGW.Widget.add_callback(self, name, cb_fn, *args, **kwargs)
+            # ``Widget`` is the pgwidgets base class imported at module
+            # top (sync or pyodide variant).  ``PGW`` is the *namespace*
+            # of concrete widget classes and has no ``Widget`` attribute
+            # in the in-situ/pyodide build, so use the imported class.
+            Widget.add_callback(self, name, cb_fn, *args, **kwargs)
 
 
 class WidgetMixin(CallbackMixin):
@@ -236,7 +240,7 @@ if in_situ_web:
         """Application class when we are running *in-situ* in the browser."""
 
         def __init__(self, logger=None, host='localhost', port=9909,
-                     ws_port=None, settings=None, token=None):
+                     ws_port=None, ws_sock=None, settings=None, token=None):
             ApplicationBase.__init__(self, logger=logger, host=host, port=port,
                                      ws_port=ws_port, settings=settings)
 
@@ -1182,6 +1186,11 @@ class TabWidget(ContainerWidgetMixin, PGW.TabWidget):
         self.on('page-switch', self._cb_redirect)
         self._enable_callback('page-switch')
 
+    def add_widget(self, child, title=''):
+        # pgwidgets' add_widget takes (child, options); pack the tab
+        # title into the options object it expects
+        return super().add_widget(child, dict(title=title))
+
     def _cb_redirect(self, child, index):
         self._make_callback('page-switch', child)
 
@@ -1194,6 +1203,11 @@ class StackWidget(ContainerWidgetMixin, PGW.StackWidget):
         # remapping 'page_switch'
         self.on('page-switch', self._cb_redirect)
         self._enable_callback('page-switch')
+
+    def add_widget(self, child, title=''):
+        # pgwidgets' add_widget takes (child, options); pack the tab
+        # title into the options object it expects
+        return super().add_widget(child, dict(title=title))
 
     def _cb_redirect(self, child, index):
         self._make_callback('page-switch', child)
@@ -1208,8 +1222,10 @@ class MDIWidget(ContainerWidgetMixin, PGW.MDIWidget):
         self.icon_data_uri = PgHelp.get_icon(app_icon_path, size=(16, 16))
 
     def add_widget(self, child, title=''):
-        return super().add_widget(child, title=title,
-                                  icon_url=self.icon_data_uri)
+        # pgwidgets' add_widget takes (child, options); pack the title
+        # and window icon into the options object it expects
+        return super().add_widget(child, dict(title=title,
+                                              icon_url=self.icon_data_uri))
 
     def tile_panes(self):
         super().tile_windows()
