@@ -59,8 +59,6 @@ mechanisms for suppressing certain images from showing up in ``Contents``:
 
 """
 from ginga import GingaPlugin
-from ginga.misc import Bunch
-
 from ginga.gw import Widgets
 
 __all__ = ['Contents']

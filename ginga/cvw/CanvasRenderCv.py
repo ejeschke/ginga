@@ -44,7 +44,7 @@ class RenderContext(render.RenderContextBase):
         font = super().get_font(fontname, **kwargs)
 
         font.render.scale = int(round(font.fontsize * self._font_scale_factor))
-        font.render.font = CvHelp.get_cached_font(font.fontname, font.fontsize)
+        font.render.font = CvHelp.get_font(font.fontname, font.fontsize)
         return font
 
     def text_extents(self, text, font=None):

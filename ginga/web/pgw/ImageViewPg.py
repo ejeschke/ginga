@@ -581,8 +581,11 @@ class ScrolledViewPg(Widgets.AbstractScrollArea):
     """
 
     def __init__(self, *args):
+        # ScrolledView always passes (session, viewer); the in-situ path
+        # has no session (it is None), so take the viewer as the last arg
+        # rather than args[0] (which would be the None session).
         if in_situ_web:
-            session, viewer = None, args[0]
+            session, viewer = None, args[-1]
             super().__init__()
         else:
             session, viewer = args

@@ -22,19 +22,21 @@ def get_image_src_from_buffer(img_buf, imgtype='png'):
     return f'data:image/{imgtype};base64,' + img_string
 
 
-def get_icon(iconpath, size=None, format='png'):
+def get_icon(iconpath, size=None, format='svg'):
 
     if size is not None:
         wd, ht = size
     else:
         wd, ht = 24, 24
 
-    if iconpath.lower().endswith('.svg'):
-        # Scalable Vector Graphics should be scalable on the browser side
-        if format.startswith('svg'):
-            svg_buf = icon_helper.load_svg_to_svgbuf(iconpath, wd_px=wd, ht_px=ht)
-            icon_uri = get_image_src_from_buffer(svg_buf.getvalue(), imgtype='svg+xml')
-            return icon_uri
+    if format.startswith('svg'):
+        if iconpath.lower().endswith('.svg'):
+            # TEMP?
+            # Scalable Vector Graphics should be scalable on the browser side
+            with open(iconpath, 'rb') as icon_f:
+                svg_buf = icon_f.read()
+                icon_uri = get_image_src_from_buffer(svg_buf, imgtype='svg+xml')
+                return icon_uri
 
         if format == 'png':
             img_buf = icon_helper.load_svg_to_pngbuf(iconpath, wd_px=wd, ht_px=ht)

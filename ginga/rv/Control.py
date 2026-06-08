@@ -1388,7 +1388,11 @@ class GingaShell(GenericShell):
         return pfx + ''.join(newname)
 
     def add_dialogs(self):
-        if hasattr(Widgets, 'FileDialog'):
+        if self.is_web_backend():
+            self.filesel = Widgets.BrowserFileDialog(title="Load File")
+            # TODO: callback
+
+        elif hasattr(Widgets, 'FileDialog'):
             self.filesel = Widgets.FileDialog(title="Load File",
                                               parent=self.w.root)
             self.filesel.add_callback('activated', self.load_file_cb)

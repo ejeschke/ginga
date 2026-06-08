@@ -212,6 +212,13 @@ class ApplicationBase(Callbacks):
     def make_timer(self):
         return Timer()
 
+    def process_events(self, timeout=0.0):
+        # In the browser (in-situ) there is nothing to pump: the JS event
+        # loop dispatches widget events directly.  Provided so the GUI
+        # event pump (GwMain.update_pending) can call it unconditionally.
+        # The websocket Application overrides this with a real impl.
+        pass
+
     def close(self):
         """Called when someone is asking the application to close.
         Can register for this callback if you want an application-wide
@@ -1308,12 +1315,17 @@ class Toolbar(ContainerWidgetMixin, PGW.ToolBar):
         x, y = child.get_position()
         menu.popup(x + 20, y + 20)
 
-    def add_action(self, text, toggle=False, iconpath=None, iconsize=None):
+    def add_action(self, text, toggle=False, iconpath=None, iconsize=None,
+                   menu=None):
         icon_uri = None
         if iconpath is not None:
             icon_uri = PgHelp.get_icon(iconpath, size=iconsize)
 
-        return super().add_action(text=text, icon_url=icon_uri, toggle=toggle)
+        # pgwidgets' add_action takes a single ``options`` object
+        options = dict(text=text, icon_url=icon_uri, toggle=toggle)
+        if menu is not None:
+            options['menu'] = menu
+        return super().add_action(options)
 
 
 class MenuAction(WidgetMixin, PGW.MenuAction):

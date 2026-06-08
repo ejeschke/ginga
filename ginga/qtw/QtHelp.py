@@ -588,7 +588,7 @@ def load_font(font_tup):
 
     # get any known information about this font
     # (may raise a KeyError if it's not known)
-    font_info = font_asst.get_font_info(font_tup, subst_ok=False)
+    font_info = font_asst.get_font_info(font_tup)
 
     # NOTE: you need to have created a QApplication() first (see
     # qtw.Widgets.Application) for this to work correctly, or you will get
