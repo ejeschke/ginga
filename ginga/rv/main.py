@@ -14,6 +14,7 @@ import logging
 import logging.handlers
 import warnings
 import threading
+import asyncio
 
 # 3rd party
 import yaml
@@ -362,6 +363,10 @@ class ReferenceViewer:
         add_argument("--numthreads", dest="numthreads", type=int,
                      default=None, metavar="NUM",
                      help="Maximum NUM threads in thread pool")
+        add_argument("--task-pool", dest="task_pool", default=None,
+                     choices=['thread', 'async'], metavar="KIND",
+                     help="Task pool implementation: 'thread' (default) "
+                     "or 'async' (single event loop, e.g. for Pyodide)")
         add_argument("--opengl", dest="opengl", default=False,
                      action="store_true",
                      help="Use OpenGL acceleration")
@@ -494,13 +499,24 @@ class ReferenceViewer:
             self.logger.warning(
                 "failed to set FITS package preference '{}': {}".format(fitspkg, e))
 
-        # Create and start thread pool
-        min_threads = self.settings.get('min_threads', 2)
-        num_threads = self.settings.get('num_threads', max(os.cpu_count(), 10))
-        analyze_interval = self.settings.get('threadpool_analyze_interval_sec', None)
-        thread_pool = Task.ThreadPool(numthreads=num_threads, logger=self.logger,
-                                      minthreads=min_threads, ev_quit=self.ev_quit,
-                                      analyze_interval=analyze_interval)
+        # Create and start the task pool.  The default is a thread pool;
+        # set ``task_pool='async'`` to run all tasks on a single event
+        # loop instead (e.g. for single-threaded/Pyodide environments).
+        task_pool_kind = self.settings.get('task_pool', 'thread')
+        if task_pool_kind == 'async':
+            thread_pool = Task.AsyncTaskPool(logger=self.logger,
+                                             ev_quit=self.ev_quit)
+        else:
+            min_threads = self.settings.get('min_threads', 2)
+            num_threads = self.settings.get('num_threads',
+                                            max(os.cpu_count(), 10))
+            analyze_interval = self.settings.get(
+                'threadpool_analyze_interval_sec', None)
+            thread_pool = Task.ThreadPool(numthreads=num_threads,
+                                          logger=self.logger,
+                                          minthreads=min_threads,
+                                          ev_quit=self.ev_quit,
+                                          analyze_interval=analyze_interval)
         thread_pool.startall()
 
         # Create the Ginga main object
@@ -762,6 +778,20 @@ class ReferenceViewer:
         Activate and run the GUI event loop.
         """
         disable_warnings()
+
+        # If we are *hosted* inside an already-running event loop (e.g. the
+        # browser's under Pyodide), ``mainloop()`` installs a cooperative
+        # pump and returns immediately; we must NOT tear the application
+        # down or call sys.exit() -- control returns to the host loop,
+        # which keeps the pump alive.  In every other case (native threaded
+        # *or* native async) ``mainloop()`` blocks until quit and we shut
+        # down normally afterward.
+        try:
+            asyncio.get_running_loop()
+            hosted = True
+        except RuntimeError:
+            hosted = False
+
         try:
             try:
                 # if there is a network component, start it
@@ -783,10 +813,12 @@ class ReferenceViewer:
                 self.logger.error("Received keyboard interrupt!")
 
         finally:
-            self.logger.info("Shutting down...")
-            self.ev_quit.set()
+            if not hosted:
+                self.logger.info("Shutting down...")
+                self.ev_quit.set()
 
-        sys.exit(0)
+        if not hosted:
+            sys.exit(0)
 
     def main(self, options, args):
         """
@@ -884,6 +916,10 @@ class ReferenceViewer:
             settings.set(num_threads=options.numthreads)
         if hasattr(options, 'minthreads') and options.minthreads is not None:
             settings.set(min_threads=options.minthreads)
+
+        # task pool implementation ('thread' or 'async')
+        if hasattr(options, 'task_pool') and options.task_pool is not None:
+            settings.set(task_pool=options.task_pool)
 
         # OpenGL
         if hasattr(options, 'opengl') and options.opengl:

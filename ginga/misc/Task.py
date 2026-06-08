@@ -6,6 +6,8 @@
 #
 import sys
 import time
+import inspect
+import asyncio
 import threading
 
 import queue as Queue
@@ -18,6 +20,7 @@ _swival = 0.000001
 sys.setswitchinterval(_swival)
 
 from . import Callback  # noqa
+from .aio_compat import AioCompletion, get_event_loop as aio_get_event_loop  # noqa
 
 
 class TaskError(Exception):
@@ -48,6 +51,10 @@ class Task(Callback.Callbacks):
         initialize() and start() methods.
         """
         self.ev_done = threading.Event()
+        # Allows the task to be awaited on a single event loop, in
+        # addition to being waited on via the ev_done Event above.
+        # The asyncio.Future is created lazily, only if awaited.
+        self._aio = AioCompletion()
         self.tag = None
         self.logger = None
         self.threadPool = None
@@ -61,6 +68,11 @@ class Task(Callback.Callbacks):
         super(Task, self).__init__()
 
         self.enable_callback('resolved')
+
+    def __await__(self):
+        """Await task completion on a single event loop.  Resolves to the
+        task result (the same value passed to :meth:`done`)."""
+        return self._aio.__await__()
 
     def initialize(self, taskParent, override=None):
         """This method initializes a task for (re)use.  taskParent is the
@@ -230,6 +242,9 @@ class Task(Callback.Callbacks):
         # Release thread waiters
         self.ev_done.set()
 
+        # wake any async (await) waiters
+        self._aio.resolve(self.result)
+
         # Perform callbacks for event-style waiters
         self.make_callback('resolved', self.result)
 
@@ -335,6 +350,38 @@ class FuncTask(Task):
             if self.logger:
                 self.logger.debug("Function returned %s" % (
                     str(res)))
+
+        except Exception as e:
+            if self.logger:
+                self.logger.error("Task '%s' terminated with exception: %s" %
+                                  (str(self), str(e)), exc_info=True)
+            self.done(e)
+
+
+class AsyncFuncTask(FuncTask):
+    """Like :class:`FuncTask`, but cooperative on a single event loop.
+
+    ``func`` may be either a plain callable or a coroutine function.  When
+    run by an :class:`AsyncTaskPool`, the pool awaits :meth:`execute_async`,
+    which awaits the result if ``func`` returns an awaitable.  This lets
+    ``nongui_do(some_coroutine_fn, ...)`` work without blocking the loop.
+
+    It still defines a synchronous :meth:`execute` (inherited) so the task
+    remains usable with the threaded pool; in that case a coroutine result
+    would not be awaited, so use a plain ``func`` when running threaded.
+    """
+
+    async def execute_async(self):
+        if self.logger:
+            self.logger.debug("Running (async) %s" % (self.func.__name__,))
+        try:
+            res = self.func(*self.args, **self.kwdargs)
+            if inspect.isawaitable(res):
+                res = await res
+            self.done(res)
+
+            if self.logger:
+                self.logger.debug("Function returned %s" % (str(res),))
 
         except Exception as e:
             if self.logger:
@@ -1082,6 +1129,97 @@ class ThreadPool:
 
     # TO BE DEPRECATED
     addThreads = add_threads
+
+
+# Alias under the task-pool interface name.  Both ThreadPool and
+# AsyncTaskPool implement that interface: addTask(task, priority=0),
+# startall(**kw), stopall(**kw).
+ThreadedTaskPool = ThreadPool
+
+
+class AsyncTaskPool:
+    """Task pool that runs tasks on a single asyncio event loop instead of
+    a pool of worker threads.
+
+    Drop-in replacement for :class:`ThreadPool`'s
+    ``addTask``/``startall``/``stopall`` interface, intended for
+    single-threaded environments (e.g. Pyodide/the browser) where a real
+    thread pool is unavailable and all work shares one event loop.
+
+    There are no worker or monitor threads.  ``addTask`` schedules the
+    task on the loop:
+
+    - if the task defines ``execute_async`` (see :class:`AsyncFuncTask`),
+      it is awaited as a coroutine -- this is the cooperative path that
+      does not block the loop;
+    - otherwise the task's synchronous ``execute()`` is run.  It should be
+      non-blocking (CPU-bound work will still stall the single thread).
+
+    The loop is *not* started or stopped here -- it is owned and driven by
+    the host environment (the browser, or Ginga's main loop pump).
+    """
+
+    def __init__(self, logger=None, ev_quit=None, loop=None):
+        self.logger = logger
+        if ev_quit is None:
+            ev_quit = threading.Event()
+        self.ev_quit = ev_quit
+        self._loop = loop
+        self._pending = set()
+
+    def get_loop(self):
+        if self._loop is None:
+            self._loop = aio_get_event_loop()
+        return self._loop
+
+    def startall(self, wait=False, **kwargs):
+        # nothing to start: the event loop is driven by the host
+        self.get_loop()
+
+    def stopall(self, wait=False):
+        self.ev_quit.set()
+        for aio_task in list(self._pending):
+            aio_task.cancel()
+        self._pending.clear()
+
+    def addTask(self, task, priority=0):
+        loop = self.get_loop()
+        # schedule on the loop; thread-safe in case a (rare) worker thread
+        # submits while we are running single-threaded elsewhere
+        loop.call_soon_threadsafe(self._schedule, task)
+
+    def add_task(self, task, priority=0):
+        # interface alias
+        self.addTask(task, priority=priority)
+
+    def _schedule(self, task):
+        aio_task = asyncio.ensure_future(self._run_task(task))
+        self._pending.add(aio_task)
+        aio_task.add_done_callback(self._pending.discard)
+
+    async def _run_task(self, task):
+        try:
+            execute_async = getattr(task, 'execute_async', None)
+            if execute_async is not None:
+                await execute_async()
+            else:
+                res = task.execute()
+                if inspect.isawaitable(res):
+                    await res
+        except Exception as e:
+            if self.logger is not None:
+                self.logger.error("async task '%s' error: %s" %
+                                  (str(task), str(e)), exc_info=True)
+            # safety net: ensure waiters are released even if execute()
+            # raised before calling done() itself
+            try:
+                if not task.ev_done.is_set():
+                    task.done(e, noraise=True)
+            except Exception:
+                pass
+
+    def workerStatus(self):
+        return [('async', None)]
 
 
 # ------------ SUPPORT FUNCTIONS ------------

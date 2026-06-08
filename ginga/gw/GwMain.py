@@ -8,8 +8,10 @@ import sys
 import traceback
 import threading
 import time
+import asyncio
 
 from ginga.misc import Task, Future, Callback
+from ginga.misc.aio_compat import get_event_loop as aio_get_event_loop
 from ginga.toolkit import toolkit
 from ginga.misc import log
 from collections import deque
@@ -20,7 +22,7 @@ import queue as Queue
 class GwMain(Callback.Callbacks):
 
     def __init__(self, queue=None, logger=None, ev_quit=None, app=None,
-                 thread_pool=None):
+                 thread_pool=None, task_pool=None, async_mode=None):
         Callback.Callbacks.__init__(self)
 
         self.enable_callback('shutdown')
@@ -44,7 +46,24 @@ class GwMain(Callback.Callbacks):
         # Mark our thread id
         self.gui_thread_id = threading.get_ident()
 
-        self.threadPool = thread_pool
+        # ``task_pool`` is the preferred name; ``thread_pool`` is kept for
+        # backward compatibility.  The pool need only implement the
+        # addTask/startall/stopall interface (see ginga.misc.Task).
+        if task_pool is None:
+            task_pool = thread_pool
+        self.threadPool = task_pool
+
+        # In "async mode" the whole application runs on a single event
+        # loop (e.g. Pyodide/the browser): there is no separate GUI thread,
+        # so cross-thread marshaling and blocking waits must be avoided.
+        # If not specified, infer it from the pool type.
+        if async_mode is None:
+            async_mode = isinstance(task_pool, Task.AsyncTaskPool)
+        self.async_mode = async_mode
+
+        # handle for the periodic event pump used in async mode
+        self._async_pump_interval = 0.05
+
         # For asynchronous tasks on the thread pool
         self.tag = 'master'
         self.shares = ['threadPool', 'logger']
@@ -210,12 +229,20 @@ class GwMain(Callback.Callbacks):
             # so call becomes async when a non-gui thread invokes it
             self.gui_do(self.make_callback, name, *args, **kwargs)
 
+    def _make_func_task(self, method, args, kwdargs):
+        # In async mode use a cooperative task that awaits coroutine
+        # results on the single event loop; otherwise a plain FuncTask
+        # for the thread pool.
+        if self.async_mode:
+            return Task.AsyncFuncTask(method, args, kwdargs, logger=self.logger)
+        return Task.FuncTask(method, args, kwdargs, logger=self.logger)
+
     def nongui_do(self, method, *args, **kwdargs):
-        task = Task.FuncTask(method, args, kwdargs, logger=self.logger)
+        task = self._make_func_task(method, args, kwdargs)
         return self.nongui_do_task(task)
 
     def nongui_do_cb(self, tup, method, *args, **kwdargs):
-        task = Task.FuncTask(method, args, kwdargs, logger=self.logger)
+        task = self._make_func_task(method, args, kwdargs)
         _args = [] if len(tup) == 1 else tup[1:]
         task.add_callback('resolved', tup[0], *_args)
         return self.nongui_do_task(task)
@@ -233,16 +260,26 @@ class GwMain(Callback.Callbacks):
             raise e
 
     def is_gui_thread(self):
+        # In async mode there is only one thread; treat it as the GUI
+        # thread so gui_call() runs inline and never blocks on a future.
+        if self.async_mode:
+            return True
         my_id = threading.get_ident()
         return my_id == self.gui_thread_id
 
     def assert_gui_thread(self):
+        if self.async_mode:
+            return
         my_id = threading.get_ident()
         assert my_id == self.gui_thread_id, \
             Exception("Non-GUI thread (%d) is executing GUI (%d) code!" % (
                 my_id, self.gui_thread_id))
 
     def assert_nongui_thread(self):
+        # Single-threaded: everything runs on the one (GUI) thread, so
+        # this assertion is not meaningful in async mode.
+        if self.async_mode:
+            return
         my_id = threading.get_ident()
         assert my_id != self.gui_thread_id, \
             Exception("GUI thread (%d) is executing non-GUI code!" % (
@@ -252,6 +289,36 @@ class GwMain(Callback.Callbacks):
         # Mark our thread id
         self.gui_thread_id = threading.get_ident()
 
+        if self.async_mode:
+            # Single event loop.  Two sub-cases:
+            #
+            #  * A loop is already running (e.g. Pyodide/the browser): we
+            #    cannot block, so install a cooperative pump and return --
+            #    the host event loop keeps everything alive.
+            #
+            #  * No loop is running (e.g. a native CLI invocation with
+            #    --task-pool=async): we own the loop and must run it here
+            #    until quit, otherwise mainloop() would return immediately
+            #    and the application would exit early.
+            try:
+                asyncio.get_running_loop()
+                hosted = True
+            except RuntimeError:
+                hosted = False
+
+            if hosted:
+                self.start_async_pump()
+                return
+
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            self.start_async_pump()
+            try:
+                loop.run_until_complete(self._async_wait_quit())
+            finally:
+                loop.close()
+            return
+
         if toolkit == 'gtk4':
             self.app.add_periodic_callback(0.1,
                                            lambda: self.update_pending(timeout=timeout))
@@ -260,6 +327,36 @@ class GwMain(Callback.Callbacks):
 
         while not self.ev_quit.is_set():
             self.update_pending(timeout=timeout)
+
+    def start_async_pump(self, interval=None):
+        """Drive ``update_pending`` from a periodic callback on the running
+        event loop, for single-threaded (async) operation.  Returns
+        immediately; the host event loop continues running.
+        """
+        if interval is not None:
+            self._async_pump_interval = interval
+        loop = aio_get_event_loop()
+
+        def _pump():
+            if self.ev_quit.is_set():
+                return
+            try:
+                # non-blocking: drain whatever is queued and return
+                self.update_pending(timeout=0.0)
+            except Exception as e:
+                self.logger.error("error in event pump: %s" % (str(e),))
+            loop.call_later(self._async_pump_interval, _pump)
+
+        loop.call_soon(_pump)
+
+    async def _async_wait_quit(self):
+        """Keep the (owned) event loop alive until ``ev_quit`` is set.
+
+        Used when running async-mode on a native platform, where we run
+        the loop ourselves rather than relying on a host (browser) loop.
+        """
+        while not self.ev_quit.is_set():
+            await asyncio.sleep(self._async_pump_interval)
 
     def gui_quit(self):
         """Call this to cause the GUI thread to quit the mainloop."""
