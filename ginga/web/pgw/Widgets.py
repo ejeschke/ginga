@@ -265,7 +265,9 @@ else:
                 ws_port = port + 1
             if http_server is None:
                 http_server = self.settings.get('http_server', False)
-                self.use_http_server = http_server
+            # NOTE: set unconditionally so get_url()/mainloop() work even
+            # when ``http_server`` is passed explicitly (not via settings)
+            self.use_http_server = http_server
             if token is None:
                 token = self.settings.get('token', None)
 

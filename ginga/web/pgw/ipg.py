@@ -1,4 +1,3 @@
-#! /usr/bin/env python
 #
 # ipg.py -- Module for simple FITS viewer in an HTML5 canvas web browser.
 #
@@ -6,26 +5,37 @@
 # Please see the file LICENSE.txt for details.
 #
 """
-This example illustrates using a Ginga widget in a web browser,  All the
-rendering is done on the server side and the browser only acts as a display
-front end.  Using this you could create an analysis type environment on a
-server and view it via a browser.
+This module makes it easy to open a Ginga viewer in a web browser (or
+embedded in a Jupyter notebook cell).  All the rendering is done on the
+server side and the browser only acts as a display front end, connected
+over a WebSocket.  Using this you could create an analysis-type
+environment on a server and view it via a browser.
 
-See example usage with an ipython notebook at:
+It is built on the ``pgwidgets`` backend (``ginga.web.pgw``), which runs
+its WebSocket and HTTP servers in their own background threads.  Because
+of that, it coexists cleanly with the Jupyter kernel's own event loop --
+there is no need to surrender the kernel's IOLoop.  For browser-initiated
+viewer interactions (cursor readout, drawing, pan/zoom) the server pumps
+queued callbacks onto the running kernel asyncio loop, so they execute on
+the kernel thread, in step with the code you run in cells.
 
-    https://gist.github.com/ejeschke/6067409
+Typical notebook usage::
+
+    from ginga.web.pgw import ipg
+    server = ipg.make_server(host='localhost', port=9914)
+    server.start(no_ioloop=True)
+    v1 = server.get_viewer('v1')
+    v1.open()              # open in a new browser tab/window
+    v1.embed(height=650)   # ...or embed in the notebook cell
+    v1.load('/path/to/image.fits')
 
 You will need a reasonably modern web browser with HTML5 canvas support.
-Tested with Chromium 41.0.2272.76, Firefox 37.0.2, Safari 7.1.6
 """
 
-import sys
 import os
 import logging
 import threading
 import asyncio
-
-import tornado.web
 
 from ginga import AstroImage
 from ginga.canvas.CanvasObject import get_canvas_types
@@ -35,7 +45,7 @@ from ginga.misc.Settings import SettingGroup
 from ginga.util.paths import ginga_home
 from ginga.util import loader
 
-from ginga.web.pgw import js, PgHelp, Widgets, Viewers
+from ginga.web.pgw import Widgets, Viewers
 
 
 class BasicCanvasView(Viewers.CanvasView):
@@ -48,17 +58,13 @@ class BasicCanvasView(Viewers.CanvasView):
         """
         vbox = Widgets.VBox()
         vbox.set_border_width(0)
+        # fill the window in both directions
+        vbox.set_expanding(True, True)
 
         w = Viewers.GingaViewerWidget(viewer=self)
         vbox.add_widget(w, stretch=1)
 
-        # need to put this in an hbox with an expanding label or the
-        # browser wants to resize the canvas, distorting it
-        hbox = Widgets.HBox()
-        hbox.add_widget(vbox, stretch=0)
-        hbox.add_widget(Widgets.Label(''), stretch=1)
-
-        container.set_widget(hbox)
+        container.set_widget(vbox)
 
     def embed(self, width=600, height=650):
         """
@@ -172,6 +178,8 @@ class EnhancedCanvasView(BasicCanvasView):
         vbox = Widgets.VBox()
         vbox.set_border_width(2)
         vbox.set_spacing(1)
+        # fill the window in both directions
+        vbox.set_expanding(True, True)
 
         w = Viewers.GingaViewerWidget(viewer=self)
         vbox.add_widget(w, stretch=1)
@@ -187,13 +195,7 @@ class EnhancedCanvasView(BasicCanvasView):
         #self.set_callback('none-move', self.motion_cb)
         self.set_callback('cursor-changed', self.motion_cb)
 
-        # need to put this in an hbox with an expanding label or the
-        # browser wants to resize the canvas, distorting it
-        hbox = Widgets.HBox()
-        hbox.add_widget(vbox, stretch=0)
-        hbox.add_widget(Widgets.Label(''), stretch=1)
-
-        container.set_widget(hbox)
+        container.set_widget(vbox)
 
     def motion_cb(self, viewer, button, data_x, data_y):
 
@@ -238,6 +240,11 @@ class ViewerFactory:
     application.
 
     The most important method of interest is get_viewer().
+
+    Each viewer is built in its own pgwidgets *session* so that it has an
+    independent URL that can be opened in a browser tab or embedded in a
+    notebook cell without interfering with any other viewer.  The first
+    viewer reuses the application's default session.
     """
 
     def __init__(self, logger, app):
@@ -253,57 +260,98 @@ class ViewerFactory:
         self.dc = get_canvas_types()
         # dict of viewers
         self.viewers = {}
+        # whether the application's default session has been claimed yet
+        self._used_default = False
 
-    def make_viewer(self, window, viewer_class=None,
-                    width=512, height=512):
+    def _get_session(self):
+        # The first viewer reuses the application's default session; each
+        # additional viewer gets its own session so it has an isolated
+        # URL (a browser tab or embedded iframe shows only that viewer).
+        if not self._used_default:
+            self._used_default = True
+            return self.app.default_session
+        return self.app.create_session()
+
+    def _session_url(self, session):
+        return "http://%s:%d/?session=%s&token=%s" % (
+            self.app._host, self.app._http_port, session.id, session.token)
+
+    def make_viewer(self, v_id, viewer_class=None, width=512, height=512):
         if viewer_class is None:
             viewer_class = EnhancedCanvasView
 
-        # load binding preferences if available
-        cfgfile = os.path.join(ginga_home, "ipg_bindings.cfg")
-        bindprefs = SettingGroup(name='bindings', logger=self.logger,
-                                 preffile=cfgfile)
-        bindprefs.load(onError='silent')
+        session = self._get_session()
+        url = self._session_url(session)
 
-        bd = ImageViewBindings(self.logger, settings=bindprefs)
+        # Build this viewer's widgets (window, canvas surface, timers) in
+        # its own session.  The pgwidgets widgets pick up the active
+        # session from the module-level ``Widgets._session`` at creation
+        # time, so swap it in for the duration of the build and restore
+        # the default afterwards.
+        prev_session = Widgets._session
+        Widgets._session = session
+        try:
+            # create the top level window in this session
+            window = self.app.make_window("Viewer %s" % v_id)
 
-        fi = viewer_class(self.logger, bindings=bd)
-        fi.url = window.url
-        # set up some reasonable defaults--user can change these later
-        # if desired
-        fi.set_autocut_params('zscale')
-        fi.enable_autocuts('on')
-        fi.enable_autozoom('on')
-        fi.set_bg(0.2, 0.2, 0.2)
-        fi.ui_set_active(True)
-        fi.ipg_parent = self
+            # load binding preferences if available
+            cfgfile = os.path.join(ginga_home, "ipg_bindings.cfg")
+            bindprefs = SettingGroup(name='bindings', logger=self.logger,
+                                     preffile=cfgfile)
+            bindprefs.load(onError='silent')
 
-        # enable most key/mouse operations
-        bd = fi.get_bindings()
-        bd.enable_all(True)
+            bd = ImageViewBindings(self.logger, settings=bindprefs)
 
-        # set up a non-private canvas for drawing
-        canvas = self.dc.DrawingCanvas()
-        canvas.set_surface(fi)
-        # add canvas to view
-        private_canvas = fi.get_canvas()
-        private_canvas.add(canvas)
-        canvas.ui_set_active(True)
-        fi.set_canvas(canvas)
+            fi = viewer_class(self.logger, bindings=bd)
+            fi.url = url
+            # set up some reasonable defaults--user can change these later
+            # if desired
+            fi.set_autocut_params('zscale')
+            fi.enable_autocuts('on')
+            fi.enable_autozoom('on')
+            fi.set_bg(0.2, 0.2, 0.2)
+            fi.ui_set_active(True)
+            fi.ipg_parent = self
 
-        fi.set_desired_size(width, height)
-        # force allocation of a surface--may be resized later
-        fi.configure_surface(width, height)
+            # enable most key/mouse operations
+            bd = fi.get_bindings()
+            bd.enable_all(True)
 
-        # add little mode indicator that shows modal states in
-        # the corner
-        fi.show_mode_indicator(True)
+            # set up a non-private canvas for drawing
+            canvas = self.dc.DrawingCanvas()
+            canvas.set_surface(fi)
+            # add canvas to view
+            private_canvas = fi.get_canvas()
+            private_canvas.add(canvas)
+            canvas.ui_set_active(True)
+            fi.set_canvas(canvas)
 
-        # Have the viewer build it's UI into the container
-        fi.build_gui(window)
+            fi.set_desired_size(width, height)
+            # force allocation of a surface--may be resized later
+            fi.configure_surface(width, height)
 
-        v_info = Bunch.Bunch(url=window.url, viewer=fi,
-                             top=window)
+            # add little mode indicator that shows modal states in
+            # the corner
+            fi.show_mode_indicator(True)
+
+            # Have the viewer build its UI into the container
+            fi.build_gui(window)
+
+            window.resize(width, height)
+            window.show()
+
+            # Attaching the viewer widget above resizes the offscreen
+            # surface to the (as yet unknown) browser canvas size.  Re-
+            # establish the desired size so that ``show()`` produces a
+            # correctly-sized snapshot even before a browser has connected
+            # to report its real canvas dimensions (a connected browser
+            # will reconfigure this on resize).
+            fi.configure_surface(width, height)
+
+        finally:
+            Widgets._session = prev_session
+
+        v_info = Bunch.Bunch(url=url, viewer=fi, top=window, session=session)
         return v_info
 
     def get_viewer(self, v_id, viewer_class=None, width=512, height=512,
@@ -318,11 +366,8 @@ class ViewerFactory:
             except KeyError:
                 pass
 
-        #  create top level window
-        window = self.app.make_window("Viewer %s" % v_id, wid=v_id)
-
         # We get back a record with information about the viewer
-        v_info = self.make_viewer(window, viewer_class=viewer_class,
+        v_info = self.make_viewer(v_id, viewer_class=viewer_class,
                                   width=width, height=height)
 
         # Save it under this viewer id
@@ -336,52 +381,18 @@ class ViewerFactory:
         self.viewers = {}
 
 
-class FileHandler(tornado.web.RequestHandler):
-    """
-    This is a handler that is started to allow a REST-type web API to
-    create and manipulate viewers.
-
-    Currently it only allows the following commands:
-        .../viewer?id=v1&cmd=get           Create/access a viewer
-        .../viewer?id=v1&cmd=load&path=... Load the viewer
-    """
-
-    def initialize(self, name, factory):
-        self.name = name
-        self.factory = factory
-        self.logger = factory.logger
-        self.logger.debug("filehandler initialize")
-
-    def get(self):
-        self.logger.debug("filehandler get")
-        # Collect arguments
-        # TODO: width, height?
-        cmd = self.get_argument('cmd', 'get')
-        v_id = self.get_argument('id', 'v1')
-
-        v_info = self.factory.get_viewer(v_id)
-
-        if cmd == 'get':
-            self._do_get(v_info)
-
-        elif cmd == 'load':
-            self._do_load(v_info)
-
-    def _do_get(self, v_info):
-        # Get window
-        window = v_info.top
-
-        # render back to caller
-        output = window.render()
-        self.write(output)
-
-    def _do_load(self, v_info):
-        path = self.get_argument('path', None)
-        if path is not None:
-            v_info.viewer.load_fits(path)
-
-
 class WebServer:
+    """
+    Manages the lifetime of the pgwidgets web application that hosts the
+    viewers.
+
+    The pgwidgets ``Application`` runs its WebSocket and HTTP servers in
+    their own background threads, so :meth:`start` does not block and does
+    not take over the calling thread's event loop.  When a running asyncio
+    loop is found (e.g. inside a Jupyter kernel), browser-initiated viewer
+    callbacks are pumped onto that loop so they run on the kernel thread.
+    Otherwise they are pumped from a private daemon thread.
+    """
 
     def __init__(self, app, factory,
                  host='localhost', port=9909, ev_quit=None,
@@ -397,48 +408,102 @@ class WebServer:
         self.ev_quit = ev_quit
         self.default_viewer_class = viewer_class
 
-        self.server = None
-        self.http_server = None
+        # callback-pump state
+        self._pump_loop = None
+        self._pump_handle = None
+        self._pump_thread = None
+        self._pump_interval = 0.05
+        self._pump_stop = threading.Event()
 
-    def start(self, use_thread=True, no_ioloop=False):
+    def start(self, use_thread=True, no_ioloop=True):
+        """Start the web application servers.
 
-        js_path = os.path.dirname(js.__file__)
+        Parameters
+        ----------
+        use_thread : bool
+            Unused; retained for backward compatibility.
+        no_ioloop : bool
+            Retained for backward compatibility.  The servers always run
+            in their own background threads now, so this is effectively a
+            no-op (kept so existing notebooks calling
+            ``server.start(no_ioloop=True)`` keep working).
+        """
+        # starts the WebSocket server (background thread) and the HTTP
+        # file server (background thread)
+        self.app.start()
 
-        self.server = tornado.web.Application([
-            (r"/js/(.*\.js)", tornado.web.StaticFileHandler,
-             {"path": js_path}),
-            (r"/viewer", FileHandler,
-             dict(name='Ginga', factory=self.factory)),
-            (r"/app", PgHelp.WindowHandler,
-             dict(name='Application', url='/app', app=self.app)),
-            (r"/app/socket", PgHelp.ApplicationHandler,
-             dict(name='Ginga', app=self.app)),
-        ], factory=self.factory, logger=self.logger)
+        # keep browser-initiated viewer callbacks flowing
+        self._install_pump()
 
-        self.http_server = self.server.listen(self.port, self.host)
+        self.logger.info("Open %s in a browser to view a viewer." %
+                         (self.app.get_url(),))
 
-        if no_ioloop:
-            self.t_ioloop = None
-        else:
+    def _install_pump(self):
+        # Find a running event loop to attach the pump to (the Jupyter
+        # kernel keeps one running).  If found, callbacks run on that
+        # loop's thread; otherwise fall back to a private daemon thread.
+        loop = None
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
             try:
-                # NOTE: tornado now uses the asyncio event loop
-                self.t_ioloop = asyncio.get_running_loop()
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = None
 
-            except RuntimeError as ex:
-                self.t_ioloop = asyncio.new_event_loop()
-                asyncio.set_event_loop(self.t_ioloop)
+        self._pump_stop.clear()
+
+        if loop is not None and loop.is_running():
+            self._pump_loop = loop
+            loop.call_soon_threadsafe(self._pump_once)
+            self.logger.debug("pumping viewer events on the running "
+                              "asyncio loop")
+        else:
+            self._pump_loop = None
+            self._pump_thread = threading.Thread(target=self._pump_thread_loop,
+                                                 daemon=True)
+            self._pump_thread.start()
+            self.logger.debug("pumping viewer events on a daemon thread")
+
+    def _pump_once(self):
+        # runs on the asyncio loop thread; drain pending callbacks without
+        # blocking, then reschedule
+        if self._pump_stop.is_set():
+            return
+        try:
+            self.app.process_events(0)
+        except Exception:
+            self.logger.error("error processing viewer events",
+                              exc_info=True)
+        if self._pump_loop is not None and not self._pump_stop.is_set():
+            self._pump_handle = self._pump_loop.call_later(
+                self._pump_interval, self._pump_once)
+
+    def _pump_thread_loop(self):
+        while not self._pump_stop.is_set():
+            try:
+                self.app.process_events(self._pump_interval)
+            except Exception:
+                self.logger.error("error processing viewer events",
+                                  exc_info=True)
 
     def stop(self):
-        # how to stop tornado server?
-        if self.t_ioloop is not None:
-            self.t_ioloop.stop()
+        # stop the callback pump
+        self._pump_stop.set()
+        if self._pump_loop is not None and self._pump_handle is not None:
+            try:
+                self._pump_loop.call_soon_threadsafe(self._pump_handle.cancel)
+            except Exception:
+                pass
+        self._pump_loop = None
+
+        # close all sessions and stop the servers
+        try:
+            self.app.close()
+        except Exception:
+            self.logger.error("error closing application", exc_info=True)
 
         self.ev_quit.set()
-        # stop and dereference the tornado server
-        if self.http_server is not None:
-            self.http_server.stop()
-            self.http_server = None
-        self.server = None
 
     def get_viewer(self, v_id, viewer_class=None, width=512, height=512,
                    force_new=False):
@@ -452,94 +517,51 @@ class WebServer:
         return v_info.viewer
 
 
-def make_server(logger=None, basedir='.', numthreads=5,
-                host='localhost', port=9909, viewer_class=None):
+def make_server(host='localhost', port=9909, ev_quit=None,
+                viewer_class=None, logger=None, numthreads=5,
+                max_sessions=None, use_opencv=False):
+    """Create and return a :class:`WebServer` hosting Ginga web viewers.
 
+    Parameters
+    ----------
+    host : str
+        Interface to bind to (default ``'localhost'``).
+    port : int
+        HTTP port to serve the viewer pages on (default ``9909``).  The
+        WebSocket server uses ``port + 1``.
+    ev_quit : threading.Event or None
+        Optional shared quit event.
+    viewer_class : class or None
+        Default viewer class for :meth:`WebServer.get_viewer`
+        (defaults to :class:`EnhancedCanvasView`).
+    logger : logging-compatible logger or None
+        If None, a simple stderr logger is created so the connect URL is
+        printed.
+    numthreads : int
+        Unused; retained for backward compatibility.
+    max_sessions : int or None
+        Maximum number of concurrent browser sessions.  ``None`` (the
+        default) means unlimited, which allows several independent
+        viewers.
+    use_opencv : bool
+        Unused; retained for backward compatibility.
+
+    Returns
+    -------
+    server : WebServer
+        The (not-yet-started) web server.  Call :meth:`WebServer.start`.
+    """
     if logger is None:
-        logger = log.get_logger("ipg", null=True)
-    ev_quit = threading.Event()
+        logger = log.get_logger("ipg", level=logging.INFO, log_stderr=True)
 
-    base_url = "http://%s:%d/app" % (host, port)
-    app = Widgets.Application(logger=logger, base_url=base_url,
-                              host=host, port=port)
+    # The Ginga pgw Application starts both the WebSocket server and a
+    # built-in HTTP server (serving the pgwidgets JS/CSS) -- enable the
+    # latter so a browser can load the viewer page.
+    app = Widgets.Application(logger=logger, host=host, port=port,
+                              http_server=True, max_sessions=max_sessions)
 
     factory = ViewerFactory(logger, app)
 
-    server = WebServer(app, factory,
-                       host=host, port=port, viewer_class=viewer_class)
-
+    server = WebServer(app, factory, host=host, port=port,
+                       ev_quit=ev_quit, viewer_class=viewer_class)
     return server
-
-
-def main(options, args):
-
-    logger = log.get_logger("ipg", options=options)
-
-    server = make_server(logger=logger, basedir=options.basedir,
-                         numthreads=options.numthreads, host=options.host,
-                         port=options.port)
-    viewer = server.get_viewer('v1')
-
-    logger.info("Starting server with one viewer, connect at %s" % viewer.url)
-    try:
-        server.start(use_thread=False)
-
-    except KeyboardInterrupt:
-        logger.info("Interrupted!")
-        server.stop()
-
-    logger.info("Server terminating ...")
-
-
-if __name__ == "__main__":
-
-    # Parse command line options
-    from argparse import ArgumentParser
-
-    argprs = ArgumentParser()
-
-    argprs.add_argument("-d", "--basedir", dest="basedir", metavar="DIR",
-                        default=".",
-                        help="Directory which is at the base of file open requests")
-    argprs.add_argument("--debug", dest="debug", default=False, action="store_true",
-                        help="Enter the pdb debugger on main()")
-    argprs.add_argument("--host", dest="host", metavar="HOST",
-                        default="localhost",
-                        help="HOST used to decide which interfaces to listen on")
-    argprs.add_argument("--log", dest="logfile", metavar="FILE",
-                        help="Write logging output to FILE")
-    argprs.add_argument("--loglevel", dest="loglevel", metavar="LEVEL",
-                        type=int, default=logging.INFO,
-                        help="Set logging level to LEVEL")
-    argprs.add_argument("--numthreads", dest="numthreads", type=int,
-                        default=5, metavar="NUM",
-                        help="Start NUM threads in thread pool")
-    argprs.add_argument("--stderr", dest="logstderr", default=False,
-                        action="store_true",
-                        help="Copy logging also to stderr")
-    argprs.add_argument("-p", "--port", dest="port",
-                        type=int, default=9909, metavar="PORT",
-                        help="Default PORT to use for the web socket")
-    argprs.add_argument("--profile", dest="profile", action="store_true",
-                        default=False,
-                        help="Run the profiler on main()")
-
-    (options, args) = argprs.parse_known_args(sys.argv[1:])
-
-    # Are we debugging this?
-    if options.debug:
-        import pdb
-
-        pdb.run('main(options, args)')
-
-    # Are we profiling this?
-    elif options.profile:
-        import profile
-
-        print(("%s profile:" % sys.argv[0]))
-        profile.run('main(options, args)')
-
-    else:
-        main(options, args)
-
-# END
