@@ -385,7 +385,29 @@ class TextSource(WidgetMixin, PGW.TextSource):
 class Label(WidgetMixin, PGW.Label):
     def __init__(self, *args, style='normal', **kwargs):
         WidgetMixin.__init__(self)
-        PGW.Label.__init__(self, *get_args(args), **kwargs)
+        # A 'clickable' label is interactive, so pgwidgets emits pointer
+        # events ('click'/'dblclick'/...) on it.  Plain labels are not
+        # interactive and only have base callbacks.
+        interactive = kwargs.pop('interactive', style == 'clickable')
+        PGW.Label.__init__(self, *get_args(args), interactive=interactive,
+                           **kwargs)
+
+        # Enable these unconditionally (mirroring the qt backend); for a
+        # non-interactive label they simply never fire.
+        for name in ['activated', 'released']:
+            self._enable_callback(name)
+
+        # Bridge pgwidgets pointer events to ours, but only for an
+        # interactive label (a non-interactive one has no 'click').
+        if interactive:
+            self.on('click', self._cb_redirect_activated)
+            self.on('pointer-up', self._cb_redirect_released)
+
+    def _cb_redirect_activated(self, *args):
+        self._make_callback('activated')
+
+    def _cb_redirect_released(self, *args):
+        self._make_callback('released')
 
 
 class Button(WidgetMixin, PGW.Button):

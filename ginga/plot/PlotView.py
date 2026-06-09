@@ -195,16 +195,31 @@ class PlotViewBase(ViewerBase):
         canvas_w.add_callback('map', self.canvas_map_cb)
         canvas_w.add_callback('resize', self.canvas_resize_cb)
 
-        session = canvas_w.session
-        self.timer_resize = session.make_timer()
-        self.timer_resize.add_callback('expired',
-                                       lambda t, n: self.delayed_resize())
-        self.timer_redraw = session.make_timer()
-        self.timer_redraw.add_callback('expired',
-                                       lambda t, n: self.delayed_redraw())
-        self.timer_msg = session.make_timer()
-        self.timer_msg.add_callback('expired',
-                                    lambda t, n: self.clear_onscreen_message())
+        if hasattr(canvas_w, 'session'):
+            # <-- not running "in-situ" in the browser
+            session = canvas_w.session
+            self.timer_resize = session.make_timer()
+            self.timer_resize.add_callback('expired',
+                                           lambda t, n: self.delayed_resize())
+            self.timer_redraw = session.make_timer()
+            self.timer_redraw.add_callback('expired',
+                                           lambda t, n: self.delayed_redraw())
+            self.timer_msg = session.make_timer()
+            self.timer_msg.add_callback('expired',
+                                        lambda t, n: self.clear_onscreen_message())
+        else:
+            # <-- running "in-situ"
+            from ginga.gw.Widgets import Timer
+            self.timer_resize = Timer()
+            self.timer_resize.add_callback('expired',
+                                           lambda t: self.delayed_resize())
+            self.timer_redraw = Timer()
+            self.timer_redraw.add_callback('expired',
+                                           lambda t: self.delayed_redraw())
+            self.timer_msg = Timer()
+            self.timer_msg.add_callback('expired',
+                                        lambda t: self.clear_onscreen_message())
+
         wd, ht = canvas_w.get_size()
         self.configure_window(wd, ht)
 

@@ -1390,7 +1390,7 @@ class GingaShell(GenericShell):
     def add_dialogs(self):
         if self.is_web_backend():
             self.filesel = Widgets.BrowserFileDialog(title="Load File")
-            # TODO: callback
+            self.filesel.add_callback('activated', self.load_blobs_cb)
 
         elif hasattr(Widgets, 'FileDialog'):
             self.filesel = Widgets.FileDialog(title="Load File",
@@ -2186,6 +2186,11 @@ class GingaShell(GenericShell):
         # file was selected and "Open" clicked.  This is due to the
         # use of FileDialog widget
         self.open_uris(paths)
+
+    def load_blobs_cb(self, w, drop_event):
+        # BrowserFileDialog widget upload event
+        blobs = drop_event['files']
+        self.open_blobs(blobs)
 
     def _get_channel_by_container(self, child):
         for chname in self.get_channel_names():
