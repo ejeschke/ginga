@@ -51,6 +51,24 @@ def get_font(font_spec, font_size, color='black', alpha=1.0):
         except Exception as e:
             pass
 
+    if font is None:
+        # try to create the font from the family name directly, plus in any
+        # other substitute fonts
+        families = font_asst.get_substitutes(font_tup.family)
+        for family in families:
+            font_tup2 = font_asst.Font(family=family, style=font_tup.style,
+                                       weight=font_tup.weight)
+            if font_asst.have_loadable_font(font_tup2):
+                try:
+                    info = font_asst.get_font_info(font_tup2)
+                    font = agg.Font(color, info.font_path, size=font_size,
+                                    opacity=alpha)
+                    break
+                except Exception as e:
+                    continue
+
+    # TODO: return Agg's "default font"
+
     if font is not None:
         font_asst.add_cache(key, font)
         if isinstance(font_spec, str):

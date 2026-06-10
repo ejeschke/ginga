@@ -45,26 +45,45 @@ def get_font(font_spec, font_size):
     font = None
     if font_asst.have_loadable_font(font_tup):
         try:
-            info = font_asst.get_font_info(font_tup)
-
-            font = ImageFont.truetype(info.font_path, font_size)
+            font = load_font(font_tup, font_size)
 
         except Exception as e:
-            try:
-                font = ImageFont.load_default(font_size)
-            except Exception as e:
-                pass
+            pass
 
-    if font is not None:
-        font_asst.add_cache(key, font)
-        if isinstance(font_spec, str):
-            # also store the font under a secondary key
-            key2 = ('pil', font_tup, font_size)
-            font_asst.add_cache(key2, font)
-        return font
+    if font is None:
+        # try to create the font from the family name directly, plus in any
+        # other substitute fonts
+        families = font_asst.get_substitutes(font_tup.family)
+        for family in families:
+            font_tup2 = font_asst.Font(family=family, style=font_tup.style,
+                                       weight=font_tup.weight)
+            if font_asst.have_loadable_font(font_tup2):
+                try:
+                    font = load_font(font_tup2, font_size)
+                    break
+                except Exception as e:
+                    continue
 
-    raise ValueError(f"Couldn't create font for family '{font_tup.family}', "
-                     f"style={font_tup.style}, weight={font_tup.weight}")
+    if font is None:
+        try:
+            # if all is lost, try the Pillow "default font"
+            font = ImageFont.load_default(font_size)
+        except Exception as e:
+            raise ValueError(f"Couldn't create font for family '{font_tup.family}', "
+                             f"style={font_tup.style}, weight={font_tup.weight}")
+
+    font_asst.add_cache(key, font)
+    if isinstance(font_spec, str):
+        # also store the font under a secondary key
+        key2 = ('pil', font_tup, font_size)
+        font_asst.add_cache(key2, font)
+
+    return font
+
+
+def load_font(font_tup, font_size):
+    info = font_asst.get_font_info(font_tup)
+    return ImageFont.truetype(info.font_path, font_size)
 
 
 def text_size(text, font):

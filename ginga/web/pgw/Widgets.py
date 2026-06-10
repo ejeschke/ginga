@@ -165,6 +165,15 @@ class WidgetBase(WidgetMixin):
     pass
 
 
+# NOTE (parked): assigning ``WidgetBase = WidgetMixin`` makes Desktop's
+# ``isinstance(widget, WidgetBase)`` checks match pg widgets, so layout
+# width/height size directives get applied to the top-level content.
+# However that currently leaves the TopLevel content not resizing with
+# the window, so it is disabled for now.  Revisit together with the
+# pgwidgets-js TopLevel / get_size sizing work.
+# WidgetBase = WidgetMixin
+
+
 class ApplicationBase(Callbacks):
     """Base application class for Ginga-wrapped PG Widgets
 
