@@ -395,7 +395,7 @@ class GingaShell(GenericShell):
         # Return the image
         return image
 
-    def add_download(self, info, future):
+    def add_download(self, info, future, download_cb=None):
         """
         Hand off a download to the Downloads plugin, if it is present.
 
@@ -409,15 +409,131 @@ class GingaShell(GenericShell):
             A future that represents the future computation to be performed
             after downloading the file.  Resolving the future will trigger
             the computation.
+
+        download_cb : callable, optional
+            If given, called as ``download_cb(fraction)`` with a value in
+            [0.0, 1.0] as the download proceeds (in addition to the
+            Downloads plugin's own progress display).
         """
         if self.gpmon.has_plugin('Downloads'):
             obj = self.gpmon.get_plugin('Downloads')
-            self.gui_do(obj.add_download, info, future)
+            self.gui_do(obj.add_download, info, future, download_cb=download_cb)
         else:
             self.show_error("Please activate the 'Downloads' plugin to"
                             " enable download functionality")
 
-    def open_uri_cont(self, filespec, loader_cont_fn):
+    def download_file(self, url, localpath, future, progress_cb=None):
+        """Download *url* to *localpath*, resolving *future* when done.
+
+        This is the low-level file downloader (the Downloads plugin is a
+        GUI on top of it).  It is meant to be dispatched via
+        ``nongui_do()`` and picks a fetch strategy automatically:
+
+        * in-situ in the browser (Pyodide) -> the browser's async fetch.
+          urllib/sockets don't work there, and cross-origin reads need a
+          CORS proxy.  A coroutine is returned; in-situ always uses the
+          async task pool, so nongui_do awaits it on the event loop.
+        * everywhere else (desktop, or pg driving a remote browser over a
+          websocket) -> a synchronous download on a worker thread.
+
+        On success *future* is resolved with *localpath*; on failure it is
+        resolved with the exception (so ``future.get_value()`` re-raises
+        it).  *progress_cb*, if given, is called as ``progress_cb(fraction)``
+        with a value in [0.0, 1.0] as the download proceeds.
+
+        Parameters
+        ----------
+        url : str
+            The URL to download.
+
+        localpath : str
+            The local file path to write the downloaded data to.
+
+        future : `~ginga.misc.Future.Future`
+            Resolved with *localpath* on success, or with the raised
+            exception on failure.
+
+        progress_cb : callable, optional
+            Called as ``progress_cb(fraction)`` as the download proceeds.
+        """
+        if self.is_web_backend() and self.is_in_situ():
+            return self._download_file_async(url, localpath, future,
+                                             progress_cb)
+        return self._download_file_sync(url, localpath, future, progress_cb)
+
+    def _download_file_sync(self, url, localpath, future, progress_cb):
+        def _dl_indicator(count, blksize, totalsize):
+            if progress_cb is not None and totalsize > 0:
+                nbytes = int(count * blksize)
+                progress_cb(min(1.0, float(nbytes) / float(totalsize)))
+
+        try:
+            # press our generic URL server into use as a file downloader
+            dl = catalog.URLServer(self.logger, "downloader", "dl", url, "")
+            filepath = dl.retrieve(url, filepath=localpath,
+                                   cb_fn=_dl_indicator)
+            self.logger.info("download of '%s' finished" % (filepath))
+            future.resolve(filepath)
+
+        except Exception as e:
+            self.logger.error("download of '%s' failed: %s" % (url, e),
+                              exc_info=True)
+            future.resolve(e)
+
+    async def _download_file_async(self, url, localpath, future, progress_cb):
+        try:
+            # Browsers block cross-origin *reads* (CORS), so route the
+            # external URL through a same-origin proxy when one is
+            # configured (the ``fetch_proxy`` setting names a same-origin
+            # endpoint that refetches the URL server-side and returns it
+            # with permissive CORS headers).  Falls back to a direct fetch
+            # otherwise.
+            fetch_url = url
+            proxy = self.settings.get('fetch_proxy', None)
+            if proxy:
+                import urllib.parse
+                fetch_url = proxy + urllib.parse.quote(url, safe='')
+            self.logger.info("downloading (async) '%s'..." % (fetch_url))
+            # browser fetch -- the only way to do network I/O under Pyodide
+            from pyodide.http import pyfetch
+            resp = await pyfetch(fetch_url)
+
+            # Stream the body so we can report incremental progress (and
+            # avoid buffering the whole file in memory).  We read off the
+            # JS Response's ReadableStream chunk-by-chunk.  ``total`` comes
+            # from Content-Length; if the server doesn't supply it we can't
+            # compute a fraction, so progress is only reported at the end.
+            jsresp = resp.js_response
+            clen = jsresp.headers.get('Content-Length')
+            total = int(clen) if clen else 0
+            reader = jsresp.body.getReader()
+            got = 0
+            next_update = 0
+            update_step = 64 * 1024
+            with open(localpath, 'wb') as out_f:
+                while True:
+                    chunk = await reader.read()
+                    if chunk.done:
+                        break
+                    buf = bytes(chunk.value.to_py())
+                    out_f.write(buf)
+                    got += len(buf)
+                    if (progress_cb is not None and total and
+                            got >= next_update):
+                        progress_cb(got / total)
+                        next_update += update_step
+
+            if progress_cb is not None:
+                progress_cb(1.0)
+            self.logger.info("download of '%s' finished" % (localpath))
+            future.resolve(localpath)
+
+        except Exception as e:
+            self.logger.error("download of '%s' failed: %s" % (url, e),
+                              exc_info=True)
+            future.resolve(e)
+
+    def open_uri_cont(self, filespec, loader_cont_fn, download_cb=None):
         """Download a URI (if necessary) and do some action on it.
 
         If the file is already present (e.g. a file:// URI) then this
@@ -434,6 +550,10 @@ class GingaShell(GenericShell):
             The parameter is the local filepath after download, plus
             any "index" understood by the loader.
 
+        download_cb : callable, optional
+            If given, called as ``download_cb(fraction)`` with a value in
+            [0.0, 1.0] as a download (if any) proceeds.
+
         """
         info = iohelper.get_fileinfo(filespec)
 
@@ -449,7 +569,7 @@ class GingaShell(GenericShell):
 
             future = Future.Future()
             future.add_callback('resolved', _download_cb)
-            self.add_download(info, future)
+            self.add_download(info, future, download_cb=download_cb)
             return
 
         # invoke the continuation
@@ -555,7 +675,7 @@ class GingaShell(GenericShell):
             if len(self.gui_dialog_list) == 1:
                 self.nongui_do_future(future)
 
-    def open_uris(self, uris, chname=None, bulk_add=False):
+    def open_uris(self, uris, chname=None, bulk_add=False, download_cb=None):
         """Open a set of URIs.
 
         Parameters
@@ -571,6 +691,10 @@ class GingaShell(GenericShell):
             channel without disturbing the current item there.
             If False, then the first item loaded will be displayed
             and the rest of the items will be loaded as bulk.
+
+        download_cb : callable, optional
+            If given, called as ``download_cb(fraction)`` with a value in
+            [0.0, 1.0] as each URI that needs downloading proceeds.
 
         """
         if len(uris) == 0:
@@ -598,14 +722,14 @@ class GingaShell(GenericShell):
 
         # determine whether first file is loaded as a bulk load
         if bulk_add:
-            self.open_uri_cont(uris[0], load_file_bulk)
+            self.open_uri_cont(uris[0], load_file_bulk, download_cb=download_cb)
         else:
-            self.open_uri_cont(uris[0], load_file)
+            self.open_uri_cont(uris[0], load_file, download_cb=download_cb)
         self.update_pending()
 
         for uri in uris[1:]:
             # rest of files are all loaded using bulk load
-            self.open_uri_cont(uri, load_file_bulk)
+            self.open_uri_cont(uri, load_file_bulk, download_cb=download_cb)
             self.update_pending()
 
     def open_blobs(self, blobs, chname=None, bulk_add=False):

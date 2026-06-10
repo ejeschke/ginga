@@ -209,6 +209,17 @@ class ApplicationBase(Callbacks):
     def is_web_backend(self):
         return True
 
+    def is_in_situ(self):
+        """Return True when running *in-situ* in the browser (Pyodide/
+        PyScript) -- i.e. Python itself is executing in the browser --
+        as opposed to driving a remote browser over a web socket.
+
+        Combine with is_web_backend() to decide, e.g., whether network
+        I/O must go through the browser (subject to CORS / needing a
+        proxy) vs. a normal server-side request.
+        """
+        return in_situ_web
+
     def make_window(self, title=None):
         win = TopLevel(title=title, moveable=True, resizable=True)
         self.add_window(win)
