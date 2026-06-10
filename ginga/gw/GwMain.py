@@ -76,6 +76,23 @@ class GwMain(Callback.Callbacks):
     def get_threadPool(self):
         return self.threadPool
 
+    def get_taskpool_type(self):
+        """Return the kind of task pool in use.
+
+        Returns
+        -------
+        kind : str
+            ``'async'`` if tasks run on a single event loop (e.g. when
+            running in-situ under Pyodide), or ``'thread'`` if they run
+            on a pool of worker threads.
+
+        This lets callers (e.g. plugins doing network I/O) choose an
+        appropriate strategy -- a synchronous ``requests`` download on a
+        worker thread vs. an awaited browser fetch -- without inspecting
+        internals.
+        """
+        return 'async' if self.async_mode else 'thread'
+
     def set_gui_thread(self):
         self.gui_thread_id = threading.get_ident()
 
