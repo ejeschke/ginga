@@ -29,8 +29,8 @@ def get_icon(iconpath, size=None, format='svg'):
     else:
         wd, ht = 24, 24
 
-    if format.startswith('svg'):
-        if iconpath.lower().endswith('.svg'):
+    if iconpath.lower().endswith('.svg'):
+        if format.startswith('svg'):
             # TEMP?
             # Scalable Vector Graphics should be scalable on the browser side
             with open(iconpath, 'rb') as icon_f:
@@ -39,8 +39,10 @@ def get_icon(iconpath, size=None, format='svg'):
                 return icon_uri
 
         if format == 'png':
-            img_buf = icon_helper.load_svg_to_pngbuf(iconpath, wd_px=wd, ht_px=ht)
-            icon_uri = get_image_src_from_buffer(img_buf.getvalue(), imgtype=format)
+            img_buf = icon_helper.load_svg_to_pngbuf(iconpath,
+                                                     wd_px=wd, ht_px=ht)
+            icon_uri = get_image_src_from_buffer(img_buf.getvalue(),
+                                                 imgtype=format)
             return icon_uri
 
     # other types handled by pillow

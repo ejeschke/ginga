@@ -640,7 +640,9 @@ class TreeView(WidgetMixin, PGW.TreeView):
             if len(col) > 2:
                 col_def['type'] = 'string' if col[2] == 'str' else col[2]
             else:
-                col_def['type'] = 'icon' if col[0] == 'icon' else 'string'
+                # detect an icon column by its data *key* (col[1]), matching
+                # the qt/gtk convention -- not the column label (col[0]).
+                col_def['type'] = 'icon' if col[1] == 'icon' else 'string'
             col_defs.append(col_def)
         self.datakeys = [col_def['key'] for col_def in col_defs]
         self.leaf_key = leaf_key
@@ -649,6 +651,14 @@ class TreeView(WidgetMixin, PGW.TreeView):
             super().set_columns(col_defs)
         except Exception as e:
             self.logger.error(f"error setting columns: {e}")
+
+    def set_cell_padding(self, px):
+        # convenience matching the desktop backends: set both the row
+        # (vertical) and column (horizontal) cell spacing.  The
+        # set_row_spacing/set_column_spacing primitives are inherited
+        # from the underlying pgwidgets TreeView.
+        self.set_row_spacing(px)
+        self.set_column_spacing(px)
 
     def set_tree(self, tree_dict):
         super().set_tree(tree_dict)

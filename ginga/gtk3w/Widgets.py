@@ -980,6 +980,9 @@ class TreeView(WidgetBase):
         self.font = 'Sans Serif'
         self.fontsize = 10.0
         self.cell_pad_px = 0
+        # separate vertical (row) / horizontal (column) cell padding
+        self.row_pad_px = 0
+        self.col_pad_px = 0
         self.editable = False
 
         # this widget has a built in ScrollArea to match Qt functionality
@@ -1075,7 +1078,7 @@ class TreeView(WidgetBase):
                 cell.set_property("editable", self.editable)
                 cell.connect("edited", self._edited_cb, datakey, n)
 
-            cell.set_padding(self.cell_pad_px, self.cell_pad_px)
+            cell.set_padding(self.col_pad_px, self.row_pad_px)
             header = headers[n]
             tvc = Gtk.TreeViewColumn(header, cell)
             tvc.set_resizable(True)
@@ -1377,7 +1380,27 @@ class TreeView(WidgetBase):
 
     def set_cell_padding(self, px):
         self.cell_pad_px = int(px)
+        self.row_pad_px = self.col_pad_px = int(px)
+        self._apply_cell_padding()
         self.__set_style()
+
+    def set_row_spacing(self, px):
+        # vertical padding inside each cell (controls row height)
+        self.row_pad_px = int(px)
+        self._apply_cell_padding()
+
+    def set_column_spacing(self, px):
+        # horizontal padding inside each cell
+        self.col_pad_px = int(px)
+        self._apply_cell_padding()
+
+    def _apply_cell_padding(self):
+        # update the (xpad, ypad) on existing cell renderers so a spacing
+        # change takes effect without rebuilding the table
+        for column in self.widget.get_columns():
+            for cell in column.get_cells():
+                cell.set_padding(self.col_pad_px, self.row_pad_px)
+        self.widget.queue_resize()
 
     def _path_to_item(self, path):
         s = self.shadow
@@ -4442,7 +4465,7 @@ class DragPackage:
         self.src_widget = src_widget
         self._selection = selection
 
-    def set_urls(self, urls):
+    def set_uris(self, urls):
         self._selection.set_uris(urls)
 
     def set_text(self, text):

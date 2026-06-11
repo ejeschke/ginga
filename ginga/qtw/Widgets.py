@@ -1004,6 +1004,9 @@ class TreeView(WidgetBase):
         self.font = 'Sans Serif'
         self.fontsize = 10.0
         self.cell_pad_px = 0
+        # separate vertical (row) / horizontal (column) cell padding
+        self.row_pad_px = 0
+        self.col_pad_px = 0
         self.editable = False
 
         tv = QtGui.QTreeWidget()
@@ -1463,6 +1466,17 @@ class TreeView(WidgetBase):
 
     def set_cell_padding(self, px):
         self.cell_pad_px = int(px)
+        self.row_pad_px = self.col_pad_px = int(px)
+        self.__set_style()
+
+    def set_row_spacing(self, px):
+        # vertical padding inside each cell (controls row height)
+        self.row_pad_px = int(px)
+        self.__set_style()
+
+    def set_column_spacing(self, px):
+        # horizontal padding inside each cell
+        self.col_pad_px = int(px)
         self.__set_style()
 
     def __set_style(self):
@@ -1477,7 +1491,7 @@ class TreeView(WidgetBase):
             font-weight: bold;
         }}
         QTreeWidget::item {{
-            padding: {self.cell_pad_px};
+            padding: {self.row_pad_px}px {self.col_pad_px}px;
         }}
         """
         self.widget.setStyleSheet(style)
@@ -4593,7 +4607,7 @@ class DragPackage:
         self._data = QtCore.QMimeData()
         self._drag.setMimeData(self._data)
 
-    def set_urls(self, urls):
+    def set_uris(self, urls):
         _urls = [QtCore.QUrl(url) for url in urls]
         self._data.setUrls(_urls)
 
