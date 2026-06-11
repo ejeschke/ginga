@@ -533,6 +533,63 @@ class GingaShell(GenericShell):
                               exc_info=True)
             future.resolve(e)
 
+    def fetch_url(self, url, future):
+        """Fetch the contents of *url* into memory, resolving *future*.
+
+        The in-memory sibling of `download_file`: instead of writing a
+        file, it resolves *future* with the response body (``bytes``).
+        Intended for small responses (name resolution, catalog queries,
+        ...) and meant to be dispatched via ``nongui_do()``.  Like
+        `download_file` it picks a strategy automatically:
+
+        * in-situ in the browser (Pyodide) -> the browser's async fetch,
+          routed through the ``fetch_proxy`` (CORS).  A coroutine is
+          returned; nongui_do awaits it on the event loop.
+        * everywhere else -> a synchronous urllib fetch on a worker thread.
+
+        On success *future* is resolved with the response bytes; on failure
+        it is resolved with the exception (so ``future.get_value()``
+        re-raises it).
+        """
+        if self.is_web_backend() and self.is_in_situ():
+            return self._fetch_url_async(url, future)
+        return self._fetch_url_sync(url, future)
+
+    def _fetch_url_sync(self, url, future):
+        try:
+            from urllib.request import Request, urlopen
+            self.logger.info("fetching '%s'..." % (url))
+            req = Request(url)
+            with urlopen(req) as response:  # nosec
+                data = response.read()
+            future.resolve(data)
+
+        except Exception as e:
+            self.logger.error("fetch of '%s' failed: %s" % (url, e),
+                              exc_info=True)
+            future.resolve(e)
+
+    async def _fetch_url_async(self, url, future):
+        try:
+            # Browsers block cross-origin reads (CORS); route through the
+            # same-origin proxy named by the ``fetch_proxy`` setting when
+            # configured (see download_file).
+            fetch_url = url
+            proxy = self.settings.get('fetch_proxy', None)
+            if proxy:
+                import urllib.parse
+                fetch_url = proxy + urllib.parse.quote(url, safe='')
+            self.logger.info("fetching (async) '%s'..." % (fetch_url))
+            from pyodide.http import pyfetch
+            resp = await pyfetch(fetch_url)
+            data = await resp.bytes()
+            future.resolve(data)
+
+        except Exception as e:
+            self.logger.error("fetch of '%s' failed: %s" % (url, e),
+                              exc_info=True)
+            future.resolve(e)
+
     def open_uri_cont(self, filespec, loader_cont_fn, download_cb=None):
         """Download a URI (if necessary) and do some action on it.
 

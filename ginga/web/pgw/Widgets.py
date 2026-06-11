@@ -271,6 +271,12 @@ if in_situ_web:
             ApplicationBase.__init__(self, logger=logger, host=host, port=port,
                                      ws_port=ws_port, settings=settings)
 
+        def open_url(self, url):
+            """Open *url* in a new browser tab.  We are *in* the browser,
+            so call window.open directly."""
+            from js import window
+            window.open(url, '_blank')
+
     def register_font(self, family, path, weight='normal', style='normal'):
         # no-op for now
         pass

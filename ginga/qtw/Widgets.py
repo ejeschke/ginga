@@ -4327,6 +4327,11 @@ class Application(Callback.Callbacks):
     def is_web_backend(self):
         return False
 
+    def open_url(self, url):
+        """Open *url* in the user's web browser (desktop backend)."""
+        import webbrowser
+        webbrowser.open(url, new=2)
+
     def register_font(self, family, path, weight='normal', style='normal'):
         f_key = font_asst.add_loadable_font(path, family, style=style,
                                             weight=weight)

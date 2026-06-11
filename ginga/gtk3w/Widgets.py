@@ -4108,6 +4108,11 @@ class Application(Callback.Callbacks):
     def is_web_backend(self):
         return False
 
+    def open_url(self, url):
+        """Open *url* in the user's web browser (desktop backend)."""
+        import webbrowser
+        webbrowser.open(url, new=2)
+
     def register_font(self, family, path, weight='normal', style='normal'):
         # This is almost a no-op for Gtk3--no easy way to load a font
         # we'll just register it in case there is a way to do that in
