@@ -589,6 +589,40 @@ class StatusBar(WidgetMixin, PGW.StatusBar):
 _CELL_WIDGETS = ('checkbox', 'combobox', 'progress', 'button')
 
 
+def _treedata_to_plain(obj):
+    """Recursively convert a tree/row data structure into plain JSON-/JS-
+    serializable Python types for transport to the browser.
+
+    Ginga plugins commonly build tree rows out of ``Bunch`` (and use
+    ``Bunch.caselessDict`` for the tree itself), and occasionally stash a
+    ``set`` in a row -- none of which serialize.  Convert Bunch/caselessDict
+    -> dict and set -> list so the pg backend can ship them.  The caller's
+    original structure is left untouched (a copy is returned).
+    """
+    if isinstance(obj, dict):
+        return {k: _treedata_to_plain(v) for k, v in obj.items()}
+    if isinstance(obj, (Bunch.Bunch, Bunch.caselessDict)):
+        return {k: _treedata_to_plain(obj[k]) for k in obj.keys()}
+    if isinstance(obj, (set, frozenset)):
+        return [_treedata_to_plain(v) for v in obj]
+    if isinstance(obj, (list, tuple)):
+        return [_treedata_to_plain(v) for v in obj]
+    return obj
+
+
+def _treedata_to_bunch(obj):
+    """Recursively wrap the dicts returned from the browser back into
+    ``Bunch`` objects, so the pg TreeView honors the same "Bunch in, Bunch
+    out" contract as the qt/gtk backends -- i.e. callers can read results
+    with either attribute (``row.NAME``) or item (``row['NAME']``) syntax.
+    """
+    if isinstance(obj, dict):
+        return Bunch.Bunch({k: _treedata_to_bunch(v) for k, v in obj.items()})
+    if isinstance(obj, (list, tuple)):
+        return [_treedata_to_bunch(v) for v in obj]
+    return obj
+
+
 class TreeView(WidgetMixin, PGW.TreeView):
     def __init__(self, *args, auto_expand=False, sortable=False,
                  selection='single', use_alt_row_color=False,
@@ -618,7 +652,7 @@ class TreeView(WidgetMixin, PGW.TreeView):
         self._make_callback('expanded', path)
 
     def _cb_redirect_selected(self, sel_lst):
-        subtree = super().get_subtree(status='selected')
+        subtree = _treedata_to_bunch(super().get_subtree(status='selected'))
         self._make_callback('selected', subtree)
 
     def _cb_redirect_activated(self, node_vals, path, col_key=None):
@@ -626,7 +660,7 @@ class TreeView(WidgetMixin, PGW.TreeView):
         # builds; older builds send only two.  TreeView's
         # public ``activated`` signature stays ``(widget, subtree)``,
         # so col_key is accepted but not surfaced here.
-        subtree = super().get_subtree(status=path)
+        subtree = _treedata_to_bunch(super().get_subtree(status=path))
         self._make_callback('activated', subtree)
 
     def setup_table(self, columns, levels, leaf_key):
@@ -661,13 +695,13 @@ class TreeView(WidgetMixin, PGW.TreeView):
         self.set_column_spacing(px)
 
     def set_tree(self, tree_dict):
-        super().set_tree(tree_dict)
+        super().set_tree(_treedata_to_plain(tree_dict))
 
     def add_tree(self, tree_dict, expand_new=False):
-        super().add_tree(tree_dict)
+        super().add_tree(_treedata_to_plain(tree_dict))
 
     def update_tree(self, tree_dict, expand_new=False):
-        super().update_tree(tree_dict)
+        super().update_tree(_treedata_to_plain(tree_dict))
 
     def expand_all(self, tf):
         if tf:
@@ -680,16 +714,16 @@ class TreeView(WidgetMixin, PGW.TreeView):
         super().select_path(path, onoff)
 
     def get_children(self, status='expanded'):
-        return super().get_subtree(status=status)
+        return _treedata_to_bunch(super().get_subtree(status=status))
 
     def get_expanded(self):
-        return super().get_subtree(status='expanded')
+        return _treedata_to_bunch(super().get_subtree(status='expanded'))
 
     def get_collapsed(self):
-        return super().get_subtree(status='collapsed')
+        return _treedata_to_bunch(super().get_subtree(status='collapsed'))
 
     def get_selected(self):
-        return super().get_subtree(status='selected')
+        return _treedata_to_bunch(super().get_subtree(status='selected'))
 
     def get_selected_paths(self):
         return super().get_selected()
