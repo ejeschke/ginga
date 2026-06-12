@@ -471,6 +471,7 @@ class Pick(GingaPlugin.LocalPlugin):
         vtop.set_border_width(4)
 
         box, sw, orientation = Widgets.get_oriented_box(container,
+                                                        fill=True,
                                                         orientation=self.settings.get('orientation', None))
         box.set_border_width(4)
         box.set_spacing(2)
@@ -1022,6 +1023,7 @@ class Pick(GingaPlugin.LocalPlugin):
         nb.add_widget(vbox3, title="Controls")
 
         vbox3 = Widgets.VBox()
+        vbox3.set_expanding(True, True)
         tv = Widgets.TreeView(sortable=True, use_alt_row_color=True)
         self.rpt_tbl = tv
         vbox3.add_widget(tv, stretch=1)
