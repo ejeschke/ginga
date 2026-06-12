@@ -89,9 +89,13 @@ class GingaShell(GenericShell):
                      'viewer-create'):
             self.enable_callback(name)
 
-        # Initialize the timer factory
+        # Initialize the timer factory.  Under the async (single event
+        # loop) task pool there are no usable threads, so use event-loop
+        # timers instead of thread-based ones.
+        async_timers = (self.get_taskpool_type() == 'async')
         self.timer_factory = Timer.TimerFactory(ev_quit=self.ev_quit,
-                                                logger=self.logger)
+                                                logger=self.logger,
+                                                async_timers=async_timers)
         self.timer_factory.wind()
 
         self.channel = Bunch.caselessDict()
