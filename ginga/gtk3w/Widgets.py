@@ -977,7 +977,9 @@ class TreeView(WidgetBase):
         self.datatypes = []
         # shadow index
         self.shadow = {}
-        self.font = 'Sans Serif'
+        # a font_asst.Font(family, style, weight) tuple; we only need the
+        # CSS attributes here, not a native font object
+        self.font = font_asst.parse_font('sans')
         self.fontsize = 10.0
         self.cell_pad_px = 0
         # separate vertical (row) / horizontal (column) cell padding
@@ -1373,8 +1375,14 @@ class TreeView(WidgetBase):
         item = self._path_to_item(path)  # noqa
         # TODO
 
-    def set_font(self, fontname, size):
-        self.font = fontname
+    def set_font(self, font, size=10):
+        # This is a CSS-styled widget, so we need the font family/style/
+        # weight, not a native font object.  A string spec ("family",
+        # "family;style;weight") is parsed via font_asst into a Font tuple
+        # (family, style, weight); a Font is used as-is.
+        if isinstance(font, str):
+            font = font_asst.parse_font(font)
+        self.font = font
         self.fontsize = size
         self.__set_style()
 
@@ -1453,8 +1461,10 @@ class TreeView(WidgetBase):
         myname = self._get_name()
         style = f"""
         .{myname} {{
-            font-family: {self.font};
+            font-family: {self.font.family};
             font-size: {self.fontsize}pt;
+            font-style: {self.font.style};
+            font-weight: {self.font.weight};
         }}
         """
         context = self.widget.get_style_context()

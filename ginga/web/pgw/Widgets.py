@@ -116,7 +116,7 @@ class WidgetMixin(CallbackMixin):
         # delete() => destroy() in pgwidgets
         self.destroy()
 
-    def set_font(self, font_info, size=10):
+    def set_font(self, font, size=10):
         # The pgwidgets-js ``set_font`` is positional —
         # ``set_font(family, size, weight, style)`` setting the
         # corresponding CSS properties on the element.  Unpack the
@@ -124,7 +124,10 @@ class WidgetMixin(CallbackMixin):
         # family string rather than a dict object that stringifies
         # to "[object Object]" (which the browser then falls back
         # to its default serif font for).
-        if isinstance(font_info, str):
+        # PgHelp.get_font accepts a str spec or a font_asst.Font and returns
+        # a CSS-style dict (family/size/weight/style); a dict is used as-is.
+        font_info = font
+        if isinstance(font_info, (str, font_asst.Font)):
             font_info = PgHelp.get_font(font_info, size)
         family = font_info.get('family', 'sans-serif')
         pts = font_info.get('size', size)
@@ -594,10 +597,15 @@ def _treedata_to_plain(obj):
     serializable Python types for transport to the browser.
 
     Ginga plugins commonly build tree rows out of ``Bunch`` (and use
-    ``Bunch.caselessDict`` for the tree itself), and occasionally stash a
-    ``set`` in a row -- none of which serialize.  Convert Bunch/caselessDict
-    -> dict and set -> list so the pg backend can ship them.  The caller's
-    original structure is left untouched (a copy is returned).
+    ``Bunch.caselessDict`` for the tree itself), occasionally stash a
+    ``set`` in a row, and frequently store numpy scalars/arrays (e.g. a
+    value computed from image data) -- none of which serialize.  Convert
+    Bunch/caselessDict -> dict, set -> list, and numpy scalars/0-d arrays
+    -> Python scalars (numpy arrays -> list) so the pg backend can ship
+    them.  Without the numpy coercion such a value would cross to the
+    browser as an opaque object and a TreeView would mistake it for a
+    nested child row.  The caller's original structure is left untouched
+    (a copy is returned).
     """
     if isinstance(obj, dict):
         return {k: _treedata_to_plain(v) for k, v in obj.items()}
@@ -607,6 +615,21 @@ def _treedata_to_plain(obj):
         return [_treedata_to_plain(v) for v in obj]
     if isinstance(obj, (list, tuple)):
         return [_treedata_to_plain(v) for v in obj]
+    # numpy scalars / 0-d arrays -> Python scalar; larger numpy arrays ->
+    # list (duck-typed, mirroring the websocket JsonEncoder, so no hard
+    # numpy dependency here).
+    item = getattr(obj, 'item', None)
+    if callable(item):
+        try:
+            return item()
+        except (TypeError, ValueError):
+            pass
+    tolist = getattr(obj, 'tolist', None)
+    if callable(tolist):
+        try:
+            return _treedata_to_plain(tolist())
+        except (TypeError, ValueError):
+            pass
     return obj
 
 
