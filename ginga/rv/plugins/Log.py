@@ -63,10 +63,7 @@ class Log(GingaPlugin.GlobalPlugin):
         tw.set_limit(self.histlimit)
         self.tw = tw
 
-        sw = Widgets.ScrollArea()
-        sw.set_widget(self.tw)
-
-        vbox.add_widget(sw, stretch=1)
+        vbox.add_widget(self.tw, stretch=1)
 
         captions = (('Level', 'combobox', 'History', 'spinbutton'),
                     ('Auto scroll', 'checkbutton', 'Clear', 'button')

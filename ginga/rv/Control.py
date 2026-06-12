@@ -23,7 +23,7 @@ from ginga.canvas.CanvasObject import drawCatalog
 from ginga.modes import modeinfo
 
 # GUI imports
-from ginga.gw import Widgets, Viewers
+from ginga.gw import Widgets, Viewers, GwHelp
 from ginga.fonts import font_asst
 from ginga.util.paths import icondir as icon_dir
 
@@ -1463,34 +1463,23 @@ class GingaShell(GenericShell):
     def banner(self):
         # load banner image
         banner_file = os.path.join(self.iconpath, 'ginga-splash.png')
-        image = self.load_image(banner_file)
-        wd, ht = image.get_size()
+        wd, ht = 968, 968
+        img_native = GwHelp.get_image(banner_file, size=(wd, ht))
 
         # create dialog for banner
         title = f"Ginga v{__version__}"
         top = Widgets.Dialog(title=title, parent=self.w.root,
-                             buttons=[["Close", 0]], modal=False)
+                             buttons=[["Close", 0]], autoclose=True,
+                             modal=True)
 
         def _close_banner(*args):
             self.ds.remove_dialog(top)
 
         top.add_callback('activated', _close_banner)
         vbox = top.get_content_area()
-        viewer = Viewers.CanvasView(logger=self.logger)
-        viewer.enable_autocuts('off')
-        viewer.enable_autozoom('off')
-        viewer.enable_autocenter('on')
-        viewer.cut_levels(0, 255)
-        viewer.scale_to(1, 1)
-        viewer.set_desired_size(wd, ht)
-        t_ = viewer.get_settings()
-        t_.set(auto_orient=True)
+        img_w = Widgets.Image(native_image=img_native)
+        vbox.add_widget(img_w, stretch=1)
 
-        w = Viewers.GingaViewerWidget(viewer=viewer)
-        w.resize(wd, ht)
-        vbox.add_widget(w, stretch=1)
-
-        viewer.set_image(image)
         self.ds.show_dialog(top)
 
     def remove_image_by_name(self, chname, imname, impath=None):
