@@ -1267,6 +1267,7 @@ class WCSAxes(CompoundObject):
                 if self.show_label:
                     obj.alpha = self.alpha
                     obj.color = self.color
+                    obj.fillcolor = self.color
                     obj.font = self.font
                     obj.fontsize = self.fontsize
                     if obj.crdaxis == 0 and self.dec_angle is not None:

@@ -732,7 +732,7 @@ class FitsioFileHandler(BaseFitsFileHandler):
         return self
 
     def open_buffer(self, name, io_buf, memmap=None, **kwargs):
-        raise NotImplemented("open_buffer is not supported by 'fitsio'")
+        raise NotImplementedError("open_buffer is not supported by 'fitsio'")
 
     def close(self):
         self.hdu_info = []

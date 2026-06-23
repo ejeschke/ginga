@@ -159,7 +159,7 @@ class ImageViewBase(ViewerBase):
                              show_pan_position=False,
                              show_mode_indicator=True,
                              show_focus_indicator=None,
-                             onscreen_font='Sans Serif',
+                             onscreen_font='sans serif',
                              onscreen_font_size=None,
                              default_cursor_length=16,
                              color_fg="#D0F0E0", color_bg="#404040",
@@ -3600,7 +3600,7 @@ class ImageViewBase(ViewerBase):
         """
         width, height = self.get_window_size()
 
-        font = self.t_.get('onscreen_font', 'sans serif')
+        font = self.t_.get('onscreen_font', 'fixed')
         font_size = self.t_.get('onscreen_font_size', None)
         if font_size is None:
             font_size = font_asst.calc_font_size(width)
