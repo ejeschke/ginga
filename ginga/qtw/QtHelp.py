@@ -558,7 +558,7 @@ def get_font(font_spec, font_size):
 
     # try to create the font from the family name directly, plus in any
     # other substitute fonts
-    families = [family] + font_asst.get_substitutes(font_tup.family)
+    families = font_asst.get_substitutes(font_tup.family) + [family]
     for family in families:
         try:
             font = QFont(family, font_size)
@@ -568,13 +568,12 @@ def get_font(font_spec, font_size):
             font.setStyleStrategy(QFont.PreferAntialias)
             font_asst.add_cache(key, font)
             if isinstance(font_spec, str):
-                # also store the font under a secondary key
+                # also store the font under a secondary key with full font tuple
                 key2 = ('qt', font_tup, font_size)
                 font_asst.add_cache(key2, font)
             return font
 
         except Exception as e:
-            print(f"Error making font: {e}")
             continue
 
     raise ValueError(f"Couldn't create font for family '{font_tup.family}', "

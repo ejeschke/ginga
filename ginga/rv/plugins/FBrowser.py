@@ -78,6 +78,8 @@ class FBrowser(GingaPlugin.LocalPlugin):
                                    scan_limit=100,
                                    keywords=keywords,
                                    columns=columns,
+                                   font_name='fixed',
+                                   font_size=12,
                                    color_alternate_rows=True,
                                    max_rows_for_col_resize=5000)
         self.settings.load(onError='silent')
@@ -110,6 +112,9 @@ class FBrowser(GingaPlugin.LocalPlugin):
                                  use_alt_row_color=color_alternate,
                                  dragable=True)
         table.set_row_spacing(0)
+        font_name = self.settings.get('font_name', 'fixed')
+        font_size = self.settings.get('font_size', 12)
+        table.set_font(font_name, font_size)
         table.add_callback('activated', self.item_dblclicked_cb)
         table.add_callback('drag-start', self.item_drag_cb)
         table.add_callback('selected', self.item_selected_cb)

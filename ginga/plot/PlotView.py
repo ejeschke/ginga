@@ -242,6 +242,7 @@ class PlotViewBase(ViewerBase):
             ax, self.ax = self.ax, None
             ax.remove()
         self.ax = self.figure.add_subplot(111, **kwdargs)
+        self.ax.set_facecolor(self.clr_bg)
         return self.ax
 
     def get_axis(self):
@@ -327,6 +328,7 @@ class PlotViewBase(ViewerBase):
                 # <-- no deferred resize found
                 return
             wd_px, ht_px = self._resize_dims
+            self._resize_flag = False
             self.set_window_size(wd_px, ht_px)
 
     def reschedule_resize(self, wd_px, ht_px):
@@ -1351,7 +1353,8 @@ class PlotViewBase(ViewerBase):
         if isinstance(plotable, Plotable):
             plotable.set(clr_bg=self.clr_bg)
 
-        self.ax.set_facecolor(self.clr_bg)
+        if self.ax is not None:
+            self.ax.set_facecolor(self.clr_bg)
 
     def onscreen_message(self, text, delay=None, redraw=True):
         if self._ost is not None:
