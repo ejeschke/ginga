@@ -500,7 +500,9 @@ class Label(WidgetBase):
         if bg is not None:
             GtkHelp.modify_bg(self.widget, bg)
         if fg is not None:
-            self.label.modify_fg(Gtk.StateType.NORMAL, Gdk.color_parse(fg))
+            # set the label text colour via CSS; GTK4 removed both
+            # modify_fg() and Gtk.StateType
+            GtkHelp.modify_fg(self.label, fg)
 
     def set_halign(self, align):
         align = align.lower()
@@ -1445,11 +1447,13 @@ class TreeView(WidgetBase):
 
     def _apply_cell_padding(self):
         # update the (xpad, ypad) on existing cell renderers so a spacing
-        # change takes effect without rebuilding the table
-        for column in self.widget.get_columns():
+        # change takes effect without rebuilding the table.  Note: the
+        # columns live on the GtkTreeView (self.tv), not the
+        # ScrolledWindow wrapper (self.widget).
+        for column in self.tv.get_columns():
             for cell in column.get_cells():
                 cell.set_padding(self.col_pad_px, self.row_pad_px)
-        self.widget.queue_resize()
+        self.tv.queue_resize()
 
     def _path_to_item(self, path):
         s = self.shadow
@@ -1500,9 +1504,13 @@ class TreeView(WidgetBase):
 
     def __set_style(self):
         myname = self._get_name()
+        # expand the family to a CSS fallback list of registered
+        # substitutes, since Pango/GTK can't resolve an alias like
+        # 'fixed' from a single CSS font-family
+        family = font_asst.get_css_family_list(self.font.family)
         style = f"""
         .{myname} {{
-            font-family: {self.font.family};
+            font-family: {family};
             font-size: {self.fontsize}pt;
             font-style: {self.font.style};
             font-weight: {self.font.weight};
@@ -4551,12 +4559,13 @@ def name_mangle(name, pfx=''):
 def make_widget(title, wtype):
     if wtype == 'label':
         w = Label(title)
-        #w.label.set_alignment(0.95, 0.5)
-        #w.label.set_xalign(0.95)
+        # GTK4 removed Gtk.Misc.set_alignment(); use set_xalign() to
+        # right-adjust the caption text within its grid cell
+        w.label.set_xalign(0.95)
     elif wtype == 'llabel':
         w = Label(title)
-        #w.label.set_alignment(0.05, 0.95)
-        #w.label.set_xalign(0.05)
+        # left-adjust the value text
+        w.label.set_xalign(0.05)
     elif wtype in ('textentry', 'entry'):
         w = TextEntry()
         # w.get_widget().set_width_chars(12)

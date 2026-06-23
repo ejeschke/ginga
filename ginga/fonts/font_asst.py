@@ -29,6 +29,12 @@ scaling_factor = Bunch.Bunch(caseless=True)
 font_regex = re.compile(r'^([\w\s\d\-\_;]+)$')
 default_family = 'sans'
 
+# generic CSS font-family keywords -- these are left unquoted in a CSS
+# font-family list so the CSS engine (browser or Pango/GTK) treats them
+# as generic fallbacks rather than literal family names
+css_generic_families = set(['serif', 'sans-serif', 'monospace',
+                            'cursive', 'fantasy', 'system-ui'])
+
 
 def add_substitutes(family, family_lst):
     global aliases
@@ -62,6 +68,32 @@ def get_substitutes(family):
 
 def resolve_alias(family, subst_name):
     return get_substitutes(family)[0]
+
+
+def get_css_family_list(family):
+    """Return a CSS ``font-family`` value for `family`.
+
+    For backends that style a widget's font through CSS (the web/pg
+    backend and the GTK ``CssProvider`` path), a single family name like
+    'fixed' or 'sans' can't be resolved -- the CSS engine matches it
+    literally and silently falls back to a default.  Instead, expand the
+    family into a comma-separated fallback list built from its registered
+    substitutes (see `get_substitutes`), so the CSS engine can fall back
+    gracefully when the preferred face isn't available.  Generic keywords
+    (monospace/sans-serif/...) are emitted unquoted; everything else is
+    quoted so multi-word family names survive.
+    """
+    families = aliases.get(family.lower())
+    if not families:
+        families = [family]
+    out, seen = [], set()
+    for fam in families:
+        key = fam.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(fam if key in css_generic_families else '"{}"'.format(fam))
+    return ", ".join(out)
 
 
 def get_cache(font_key):
@@ -227,7 +259,7 @@ for weight in ["Bold", "BoldItalic", "Italic", "Light", "LightItalic"]:
                       'roboto condensed', style=style, weight=lweight)
 
 add_loadable_font(os.path.join(fontdir, 'Ubuntu_Mono', "UbuntuMono-Regular.ttf"),
-                  'ubuntu mono')
+                  'ubuntu mono', style='normal', weight='normal')
 for weight in ["Bold", "BoldItalic", "Italic"]:
     lweight = weight.lower()
     style = 'normal'

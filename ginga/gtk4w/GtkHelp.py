@@ -1834,18 +1834,24 @@ def get_font(font_spec, font_size):
     else:
         raise ValueError("not a valid font spec: {}".format(str(font_spec)))
 
-    substitutes = font_asst.get_substitutes(font_tup.family)
-    family = substitutes[0]
-    font_str = f'"{family}" {font_tup.style} {font_tup.weight} {font_size}'
-    font_desc = Pango.FontDescription()
-    # cache this dict for faster lookups hence
-    font_asst.add_cache(key, font_desc)
-    if isinstance(font_spec, str):
-        # also store the font under a secondary key
-        key2 = ('gtk', font_tup, font_size)
-        font_asst.add_cache(key2, font_desc)
+    families = font_asst.get_substitutes(font_tup.family) + [font_tup.family]
+    for family in families:
+        try:
+            font_str = f'"{family}" {font_tup.style} {font_tup.weight} {font_size}'
+            font_desc = Pango.FontDescription(font_str)
+            # cache this dict for faster lookups hence
+            font_asst.add_cache(key, font_desc)
+            if isinstance(font_spec, str):
+                # also store the font under a secondary key
+                key2 = ('gtk', font_tup, font_size)
+                font_asst.add_cache(key2, font_desc)
+            return font_desc
 
-    return font_desc
+        except Exception as e:
+            continue
+
+    font_str = f'"{font_tup.family}" {font_tup.style} {font_tup.weight} {font_size}'
+    return Pango.FontDescription(font_str)
 
 
 def get_image(iconpath, size=None, adjust_width=True):
@@ -2000,6 +2006,19 @@ def modify_bg(widget, color):
         context.add_provider(css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
     else:
         context.remove_class("custom_bg")
+
+
+def modify_fg(widget, color):
+    context = widget.get_style_context()
+    if color is not None:
+        context.add_class("custom_fg")
+        css_color = _coerce_css_color(color)
+        css_data = ("*.custom_fg { color: %s; }" % (css_color,))
+        css_provider = Gtk.CssProvider()
+        css_provider.load_from_data(css_data.encode())
+        context.add_provider(css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
+    else:
+        context.remove_class("custom_fg")
 
 
 def _coerce_css_color(color):

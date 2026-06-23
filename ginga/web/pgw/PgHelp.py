@@ -101,9 +101,11 @@ def get_font(font_spec, font_size):
     else:
         raise ValueError("not a valid font spec: {}".format(str(font_spec)))
 
-    substitutes = font_asst.get_substitutes(font_tup.family)
     font_dct = font_tup._asdict()
-    font_dct['family'] = substitutes[0]
+    # emit a CSS font-family fallback list (e.g. '"ubuntu mono",
+    # monospace') rather than a single family, so the browser can fall
+    # back gracefully when the preferred face isn't available
+    font_dct['family'] = font_asst.get_css_family_list(font_tup.family)
     font_dct['size'] = font_size
     # cache this dict for faster lookups hence
     font_asst.add_cache(key, font_dct)

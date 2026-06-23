@@ -1001,9 +1001,11 @@ class TreeView(WidgetBase):
         self.datatypes = []
         # shadow index
         self.shadow = {}
-        # a font_asst.Font(family, style, weight) tuple; we only need the
-        # CSS attributes here, not a native font object
-        self.font = font_asst.parse_font('sans')
+        # native backend font (QFont).  Aliases like "fixed" are resolved
+        # to a loadable shipped font by QtHelp/font_asst, so the font is
+        # applied via setFont() rather than a CSS font-family that Qt's
+        # stylesheet engine can't resolve.
+        self.font = self.get_font('sans', 10)
         self.fontsize = 10.0
         self.cell_pad_px = 0
         # separate vertical (row) / horizontal (column) cell padding
@@ -1013,6 +1015,7 @@ class TreeView(WidgetBase):
 
         tv = QtGui.QTreeWidget()
         self.widget = tv
+        self.__apply_font()
         tv.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
         if selection == 'multiple':
             tv.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
@@ -1462,15 +1465,23 @@ class TreeView(WidgetBase):
         return [self.widget.columnWidth(i) for i in range(len(self.columns))]
 
     def set_font(self, font, size=10):
-        # This is a CSS-styled widget, so we need the font family/style/
-        # weight, not a native font object.  A string spec ("family",
-        # "family;style;weight") is parsed via font_asst into a Font tuple
-        # (family, style, weight); a Font is used as-is.
-        if isinstance(font, str):
-            font = font_asst.parse_font(font)
+        # Apply a real backend font, resolved through QtHelp/font_asst so
+        # that aliases like "fixed" map to a loadable shipped font.  Qt's
+        # stylesheet engine can't resolve such a font from a CSS
+        # font-family, so we set the font via setFont() (as Label does)
+        # and reserve CSS for cell padding only.
+        if not isinstance(font, QFont):
+            font = self.get_font(font, size)
         self.font = font
         self.fontsize = size
-        self.__set_style()
+        self.__apply_font()
+
+    def __apply_font(self):
+        self.widget.setFont(self.font)
+        # render the header in the same typeface/size, but bold
+        hdr_font = QFont(self.font)
+        hdr_font.setBold(True)
+        self.widget.header().setFont(hdr_font)
 
     def set_cell_padding(self, px):
         self.cell_pad_px = int(px)
@@ -1488,18 +1499,9 @@ class TreeView(WidgetBase):
         self.__set_style()
 
     def __set_style(self):
+        # font is applied via setFont() (see set_font); CSS handles only
+        # the per-cell padding.
         style = f"""
-        QTreeWidget {{
-            font-family: {self.font.family};
-            font-size: {self.fontsize}pt;
-            font-style: {self.font.style};
-            font-weight: {self.font.weight};
-        }}
-        QHeaderView::section {{
-            font-family: {self.font.family};
-            font-size: {self.fontsize}pt;
-            font-weight: bold;
-        }}
         QTreeWidget::item {{
             padding: {self.row_pad_px}px {self.col_pad_px}px;
         }}

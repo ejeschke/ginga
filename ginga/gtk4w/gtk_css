@@ -132,3 +132,44 @@ expander-widget > box > title:active {
                                       #e8e8e8 100%);
     border-color: #777;
 }
+
+
+/*
+ * Popover menus (context menus and menubar drop-downs use
+ * Gtk.PopoverMenu / Gtk.PopoverMenuBar).  The default theme draws the
+ * popover with rounded corners and a drop shadow rendered in the
+ * surface margin.  Without a compositing manager / RGBA visual those
+ * transparent corner + shadow pixels composite against black, leaving
+ * a squared-off black frame around the rounded menu.
+ *
+ * Make the popover a flat, square, opaque panel with a thin border
+ * (matching the pgwidgets-js Menu look) so its appearance doesn't
+ * depend on alpha compositing.  Node tree:
+ *
+ *   popover.background
+ *   ├── arrow        (disabled via set_has_arrow(False))
+ *   ╰── contents
+ */
+popover,
+popover.background {
+    margin: 0;
+    padding: 0;
+    background-color: #e8e8e8;
+    box-shadow: none;
+    border-radius: 0;
+}
+
+popover > contents {
+    background-color: #e8e8e8;
+    border: 1px solid #888;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 2px;
+}
+
+popover > arrow {
+    min-width: 0;
+    min-height: 0;
+    background-color: transparent;
+    border: none;
+}
