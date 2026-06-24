@@ -154,13 +154,35 @@ class ContainerWidgetMixin(WidgetMixin):
         WidgetMixin.__init__(self)
 
         self._enable_callback('widget-removed')
+        # Python-side list of child *wrappers*.  The JS side only knows the
+        # JS widgets, so its get_children() returns JsProxy objects with no
+        # get_widget()/extdata; ginga (e.g. Desktop.get_configuration)
+        # expects the ginga wrappers, like the qt/gtk backends.  Track them
+        # here so get_children() can return them.
+        self.children = []
+
+    def add_widget(self, child, *args, **kwargs):
+        self.add_ref(child)
+        return super().add_widget(child, *args, **kwargs)
+
+    def add_ref(self, ref):
+        self.children.append(ref)
+
+    def get_children(self):
+        return self.children
+
+    def num_children(self):
+        return len(self.children)
 
     def remove(self, child, delete=False):
         super().remove(child, destroy=delete)
+        if child in self.children:
+            self.children.remove(child)
         self._make_callback('widget-removed', child)
 
     def remove_all(self, delete=False):
         super().remove_all(destroy=delete)
+        self.children = []
 
 
 # for compatibility
