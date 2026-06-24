@@ -276,6 +276,82 @@ class GwMain(Callback.Callbacks):
             self.logger.error("Error starting task: %s" % (str(e)))
             raise e
 
+    def nongui_foreach(self, items, worker, on_each=None, on_done=None,
+                       yield_interval=0.05, is_cancelled=None):
+        """Run ``worker(item)`` for each item off the GUI while keeping the
+        UI responsive.
+
+        In async (single event loop) mode this runs as a coroutine that
+        yields control back to the loop on a time budget (see
+        ``yield_interval``), so UI events and repaints are serviced as the
+        work proceeds; in threaded mode it runs as a single nongui task on a
+        worker thread.  The caller-facing API is identical in both modes.
+
+        This is the cooperative escape hatch for CPU-bound "nongui" work in
+        the single-threaded (browser/Pyodide) backend, where a nongui task
+        is just a coroutine on the one event loop: without periodic yields a
+        long loop starves the UI exactly like a synchronous call would.
+
+        Parameters
+        ----------
+        items : iterable
+            The work items.
+        worker : callable
+            ``worker(item) -> result``.  Runs off the GUI; must not touch
+            widgets directly.
+        on_each : callable or None
+            ``on_each(item, result)``, scheduled on the GUI (via gui_do)
+            after each item completes -- use for incremental display /
+            progress.
+        on_done : callable or None
+            ``on_done(results)``, scheduled on the GUI after all items
+            complete (not called if cancelled).
+        yield_interval : float
+            Minimum wall-clock seconds between event-loop yields (async mode
+            only).  The loop is given control only after this much time has
+            elapsed, *not* after every item -- each yield is a full
+            round-trip to the browser event loop costing real time, so
+            yielding per item would make the total cost roughly constant
+            regardless of how fast the work itself is (e.g. when results are
+            cached).  Yielding on a time budget keeps the UI responsive while
+            letting a fast (cached) run finish with few yields.
+        is_cancelled : callable or None
+            ``is_cancelled() -> bool``, checked before each item; abort if
+            it returns True.
+
+        Returns the task object.
+        """
+        items = list(items)
+
+        if self.async_mode:
+            async def _run_async():
+                results = []
+                t_last = time.monotonic()
+                for item in items:
+                    if is_cancelled is not None and is_cancelled():
+                        return
+                    results.append(worker(item))
+                    if on_each is not None:
+                        self.gui_do(on_each, item, results[-1])
+                    if time.monotonic() - t_last >= yield_interval:
+                        await asyncio.sleep(0)
+                        t_last = time.monotonic()
+                if on_done is not None:
+                    self.gui_do(on_done, results)
+            return self.nongui_do(_run_async)
+
+        def _run_thread():
+            results = []
+            for item in items:
+                if is_cancelled is not None and is_cancelled():
+                    return
+                results.append(worker(item))
+                if on_each is not None:
+                    self.gui_do(on_each, item, results[-1])
+            if on_done is not None:
+                self.gui_do(on_done, results)
+        return self.nongui_do(_run_thread)
+
     def is_gui_thread(self):
         # In async mode there is only one thread; treat it as the GUI
         # thread so gui_call() runs inline and never blocks on a future.
