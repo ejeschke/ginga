@@ -1610,6 +1610,12 @@ class TreeView(WidgetBase):
 
             if isinstance(cell, Gtk.CellRendererPixbuf):
                 if datatype == 'icon':
+                    # the 'pixbuf' property needs a GdkPixbuf (a GObject) or
+                    # None; an empty/non-leaf cell value ('' or None) would
+                    # raise "expected GObject but got ''", so coerce any
+                    # non-GObject to None
+                    if not isinstance(value, GObject.GObject):
+                        value = None
                     cell.set_property('pixbuf', value)
             elif isinstance(cell, Gtk.CellRendererToggle):
                 if datatype == 'check':
