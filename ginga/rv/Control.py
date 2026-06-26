@@ -2588,8 +2588,35 @@ class GuiLogHandler(logging.Handler):
 
     def __init__(self, fv, level=logging.NOTSET):
         self.fv = fv
+        self._emitting = False
         logging.Handler.__init__(self, level=level)
 
     def emit(self, record):
-        text = self.format(record)
-        self.fv.logit(text)
+        # Guard against re-entrancy: logit() updates a GUI widget (and on
+        # the web backend sends over a web socket), which can itself emit
+        # log records that would otherwise recurse back into this handler.
+        if self._emitting:
+            return
+        self._emitting = True
+        try:
+            text = self.format(record)
+            self.fv.logit(text)
+        finally:
+            self._emitting = False
+
+    def handle_batch(self, records):
+        # Called by BatchingQueueListener: format a run of records into a
+        # single block so logit() (and any web-socket round-trip behind it)
+        # fires once for the whole batch instead of once per line.  Honor the
+        # handler's own level here, since the QueueHandler enqueues at the
+        # logger's level.
+        if self._emitting:
+            return
+        self._emitting = True
+        try:
+            lines = [self.format(r) for r in records
+                     if r.levelno >= self.level]
+            if lines:
+                self.fv.logit("\n".join(lines))
+        finally:
+            self._emitting = False

@@ -7,12 +7,88 @@
 import os
 import logging
 import logging.handlers
+import threading
+import queue
+import time
 
 LOG_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
 
 # max size of log file before rotating
 log_maxsize = 20 * 1024 * 1024
 log_backups = 4
+
+
+class BatchingQueueListener:
+    """Drain a logging queue on a background thread, delivering records to a
+    handler in *batches* rather than one at a time.
+
+    A batch is flushed when either ``max_records`` records have piled up or
+    ``interval`` seconds have elapsed since the first record in the current
+    batch -- whichever comes first.  This collapses many GUI / web-socket log
+    writes into a single one, which matters when the GUI handler's sink is
+    expensive (e.g. a websocket round-trip per line).
+
+    The handler must implement ``handle_batch(records)``.  This is a
+    thread-based listener (it owns its own daemon thread), so it is only
+    suitable on backends that have threads -- i.e. not the in-situ/Pyodide
+    case, which runs a single event loop.
+    """
+
+    _SENTINEL = object()
+
+    def __init__(self, log_queue, handler, max_records=200, interval=0.25):
+        self.queue = log_queue
+        self.handler = handler
+        self.max_records = max_records
+        self.interval = interval
+        self._thread = None
+
+    def start(self):
+        self._thread = threading.Thread(target=self._run,
+                                        name="ginga-gui-log", daemon=True)
+        self._thread.start()
+
+    def stop(self):
+        # wake the thread if it is blocked in get(), then wait for it to drain
+        self.queue.put(self._SENTINEL)
+        t = self._thread
+        if t is not None:
+            t.join()
+            self._thread = None
+
+    def _run(self):
+        batch = []
+        deadline = None
+        while True:
+            timeout = (None if deadline is None
+                       else max(0.0, deadline - time.monotonic()))
+            try:
+                rec = self.queue.get(timeout=timeout)
+            except queue.Empty:
+                rec = None
+            if rec is self._SENTINEL:
+                break
+            if rec is not None:
+                if not batch:
+                    # first record of a new batch -- start the clock
+                    deadline = time.monotonic() + self.interval
+                batch.append(rec)
+            if batch and (len(batch) >= self.max_records or
+                          (deadline is not None and
+                           time.monotonic() >= deadline)):
+                self._deliver(batch)
+                batch = []
+                deadline = None
+        # flush whatever is left on shutdown
+        if batch:
+            self._deliver(batch)
+
+    def _deliver(self, records):
+        try:
+            self.handler.handle_batch(records)
+        except Exception:
+            # never let a logging failure kill the listener thread
+            pass
 
 
 class NullLogger:

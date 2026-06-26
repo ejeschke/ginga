@@ -12,6 +12,7 @@ import sys
 import os
 import logging
 import logging.handlers
+import queue
 import warnings
 import threading
 import asyncio
@@ -260,6 +261,8 @@ class ReferenceViewer:
         self.prefs = None
         self.settings = None
         self.ginga_shell = None
+        # background log listener (non-in-situ only); see run()/setup
+        self._gui_log_listener = None
 
     def add_plugin_spec(self, spec):
         self.plugins.append(spec)
@@ -558,7 +561,28 @@ class ReferenceViewer:
         guiHdlr.setLevel(self.settings.get('loglevel', logging.INFO))
         fmt = logging.Formatter(log.LOG_FORMAT)
         guiHdlr.setFormatter(fmt)
-        self.logger.addHandler(guiHdlr)
+
+        # The GUI handler writes to a widget -- on the web (pg) backend that
+        # means a web-socket send, which itself logs; doing that work
+        # synchronously on the logging caller's stack causes re-entrant
+        # recursion and stalls the hot path.  When threads are available
+        # (i.e. NOT running in-situ under Pyodide) route GUI logging through
+        # a queue drained by a background listener thread, so emit() just
+        # enqueues and returns.  The listener batches records, flushing a
+        # block to the GUI handler when it has piled up enough lines or a
+        # short interval has elapsed -- so a burst of log lines costs one
+        # widget update / web-socket send instead of one per line.  In-situ
+        # there are no threads, so log directly (and the GuiLogHandler
+        # re-entrancy guard covers that).
+        in_situ = (ginga_shell.is_web_backend() and ginga_shell.is_in_situ())
+        if in_situ:
+            self.logger.addHandler(guiHdlr)
+        else:
+            log_queue = queue.Queue(-1)
+            self.logger.addHandler(logging.handlers.QueueHandler(log_queue))
+            self._gui_log_listener = log.BatchingQueueListener(
+                log_queue, guiHdlr)
+            self._gui_log_listener.start()
 
         # Set loader priorities, if user has saved any
         # (see LoaderConfig plugin)
@@ -816,6 +840,10 @@ class ReferenceViewer:
             if not hosted:
                 self.logger.info("Shutting down...")
                 self.ev_quit.set()
+                # stop the background log listener thread, if running
+                if self._gui_log_listener is not None:
+                    self._gui_log_listener.stop()
+                    self._gui_log_listener = None
 
         if not hosted:
             sys.exit(0)
