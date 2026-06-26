@@ -885,10 +885,12 @@ class WorkerThread:
         self.my_quit.set()
 
     def cleanup(self):
+        # Called by the pool once our thread has been told to stop and the
+        # taskloop is on its way out.  Join the old thread before the worker
+        # object can be reused, otherwise we could null self.thread while the
+        # old thread is still finishing (see ThreadPool.register_dn).
         if self.thread is not None:
-            alive = self.thread.is_alive()
-            if not alive:
-                self.thread.join()
+            self.thread.join()
             self.thread = None
 
 
@@ -1022,18 +1024,38 @@ class ThreadPool:
                     self._analyze_time = cur_time
                     self.analyze_threads()
 
+            # Reclaim workers whose threads have stopped: join them OUTSIDE
+            # the lock, then return them to the waiting pool.  A worker is
+            # never put back in 'waiting' until its old thread is truly dead,
+            # so it cannot be restarted while still finishing up.
+            with self.regcond:
+                reclaim, self.cleanup = self.cleanup, []
+            for dead_worker in reclaim:
+                dead_worker.cleanup()
+            if len(reclaim) > 0:
+                with self.regcond:
+                    self.waiting.extend(reclaim)
+
             worker = None
             with self.regcond:
-                # join threads that have exited
-                while len(self.cleanup) > 0:
-                    dead_worker = self.cleanup.pop()
-                    dead_worker.cleanup()
-
                 num_running = len(self.running)
+                # number of running workers ready to take a task right now,
+                # and the amount of work waiting in the queue
+                num_idle = sum(1 for w in self.running
+                               if w.getstatus()[0] == 'idle')
+                num_pending = self.queue.qsize()
+
+                # Add a thread if we are below the minimum, or there is more
+                # pending work than idle workers to service it (up to the
+                # maximum).  Keying off the idle-worker count rather than
+                # qsize() alone avoids the race where an idle worker grabs the
+                # queued task before the attendant samples the queue -- which
+                # made it look like no extra thread was needed.
                 if (num_running < self.minthreads or
-                    self.queue.qsize() > 0 and num_running < self.numthreads):
-                    assert (len(self.waiting) > 0)
-                    worker = self.waiting[0]
+                    (num_pending > num_idle and
+                     num_running < self.numthreads)):
+                    if len(self.waiting) > 0:
+                        worker = self.waiting[0]
 
             if worker is not None:
                 worker.start(wait=True)
@@ -1115,7 +1137,8 @@ class ThreadPool:
         """
         with self.regcond:
             self.running.remove(worker)
-            self.waiting.append(worker)
+            # hand the worker to the attendant for cleanup (join) before it
+            # is returned to 'waiting' and possibly reused
             self.cleanup.append(worker)
             num_running = len(self.running)
             self.logger.debug("register_dn: (%d) count is %d" % (
