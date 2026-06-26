@@ -2,10 +2,74 @@
 What's New
 ++++++++++
 
-Ver 6.1.0 (unreleased)
+Ver 7.0.0 (unreleased)
 ======================
-- Remember position and size of a window in an MDI workspaces after a plugin
+- Adopted the new ``pgwidgets`` widget set (JavaScript widgets + Python
+  bindings) as the basis of the ``ginga.web.pgw`` backend.
+  (More information on pgwidgets can be found at the
+  `pgwidgets-js home page <https://github.com/naojsoft/pgwidgets-js>`__
+  and `pgwidgets-python page <https://github.com/naojsoft/pgwidgets-python>`__)
+- The reference viewer and the ``pg`` (web) widget set can now run
+  *entirely in the browser* via Pyodide/PyScript ("in-situ"), in addition
+  to the existing remote (web socket) mode; the widgets, image viewer
+  (``ImageViewPg``), plot viewer and ``ipg`` were reworked to support this
+- Added an optional asyncio-based, single-event-loop task pool (with an
+  async timer heap) so background ("nongui") work can run cooperatively on
+  the browser event loop where there are no threads; added
+  ``GwMain.nongui_foreach`` for responsive chunked work
+- Refactored the font assistant to support family/style/weight, added
+  ``Application`` methods to register shipped/loadable fonts and set a
+  default font, changed the default font from "Roboto" to "sans", and
+  fixed font handling across the PIL, OpenCV, AGG and Matplotlib backends
+- Added a central ``download_file()`` (Downloads delegates to it), a
+  ``fetch_url`` helper plus a Sesame name server, a backend-aware
+  ``open_url``, and an ``is_in_situ()`` check, so network access works
+  both natively and in the browser (via a same-origin CORS proxy)
+- Remember position and size of a window in an MDI workspace after a plugin
   has been closed and reopened
+- Plugin updates: PixTable now uses a ``TableView``; Cursor now uses a
+  ``Label``; fixes to Contents, Errors, FBrowser, Blink (close), WCSAxes
+  label color, and the startup banner under the ``pg`` backend
+- Many backend fixes (Qt/Gtk3/Gtk4/pg): font resolution, cell padding,
+  label colors, Gtk4 menu styling and Info-panel label alignment, empty
+  pixbuf cells, ``get_oriented_box`` now fills its area, and
+  ``get_children`` on pg containers returns the ginga widget wrappers
+
+New widgets
+-----------
+- **TableView** -- a flat, single-level, column-oriented table widget,
+  available in the Qt, Gtk3, Gtk4 and pg widget sets
+
+New features for existing widgets
+---------------------------------
+- ``TreeView`` / ``TableView``: per-cell background/foreground coloring;
+  embedded cell widgets (checkbox, combobox, progress bar, button);
+  per-column widths (``colwidths``) on all backends; ``set_row_spacing`` /
+  ``set_column_spacing`` cell padding; editing enhancements; a standardized
+  ``set_font(font, size=10)``
+- ``Box``: cross-axis alignment (``set_align``)
+- ``Label``: vertical alignment; ``set_bg()`` (now available on widgets
+  generally)
+- MDI workspaces remember child window size/position; sub-windows show an
+  icon
+- ``Application``: ``register_font`` / ``set_default_font`` for shipped
+  loadable fonts
+
+Breaking API changes
+--------------------
+- ``ginga.web.pgw`` now targets the new ``pgwidgets`` set; code written
+  against the old ``pgw`` widget classes / ``Application`` API needs
+  updating, although much of the API should be largely unchanged
+- The font assistant (``ginga.fonts.font_asst``) was refactored to carry
+  family/style/weight on its ``Font`` record (and in ``parse_font``); code
+  that constructed or unpacked the old ``Font`` should be updated
+- ``set_font`` is standardized to ``set_font(self, font, size=10)`` on the
+  tree/table (and other) widgets; a string, a ``font_asst.Font`` or a
+  native font object are accepted, but callers relying on a different
+  signature should adapt
+- The "drag-drop" event now calls back with the widget plus a drop event
+  object instead of a list of paths.  This supports drops of different data
+  types including blobs for chunking data into browsers, text, etc.
 
 Ver 6.0.0 (2016-02-25)
 ======================
