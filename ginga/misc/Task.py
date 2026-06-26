@@ -947,6 +947,9 @@ class ThreadPool:
             return
 
         self.logger.debug("startall called, starting pool attendant thread")
+        # clear the termination flag so the pool can be restarted after a
+        # prior stopall()
+        self.ev_quit.clear()
         self.status = 'start'
         self.mon_thread = threading.Thread(target=self.pool_attendant, args=[])
         self.mon_thread.start()
@@ -964,24 +967,37 @@ class ThreadPool:
 
     def stopall(self, wait=False):
         """Stop all threads in the worker pool.  If _wait_ is True
-        then don't return until all threads are down.
+        then don't return until all threads are down.  Safe to call when
+        the pool is not running (it is then a no-op).
         """
+        if self.mon_thread is None:
+            self.logger.debug("stopall called, but thread pool is not running")
+            return
+
         self.logger.debug("stopall called")
-        with self.lock:
+        with self.regcond:
             self.status = 'stop'
-        # Signal to all threads to terminate.
+        # Signal to all threads (and the attendant) to terminate.
         self.ev_quit.set()
+        with self.mp_cond:
+            # wake the attendant in case it is idle-waiting
+            self.mp_cond.notify()
 
         if wait:
             with self.regcond:
-                # Threads are on the way down.  Wait until last one quits.
-                while self.status != 'down':
+                # Wait until all running workers have exited.  Keying off the
+                # running count (rather than status == 'down') avoids hanging
+                # forever when there were no running workers to flip it.  The
+                # timeout makes this robust to a missed notify.
+                while len(self.running) > 0:
                     self.logger.debug("waiting for threads: count=%d" %
                                       len(self.running))
-                    self.regcond.wait()
+                    self.regcond.wait(timeout=0.25)
 
         self.mon_thread.join()
         self.mon_thread = None
+        with self.regcond:
+            self.status = 'down'
         self.logger.debug("stopall done")
 
     def add_threads(self, add_numthreads, minthreads=None):
