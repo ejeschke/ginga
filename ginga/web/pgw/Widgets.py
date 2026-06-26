@@ -589,7 +589,15 @@ class Image(WidgetMixin, PGW.Image):
             self.set_image(native_image)
 
     def load_file(self, path):
-        data_uri = self.to_data_uri(path)
+        # Build a ``data:`` URI from the file's bytes and hand it to the
+        # browser <img>.  SVG is kept scalable; raster formats keep their
+        # native resolution.  (There is no ``to_data_uri`` method -- this
+        # used to reference one that never existed.)
+        ext = os.path.splitext(path)[1].lower().lstrip('.')
+        imgtype = 'svg+xml' if ext == 'svg' else (ext or 'png')
+        with open(path, 'rb') as in_f:
+            data_uri = PgHelp.get_image_src_from_buffer(in_f.read(),
+                                                        imgtype=imgtype)
         self.set_image(data_uri)
 
 
