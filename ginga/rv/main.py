@@ -398,6 +398,7 @@ class ReferenceViewer:
         Setup routine for running the reference viewer.
 
         Assumptions:
+
         1) Following instance variables are set as needed:
            logger, settings, prefs, appname, basedir, ev_quit, ws_sock
         2) settings should be initialized with any desired overrides.
