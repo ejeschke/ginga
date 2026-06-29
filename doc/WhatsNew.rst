@@ -71,7 +71,7 @@ Breaking API changes
   object instead of a list of paths.  This supports drops of different data
   types including blobs for chunking data into browsers, text, etc.
 
-Ver 6.0.0 (2016-02-25)
+Ver 6.0.0 (2026-02-25)
 ======================
 - Added ability to add icons to Ginga-wrapped Button widgets
 - Refactored Pan and Header plugins to use new parent/child plugin
