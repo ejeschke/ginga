@@ -428,14 +428,14 @@ class PixTable(GingaPlugin.LocalPlugin):
         # bottom
         data = np.flipud(data)
 
-        # update the pixtable
-        # TODO: get set_rows() to accept a numpy 2D array
-        rows = [data[:, i].tolist() for i in range(data.shape[1])]
+        # update the pixtable: one displayed row per image column, so the
+        # grid is the transpose of `data` -- set_data() takes the 2D array
+        grid = data.T
         cols = [dict(label=f'col{i}', type='number')
-                for i in range(len(rows[0]))]
+                for i in range(grid.shape[1])]
         self.pixview.set_columns(cols)
-        self.pixview.set_rows(rows)
-        i, j = len(rows) // 2, len(cols) // 2
+        self.pixview.set_data(grid)
+        i, j = grid.shape[0] // 2, grid.shape[1] // 2
         # bold the value under the cursor
         self.pixview.set_cell_color(i, f'col{j}', fg='blue', bold=True)
         self.pixview.set_optimal_column_widths()

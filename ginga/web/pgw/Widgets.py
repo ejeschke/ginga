@@ -973,9 +973,31 @@ class TableView(WidgetMixin, PGW.TableView):
         super().set_rows(rows)
 
     def set_data(self, data):
+        """Replace all rows.  Accepts the same row forms as :meth:`set_rows`,
+        or a numpy array: a structured/record array becomes dict rows (keyed
+        by field name), a 2-D array becomes positional rows."""
+        from ginga.util import tablehelper
+        if tablehelper.is_ndarray(data):
+            data = tablehelper.rows_from_ndarray(data)
         self._rows = [self._normalise_row(r) for r in data]
         self._row_keys = [f'row{i}' for i in range(len(self._rows))]
         super().set_data(data)
+
+    def set_table(self, table):
+        """Populate the table from an astropy Table or pandas DataFrame:
+        derive the columns from the table (name -> key/label, dtype -> type),
+        then load its contents as rows."""
+        from ginga.util import tablehelper
+        self.set_columns(tablehelper.columns_from_table(table))
+        self.set_rows(tablehelper.rows_from_table(table))
+
+    def set_cell_padding(self, px):
+        # convenience matching the desktop backends: set both the row
+        # (vertical) and column (horizontal) cell spacing.  The
+        # set_row_spacing/set_column_spacing primitives are inherited
+        # from the underlying pgwidgets TableView (a TreeView subclass).
+        self.set_row_spacing(px)
+        self.set_column_spacing(px)
 
     def append_row(self, row):
         key = self._next_row_key()
@@ -1065,6 +1087,10 @@ class TableView(WidgetMixin, PGW.TableView):
         mirror — naïvely formatting ``'row{N}'`` would be wrong
         after any insert/delete, since JS auto-keys past collisions
         rather than reusing position numbers."""
+        # tolerate a bare row index (``2``) in place of a path (``[2]``),
+        # matching the qtw wrapper's _resolve_to_row_index
+        if isinstance(path, int):
+            path = [path]
         out = []
         for i, k in enumerate(path):
             if i == 0 and isinstance(k, int):

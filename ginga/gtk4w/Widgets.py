@@ -1966,8 +1966,22 @@ class TableView(TreeView):
         for r in rows:
             self._append_one(r)
 
-    # Alias matching pgw's ``set_data`` name.
-    set_data = set_rows
+    def set_data(self, data):
+        """Replace all rows.  Accepts the same row forms as :meth:`set_rows`,
+        or a numpy array: a structured/record array becomes dict rows (keyed
+        by field name), a 2-D array becomes positional rows."""
+        from ginga.util import tablehelper
+        if tablehelper.is_ndarray(data):
+            data = tablehelper.rows_from_ndarray(data)
+        self.set_rows(data)
+
+    def set_table(self, table):
+        """Populate the table from an astropy Table or pandas DataFrame:
+        derive the columns from the table (name -> key/label, dtype -> type),
+        then load its contents as rows."""
+        from ginga.util import tablehelper
+        self.set_columns(tablehelper.columns_from_table(table))
+        self.set_rows(tablehelper.rows_from_table(table))
 
     def append_row(self, values):
         self._append_one(values)
