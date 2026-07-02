@@ -184,7 +184,12 @@ class Contents(GingaPlugin.GlobalPlugin):
             if len(img_dict) == 0:
                 continue
             for imname in img_dict.keys():
-                bnch = channel.get_image_info(imname)
+                try:
+                    bnch = channel.get_image_info(imname)
+                except KeyError:
+                    # selection isn't a real image (e.g. a channel header
+                    # node); skip it
+                    continue
                 res.append((chname, bnch))
         return res
 
@@ -223,7 +228,7 @@ class Contents(GingaPlugin.GlobalPlugin):
             # may be a top-level channel node, e.g. in gtk
             return
         path = bnch.path
-        imname = bnch.imname
+        imname = bnch.name
         self.logger.debug("chname=%s name=%s path=%s" % (
             chname, imname, path))
 
