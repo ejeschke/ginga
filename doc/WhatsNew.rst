@@ -27,13 +27,11 @@ Ver 7.0.0 (unreleased)
   both natively and in the browser (via a same-origin CORS proxy)
 - Remember position and size of a window in an MDI workspace after a plugin
   has been closed and reopened
-- Plugin updates: PixTable now uses a ``TableView``; Cursor now uses a
-  ``Label``; fixes to Contents, Errors, FBrowser, Blink (close), WCSAxes
-  label color, and the startup banner under the ``pg`` backend
+- Plugin updates: PixTable now uses a ``TableView``; fixes to Contents,
+  Errors, FBrowser, Blink (close), WCSAxes, label color, and the startup
+  banner under the ``pg`` backend
 - Many backend fixes (Qt/Gtk3/Gtk4/pg): font resolution, cell padding,
-  label colors, Gtk4 menu styling and Info-panel label alignment, empty
-  pixbuf cells, ``get_oriented_box`` now fills its area, and
-  ``get_children`` on pg containers returns the ginga widget wrappers
+  label colors, Gtk4 menu styling and Info-panel label alignment
 
 New widgets
 -----------
