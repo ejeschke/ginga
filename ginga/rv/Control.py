@@ -2314,13 +2314,14 @@ class GingaShell(GenericShell):
         if hasattr(v, 'take_focus'):
             v.take_focus()
 
-    def focus_cb(self, viewer, tf, name):
+    def focus_cb(self, viewer, g_event, name):
         """Called when ``viewer`` gets ``(tf==True)`` or loses
         ``(tf==False)`` the focus.
         """
         if not self.settings.get('channel_follows_focus', False):
             return True
 
+        tf = g_event.focus
         self.logger.debug("focus %s=%s" % (name, tf))
         if tf:
             if viewer != self.getfocus_viewer():

@@ -128,7 +128,7 @@ class PlotViewBase(ViewerBase):
         # For callbacks
         for name in ['image-set', 'image-unset',
                      'limits-set', 'range-set', 'redraw',
-                     'configure']:
+                     'configure', 'map', 'resize']:
             self.enable_callback(name)
 
         if figure is None:
@@ -159,7 +159,9 @@ class PlotViewBase(ViewerBase):
         self.timer_resize = None
         self.timer_msg = None
 
-        self.add_callback('configure', self.resize_cb)
+        self.add_callback('map', self.map_cb)
+        self.add_callback('resize', self.resize_cb)
+        self.add_callback('configure', self.configure_cb)
         self.plot_w = PlotWidget(self)
 
     def set_figure(self, figure, mpl_canvas=None):
@@ -259,11 +261,22 @@ class PlotViewBase(ViewerBase):
     configure = set_window_size
     configure_window = set_window_size
 
-    def resize_cb(self, viewer, wd_px, ht_px):
+    def configure_cb(self, viewer, wd_px, ht_px):
+        """Called once a viewer size is being confirmed."""
         self.logger.debug(f"viewer resized to {wd_px}x{ht_px}")
         self._set_variable_font_sizes()
 
         self.redraw()
+
+    def map_cb(self, viewer, event):
+        """Called when the viewer widget is mapped to a window."""
+        self.set_window_size(event.width, event.height)
+
+    def resize_cb(self, viewer, event):
+        """Called while the viewer widget is being resized."""
+        # we schedule a resize in the near future, if the resize is ongoing
+        # we can avoid extra work
+        self.reschedule_resize(event.width, event.height)
 
     def delayed_resize(self):
         """Called when the timer for a delayed resize expires."""

@@ -558,9 +558,9 @@ class FocusIndicator(CanvasObjectBase):
                    (off, ht - off))
         cr.draw_polygon(tr.to_(cpoints), line=cr.line)
 
-    def focus_cb(self, viewer, onoff):
+    def focus_cb(self, viewer, g_event):
         has_focus = self.has_focus
-        self.has_focus = onoff
+        self.has_focus = g_event.focus
 
         if has_focus != self.has_focus:
             viewer.redraw(whence=3)
