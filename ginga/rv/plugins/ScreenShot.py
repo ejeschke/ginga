@@ -122,7 +122,6 @@ class ScreenShot(GingaPlugin.LocalPlugin):
         zi.show_mode_indicator(True)
 
         iw = Viewers.ScrolledView(zi)
-        iw.resize(self._wd, self._ht)
         vbox1.add_widget(iw, stretch=1)
 
         captions = (

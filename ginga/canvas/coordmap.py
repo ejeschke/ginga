@@ -17,7 +17,7 @@ class CoordMapError(Exception):
     pass
 
 
-class BaseMapper(object):
+class BaseMapper:
     """Base class for coordinate mapper objects."""
     def __init__(self):
         super(BaseMapper, self).__init__()

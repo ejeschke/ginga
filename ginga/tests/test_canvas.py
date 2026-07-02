@@ -12,7 +12,7 @@ from ginga.canvas.CanvasObject import get_canvas_types
 from ginga.AstroImage import AstroImage
 
 
-class TestCanvas(object):
+class TestCanvas:
 
     def setup_class(self):
         self.logger = logging.getLogger("TestCanvas")

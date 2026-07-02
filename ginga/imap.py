@@ -3378,7 +3378,7 @@ imap_null = (
 min_imap_len = 256
 
 
-class IntensityMap(object):
+class IntensityMap:
     def __init__(self, name, ilst):
         self.name = name
         #self.arr = np.array(ilst)

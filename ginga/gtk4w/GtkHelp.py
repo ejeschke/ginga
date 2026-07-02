@@ -36,7 +36,7 @@ DND_TARGET_TYPE_TEXT = 0
 DND_TARGET_TYPE_URIS = 1
 
 
-class WidgetMask(object):
+class WidgetMask:
     def __init__(self, *args):
         self.cb_fn = None
         self.cb_args = []
@@ -148,30 +148,17 @@ class SpinButton(WidgetMask, Gtk.SpinButton):
         super(SpinButton, self).set_value(newval)
 
 
-class HScale(WidgetMask, Gtk.Scale):
+class Scale(WidgetMask, Gtk.Scale):
     def __init__(self, *args, **kwdargs):
         WidgetMask.__init__(self)
-        Gtk.Scale.__init__(self, Gtk.ORIENTATION_HORIZONTAL, *args, **kwdargs)
+        Gtk.Scale.__init__(self, *args, **kwdargs)
 
     def set_value(self, newval):
         oldval = self.get_value()
         if oldval != newval:
             self.change()
 
-        super(HScale, self).set_value(newval)
-
-
-class VScale(WidgetMask, Gtk.Scale):
-    def __init__(self, *args, **kwdargs):
-        WidgetMask.__init__(self)
-        Gtk.Scale.__init__(self, Gtk.ORIENTATION_VERTICAL, *args, **kwdargs)
-
-    def set_value(self, newval):
-        oldval = self.get_value()
-        if oldval != newval:
-            self.change()
-
-        super(VScale, self).set_value(newval)
+        super(Scale, self).set_value(newval)
 
 
 class ComboBox(WidgetMask, Gtk.ComboBox):
@@ -1596,7 +1583,7 @@ class IndexDial(Dial):
         return idx
 
 
-class FileSelection(object):
+class FileSelection:
 
     def __init__(self, parent_w, action=Gtk.FileChooserAction.OPEN,
                  title="Select a file", all_at_once=False):
@@ -1817,17 +1804,54 @@ def get_icon(iconpath, size=None, adjust_width=True):
     return pixbuf
 
 
-def get_font(font_family, point_size):
-    font_family = font_asst.resolve_alias(font_family, font_family)
-    font = Pango.FontDescription('%s %d' % (font_family, point_size))
-    return font
+def get_font(font_spec, font_size):
+    """Function to obtain a font for the Pg backend.
 
+    Parameters
+    ----------
+    font_spec : str or `~ginga.fonts.font_asst.Font`
+        The desired font
 
-def load_font(font_name, font_file):
-    # TODO!
-    ## raise ValueError("Loading fonts dynamically is an unimplemented"
-    ##                  " feature for gtk4 back end")
-    return font_name
+    font_size : int
+        The point size requested for the given font
+
+    Returns
+    -------
+    font : dict
+        The desired font information in native backend form
+    """
+    key = ('gtk', font_spec, font_size)
+    try:
+        return font_asst.get_cache(key)
+
+    except KeyError:
+        pass
+
+    if isinstance(font_spec, str):
+        font_tup = font_asst.parse_font(font_spec)
+    elif isinstance(font_spec, font_asst.Font):
+        font_tup = font_spec
+    else:
+        raise ValueError("not a valid font spec: {}".format(str(font_spec)))
+
+    families = font_asst.get_substitutes(font_tup.family) + [font_tup.family]
+    for family in families:
+        try:
+            font_str = f'"{family}" {font_tup.style} {font_tup.weight} {font_size}'
+            font_desc = Pango.FontDescription(font_str)
+            # cache this dict for faster lookups hence
+            font_asst.add_cache(key, font_desc)
+            if isinstance(font_spec, str):
+                # also store the font under a secondary key
+                key2 = ('gtk', font_tup, font_size)
+                font_asst.add_cache(key2, font_desc)
+            return font_desc
+
+        except Exception as e:
+            continue
+
+    font_str = f'"{font_tup.family}" {font_tup.style} {font_tup.weight} {font_size}'
+    return Pango.FontDescription(font_str)
 
 
 def get_image(iconpath, size=None, adjust_width=True):
@@ -1974,12 +1998,46 @@ def modify_bg(widget, color):
     context = widget.get_style_context()
     if color is not None:
         context.add_class("custom_bg")
-        css_data = "*.custom_bg { background-image: none; background-color: %s; }" % (color)
+        css_color = _coerce_css_color(color)
+        css_data = ("*.custom_bg { background-image: none; "
+                    "background-color: %s; }" % (css_color,))
         css_provider = Gtk.CssProvider()
         css_provider.load_from_data(css_data.encode())
         context.add_provider(css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
     else:
         context.remove_class("custom_bg")
+
+
+def modify_fg(widget, color):
+    context = widget.get_style_context()
+    if color is not None:
+        context.add_class("custom_fg")
+        css_color = _coerce_css_color(color)
+        css_data = ("*.custom_fg { color: %s; }" % (css_color,))
+        css_provider = Gtk.CssProvider()
+        css_provider.load_from_data(css_data.encode())
+        context.add_provider(css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
+    else:
+        context.remove_class("custom_fg")
+
+
+def _coerce_css_color(color):
+    """GTK CSS only accepts ``#rrggbb`` hex, named colours, or
+    ``rgb()``/``rgba()`` functional forms — it rejects the 8-char
+    ``#rrggbbaa`` hex that ``ginga.colors.get_hex(alpha=...)``
+    produces.  Coerce that form into ``rgba(r, g, b, a)``; pass
+    everything else through unchanged."""
+    if (isinstance(color, str) and len(color) == 9 and
+        color.startswith('#')):
+        try:
+            r = int(color[1:3], 16)
+            g = int(color[3:5], 16)
+            b = int(color[5:7], 16)
+            a = int(color[7:9], 16) / 255.0
+        except ValueError:
+            return color
+        return f'rgba({r}, {g}, {b}, {a:.3f})'
+    return color
 
 
 def set_border_width(widget, pix):
@@ -2003,9 +2061,16 @@ def set_default_style():
     try:
         style_provider.load_from_data(css_data)
 
-        Gtk.StyleContext.add_provider_for_screen(
-            Gdk.Screen.get_default(), style_provider,
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        # GTK 4 dropped ``add_provider_for_screen`` /
+        # ``Gdk.Screen``; the equivalent is
+        # ``add_provider_for_display`` with the default display.
+        # Using ``STYLE_PROVIDER_PRIORITY_USER`` (1000) so our
+        # chrome rules win over the theme's more specific
+        # selectors — at APPLICATION (800) the theme often beats
+        # us on specificity.
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(), style_provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_USER
         )
 
     except Exception:

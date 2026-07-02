@@ -40,7 +40,7 @@ class SourceError(Exception):
     pass
 
 
-class Star(object):
+class Star:
     def __init__(self, **kwdargs):
         starInfo = {}
         starInfo.update(kwdargs)
@@ -60,7 +60,7 @@ class Star(object):
         return key in self.starInfo
 
 
-class AstroqueryCatalogServer(object):
+class AstroqueryCatalogServer:
     """For queries using the ``astroquery.catalog`` function."""
 
     kind = 'astroquery.catalog'
@@ -405,7 +405,7 @@ class AstroqueryVizierCatalogServer(AstroqueryCatalogServer):
         return starlist, info
 
 
-class AstroqueryImageServer(object):
+class AstroqueryImageServer:
     """For queries using the ``astroquery.vo_conesearch`` function."""
 
     kind = 'astroquery.image'
@@ -507,7 +507,7 @@ class AstroqueryImageServer(object):
         return fitspath
 
 
-class AstroqueryNameServer(object):
+class AstroqueryNameServer:
     """For object name lookups using `astroquery`"""
 
     kind = 'astroquery.names'
@@ -554,7 +554,82 @@ class AstroqueryNameServer(object):
         return ra, dec
 
 
-class URLServer(object):
+class SesameNameServer:
+    """Object name -> coordinates via the CDS Sesame resolver.
+
+    Unlike `AstroqueryNameServer`, this performs a single plain HTTP GET
+    against the Sesame service and parses the result, so it works both
+    natively *and* in-situ in the browser (Pyodide) -- in the latter case
+    the fetch goes through the central object's ``fetch_url()`` (browser
+    fetch + CORS proxy), since astroquery cannot run there.
+
+    The protocol (URL construction + response parsing) is abstracted here;
+    the *transport* is left to the caller, so the same server object works
+    regardless of backend.  ``search()`` is provided as a convenience for
+    native/synchronous callers.
+    """
+
+    kind = 'name.sesame'
+
+    # -oI : output includes a ``%J <ra_deg> <dec_deg>`` line (decimal deg)
+    # {db}: S=SIMBAD, N=NED, V=VizieR, A=all (tried in order)
+    base_url = "https://cds.unistra.fr/cgi-bin/nph-sesame/-oI/{db}?{name}"
+
+    db_codes = {'SIMBAD': 'S', 'NED': 'N', 'VIZIER': 'V', 'ALL': 'A'}
+
+    def __init__(self, logger, full_name, key, mapping, description=None):
+        super(SesameNameServer, self).__init__()
+        self.logger = logger
+        self.full_name = full_name
+        self.short_name = key
+        self.mapping = mapping
+        if description is None:
+            description = full_name
+        self.description = description
+        # which database(s) to resolve against
+        self.db = self.db_codes.get(key.upper(), 'A')
+
+    def make_url(self, name):
+        """Return the Sesame URL that resolves *name*."""
+        from urllib.parse import quote
+        return self.base_url.format(db=self.db, name=quote(name.strip()))
+
+    def parse(self, data):
+        """Parse a Sesame response into (ra_str, dec_str).
+
+        *data* may be ``bytes`` or ``str`` (the in-situ fetch returns
+        bytes).  Raises `SourceError` if no coordinates are found.
+        """
+        if isinstance(data, (bytes, bytearray, memoryview)):
+            data = bytes(data).decode('utf-8', errors='replace')
+
+        # Sesame emits a ``%J <ra_deg> <dec_deg> ...`` line per resolved
+        # database; take the first one.
+        for line in data.splitlines():
+            line = line.strip()
+            if line.startswith('%J '):
+                parts = line.split()
+                try:
+                    ra_deg = float(parts[1])
+                    dec_deg = float(parts[2])
+                except (IndexError, ValueError):
+                    continue
+                return (wcs.ra_deg_to_str(ra_deg), wcs.dec_deg_to_str(dec_deg))
+
+        raise SourceError("No coordinates found via Sesame "
+                          "(name not resolved?)")
+
+    def search(self, name, **kwargs):
+        """Resolve *name* synchronously (native/blocking convenience)."""
+        url = self.make_url(name)
+        self.logger.info("Sesame name lookup: %s" % (url))
+        req = Request(url)
+        with urlopen(req) as response:  # nosec
+            data = response.read()
+        return self.parse(data)
+
+
+class URLServer:
 
     kind = 'url'
 
@@ -793,7 +868,7 @@ class CatalogServer(URLServer):
         return (results, info)
 
 
-class ServerBank(object):
+class ServerBank:
 
     def __init__(self, logger):
         self.logger = logger
@@ -847,15 +922,17 @@ class ServerBank(object):
 
 # ---- SET UP DEFAULT SOURCES ----
 
-if have_astroquery:
-    # set up default name sources, catalog sources and image sources
+# Default name resolvers use Sesame (a plain HTTP GET), so they work both
+# natively and in-situ in the browser -- and do not require astroquery.
+default_name_sources.extend([
+    {'shortname': "SIMBAD", 'fullname': "SIMBAD",
+     'type': 'name.sesame'},
+    {'shortname': "NED", 'fullname': "NED",
+     'type': 'name.sesame'},
+])
 
-    default_name_sources.extend([
-        {'shortname': "SIMBAD", 'fullname': "SIMBAD",
-         'type': 'astroquery.names'},
-        {'shortname': "NED", 'fullname': "NED",
-         'type': 'astroquery.names'},
-    ])
+if have_astroquery:
+    # set up default catalog sources and image sources
 
     default_catalog_sources.extend([
         {'shortname': "GSC 2.3",

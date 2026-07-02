@@ -18,7 +18,7 @@ from tkinter.filedialog import askopenfilename
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
 
 
-class FitsViewer(object):
+class FitsViewer:
 
     def __init__(self, logger):
 

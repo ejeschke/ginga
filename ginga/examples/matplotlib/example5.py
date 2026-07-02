@@ -33,7 +33,7 @@ from ginga.util.loader import load_data
 use_logger = False
 
 
-class MyGingaFigure(object):
+class MyGingaFigure:
     def __init__(self, logger, fig):
         self.logger = logger
         # create a ginga object and tell it about the figure

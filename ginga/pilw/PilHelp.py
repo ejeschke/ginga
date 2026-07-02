@@ -11,29 +11,83 @@ from ginga import colors
 from ginga.fonts import font_asst
 
 
-def get_cached_font(fontname, fontsize):
-    key = ('pil', fontname, fontsize)
+def get_font(font_spec, font_size):
+    """Function to obtain a native font for the Pil backend.
+
+    Parameters
+    ----------
+    font_spec : str or `~ginga.fonts.font_asst.Font`
+        The desired font
+
+    font_size : int
+        The point size requested for the given font
+
+    Returns
+    -------
+    font : pillow truetype font
+        The desired font in native backend form
+    """
+    key = ('pil', font_spec, font_size)
     try:
         return font_asst.get_cache(key)
 
     except KeyError:
-        # see if we can build the font
-        info = font_asst.get_font_info(fontname, subst_ok=True)
+        pass
 
-        font = ImageFont.truetype(info.font_path, fontsize)
-        font_asst.add_cache(key, font)
+    if isinstance(font_spec, str):
+        font_tup = font_asst.parse_font(font_spec)
+    elif isinstance(font_spec, font_asst.Font):
+        font_tup = font_spec
+    else:
+        raise ValueError("not a valid font spec: {}".format(str(font_spec)))
 
-        return font
+    # font not loaded? try and load it
+    font = None
+    if font_asst.have_loadable_font(font_tup):
+        try:
+            font = load_font(font_tup, font_size)
+
+        except Exception as e:
+            pass
+
+    if font is None:
+        # try to create the font from the family name directly, plus in any
+        # other substitute fonts
+        families = font_asst.get_substitutes(font_tup.family)
+        for family in families:
+            font_tup2 = font_asst.Font(family=family, style=font_tup.style,
+                                       weight=font_tup.weight)
+            if font_asst.have_loadable_font(font_tup2):
+                try:
+                    font = load_font(font_tup2, font_size)
+                    break
+                except Exception as e:
+                    continue
+
+    if font is None:
+        try:
+            # if all is lost, try the Pillow "default font"
+            font = ImageFont.load_default(font_size)
+        except Exception as e:
+            raise ValueError(f"Couldn't create font for family '{font_tup.family}', "
+                             f"style={font_tup.style}, weight={font_tup.weight}")
+
+    font_asst.add_cache(key, font)
+    if isinstance(font_spec, str):
+        # also store the font under a secondary key
+        key2 = ('pil', font_tup, font_size)
+        font_asst.add_cache(key2, font)
+
+    return font
 
 
-def load_font(font_name, font_file):
-    if not font_asst.have_font(font_name):
-        font_asst.add_font(font_file, font_name=font_name)
-    return font_name
+def load_font(font_tup, font_size):
+    info = font_asst.get_font_info(font_tup)
+    return ImageFont.truetype(info.font_path, font_size)
 
 
 def text_size(text, font):
-    f = get_cached_font(font.fontname, font.fontsize)
+    f = get_font(font.fontname, font.fontsize)
     if hasattr(f, 'getbbox'):
         # PIL v10.0
         l, t, r, b = f.getbbox(text)
@@ -45,7 +99,7 @@ def text_size(text, font):
 
 def text_to_array(text, font, rot_deg=0.0):
     wd, ht = text_size(text, font)
-    f = get_cached_font(font.fontname, font.fontsize)
+    f = get_font(font.fontname, font.fontsize)
     color = get_color(font.color)
     i = Image.new('RGBA', (wd, ht))
     d = ImageDraw.Draw(i, 'RGBA')
@@ -65,7 +119,7 @@ def get_color(color, alpha=1.0):
     return (int(r * 255), int(g * 255), int(b * 255), int(alpha * 255))
 
 
-class PilContext(object):
+class PilContext:
 
     def __init__(self, surface):
         self.set_canvas(surface)
@@ -85,7 +139,7 @@ class PilContext(object):
         return [(p[0], p[1]) for p in points]
 
     def _get_font(self, font):
-        font = get_cached_font(font.fontname, font.fontsize)
+        font = get_font(font.fontname, font.fontsize)
         return font
 
     def text_extents(self, text, font):

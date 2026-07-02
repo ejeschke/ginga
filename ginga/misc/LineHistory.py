@@ -6,7 +6,7 @@
 #
 
 
-class LineHistory(object):
+class LineHistory:
 
     def __init__(self, numlines=1000):
         super(LineHistory, self).__init__()

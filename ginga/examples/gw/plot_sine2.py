@@ -35,14 +35,8 @@ def main(options, args):
         sys.exit()
 
     app.add_callback('shutdown', quit)
-    if hasattr(Widgets, 'Page'):
-        page = Widgets.Page("Plot sine2")
-        app.add_window(page)
-        top = Widgets.TopLevel("Plot sine2")
-        page.add_dialog(top)
-    else:
-        top = Widgets.TopLevel("Plot sine2")
-        app.add_window(top)
+    top = Widgets.TopLevel(title="Plot sine2")
+    app.add_window(top)
     top.add_callback('close', quit)
 
     vbox = Widgets.VBox()

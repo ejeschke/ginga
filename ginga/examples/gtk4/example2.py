@@ -13,7 +13,7 @@ from ginga.gtk4w.ImageViewGtk import CanvasView, ScrolledView
 from ginga.canvas.CanvasObject import get_canvas_types
 from ginga import colors
 from ginga.misc import log
-from ginga.util.loader import load_data
+from ginga.util.loader import load_data, handle_drop_event
 from ginga.locale.localize import _tr
 
 from gi.repository import Gtk
@@ -22,7 +22,7 @@ from gi.repository import Gtk
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
 
 
-class FitsViewer(object):
+class FitsViewer:
 
     def __init__(self, logger, render='widget'):
         self.logger = logger
@@ -196,9 +196,8 @@ class FitsViewer(object):
     def open_file(self, w):
         self.select.popup(_tr("Open FITS file"), self.load_file)
 
-    def drop_file_cb(self, fitsimage, paths):
-        fileName = paths[0]
-        self.load_file(fileName)
+    def drop_file_cb(self, fitsimage, drop_event):
+        handle_drop_event(fitsimage, drop_event)
 
     def cursor_cb(self, viewer, button, data_x, data_y):
         """This gets called when the data position relative to the cursor

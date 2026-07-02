@@ -36,7 +36,7 @@ def get_cached_font(fontpath, fontsize):
         return font
 
 
-class GlContext(object):
+class GlContext:
 
     def __init__(self, widget):
         self.widget = widget

@@ -5,10 +5,11 @@
 # Please see the file LICENSE.txt for details.
 
 import sys
+import time
 import numpy as np
 
 from ginga.gtk4w import GtkHelp
-from ginga import ImageView, Mixins, Bindings
+from ginga import ImageView, Mixins, Bindings, events
 from ginga.cursors import cursor_info
 from ginga.canvas import render
 
@@ -545,10 +546,16 @@ class GtkEventMixin:
                                             data_x, data_y)
 
     def on_dnd_drop(self, drop_target, value, x, y):
+        # common elements for a drop
+        drop = events.DropEvent()
+        data_x, data_y = self.check_cursor_location()
+        drop.set(timestamp=time.time(), x=x, y=y, data_x=data_x, data_y=data_y)
+
         paths = [gdk_path.get_path() for gdk_path in value]
         self.logger.debug("dropped filename(s): %s" % (str(paths)))
+        drop.set_uris(paths)
         if len(paths) > 0:
-            self.make_ui_callback_viewer(self, 'drag-drop', paths)
+            self.make_ui_callback_viewer(self, 'drag-drop', drop)
 
     def on_dnd_accept(self, drop, user_data):
         # TODO: double-check drop type

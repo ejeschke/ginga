@@ -35,7 +35,7 @@ from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.qtw import QtHelp
 from ginga import cmap, imap
 from ginga.misc import log
-from ginga.util.loader import load_data
+from ginga.util.loader import load_data, handle_drop_event
 
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
 
@@ -235,9 +235,8 @@ class FitsViewer(QtGui.QMainWindow):
         if len(fileName) != 0:
             self.load_file(fileName)
 
-    def drop_file_cb(self, viewer, paths):
-        filename = paths[0]
-        self.load_file(filename)
+    def drop_file_cb(self, fitsimage, drop_event):
+        handle_drop_event(fitsimage, drop_event)
 
     def closeEvent(self, ce):
         self.close()

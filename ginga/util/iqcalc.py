@@ -64,7 +64,7 @@ class IQCalcError(Exception):
     pass
 
 
-class IQCalc(object):
+class IQCalc:
     """Class to handle model fitting and FWHM calculations.
 
     Parameters

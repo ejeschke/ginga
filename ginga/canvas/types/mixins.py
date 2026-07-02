@@ -15,7 +15,7 @@ from ginga import trcalc
 #
 #   ==== MIXIN CLASSES FOR BASE OBJECTS ====
 #
-class OnePointMixin(object):
+class OnePointMixin:
 
     # --- For backward compatibility ---
     def __get_x(self):
@@ -63,7 +63,7 @@ class OnePointMixin(object):
         pass
 
 
-class TwoPointMixin(object):
+class TwoPointMixin:
 
     # --- For backward compatibility ---
     def __get_x1(self):
@@ -278,7 +278,7 @@ class OnePointTwoRadiusMixin(OnePointMixin):
         return (a[0], a[1], b[0], b[1])
 
 
-class PolygonMixin(object):
+class PolygonMixin:
     """Mixin for polygon-based objects.
     """
     def __init__(self):

@@ -16,7 +16,7 @@ class PluginError(Exception):
     pass
 
 
-class BasePlugin(object):
+class BasePlugin:
     """Base class for all plugins."""
     def __init__(self, fv, ident=None):
         super().__init__()

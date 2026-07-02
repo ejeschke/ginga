@@ -20,7 +20,7 @@ class ZoomError(Exception):
     pass
 
 
-class ZoomBase(object):
+class ZoomBase:
 
     def __init__(self, viewer):
         super(ZoomBase, self).__init__()

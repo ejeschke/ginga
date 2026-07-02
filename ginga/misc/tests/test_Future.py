@@ -13,7 +13,7 @@ class _TestError(Exception):
     pass
 
 
-class TestFuture(object):
+class TestFuture:
 
     def setup_class(self):
         self.future_thread = None

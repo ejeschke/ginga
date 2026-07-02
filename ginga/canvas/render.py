@@ -104,7 +104,6 @@ class RenderContextBase:
 
     def get_font(self, fontname, fontsize=None, fontscale=False,
                  fontsize_min=2, fontsize_max=None):
-        fontname = font_asst.resolve_alias(fontname, fontname)
         if fontsize is None:
             fontsize = 12
             fontsize = self.scale_fontsize(fontsize)
@@ -221,7 +220,7 @@ class RenderContextBase:
         pass
 
 
-class RendererBase(object):
+class RendererBase:
     """Base class from which all Renderer classes are derived."""
 
     def __init__(self, viewer):

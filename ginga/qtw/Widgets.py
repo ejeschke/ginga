@@ -11,21 +11,23 @@ from functools import reduce
 from ginga.qtw.QtHelp import (QtGui, QtCore, QTextCursor, QIcon, QPixmap,
                               QTextOption, QCursor, QFont, SaveDialog)
 from ginga.qtw import QtHelp
+from ginga.qtw.QtHelp import Timer  # noqa
 
 from ginga import colors
 from ginga.util.paths import icondir as ginga_icon_dir
 from ginga.misc import Callback, Bunch, Settings, LineHistory
 from ginga.util.paths import icondir, app_icon_path
+from ginga.fonts import font_asst
 
-__all__ = ['WidgetError', 'WidgetBase', 'TextEntry', 'TextEntrySet',
-           'TextArea', 'Label', 'Button', 'ComboBox',
+__all__ = ['WidgetError', 'Widget', 'WidgetBase', 'TextEntry', 'TextEntrySet',
+           'TextArea', 'Label', 'Button', 'ComboBox', 'Timer',
            'SpinBox', 'Slider', 'Dial', 'ScrollBar', 'CheckBox', 'ToggleButton',
            'RadioButton', 'Image', 'ProgressBar', 'StatusBar', 'TreeView',
-           'ContainerBase', 'Box', 'HBox', 'VBox', 'Frame',
-           'Expander', 'TabWidget', 'StackWidget', 'MDIWidget', 'ScrollArea',
-           'Splitter', 'GridBox', 'ToolbarAction', 'Toolbar', 'MenuAction',
-           'Menu', 'Menubar', 'TopLevelMixin', 'TopLevel', 'Application',
-           'Dialog', 'SaveDialog', 'ColorDialog', 'FileDialog',
+           'TableView', 'ContainerBase', 'Box', 'HBox', 'VBox', 'Frame',
+           'Expander', 'FixedLayout', 'TabWidget', 'StackWidget', 'MDIWidget',
+           'ScrollArea', 'Splitter', 'GridBox', 'ToolbarAction', 'Toolbar',
+           'MenuAction', 'Menu', 'Menubar', 'TopLevelMixin', 'TopLevel',
+           'Application', 'Dialog', 'SaveDialog', 'ColorDialog', 'FileDialog',
            'MessageDialog', 'DragPackage',
            'name_mangle', 'make_widget', 'hadjust', 'build_info', 'wrap']
 
@@ -56,11 +58,42 @@ class WidgetBase(Callback.Callbacks):
     def set_tooltip(self, text):
         self.widget.setToolTip(text)
 
+    def set_bg(self, color):
+        """Set the widget's background colour.  ``color`` is a CSS
+        string (``'#rrggbb'``, ``'red'``, ``'rgba(...)'``, …) or
+        ``None`` to clear the override.
+
+        Uses ``setAutoFillBackground(True)`` + palette ``Window``
+        role — the reliable mechanism that paints plain
+        ``QWidget`` (Box / HBox / VBox containers) as well as
+        every other widget class.  Stylesheets on plain QWidget
+        are ignored without ``WA_StyledBackground`` *and* a
+        ``paintEvent`` override, so palette is the simpler path.
+
+        Themed widgets (Button, ComboBox, …) paint their own
+        multi-state backgrounds via the platform style; on those,
+        a generic ``set_bg`` may be partially overridden by hover /
+        active states.  For uniform styling on themed widgets,
+        use their widget-specific style API instead."""
+        if color is None:
+            self.widget.setAutoFillBackground(False)
+            # Reset to the application default palette so any
+            # previously applied Window colour goes away.
+            self.widget.setPalette(QtGui.QApplication.palette(self.widget))
+        else:
+            self.widget.setAutoFillBackground(True)
+            pal = self.widget.palette()
+            pal.setColor(QtHelp.QPalette.Window, QtHelp.QColor(color))
+            self.widget.setPalette(pal)
+
     def get_enabled(self):
         self.widget.isEnabled()
 
     def set_enabled(self, tf):
         self.widget.setEnabled(tf)
+
+    def is_container(self):
+        return False
 
     def get_size(self):
         wd, ht = self.widget.width(), self.widget.height()
@@ -90,6 +123,24 @@ class WidgetBase(Callback.Callbacks):
         if height < 0:
             height = _ht
         self.widget.resize(int(width), int(height))
+
+    def set_min_size(self, wd, ht):
+        if wd is None:
+            # sentinal for unrestricted
+            wd = QtHelp.QWIDGETSIZE_MAX
+        if ht is None:
+            # sentinal for unrestricted
+            ht = QtHelp.QWIDGETSIZE_MAX
+        self.widget.setMinimumSize(wd, ht)
+
+    def set_max_size(self, wd, ht):
+        if wd is None:
+            # sentinal for unrestricted
+            wd = QtHelp.QWIDGETSIZE_MAX
+        if ht is None:
+            # sentinal for unrestricted
+            ht = QtHelp.QWIDGETSIZE_MAX
+        self.widget.setMaximumSize(wd, ht)
 
     def show(self):
         self.widget.show()
@@ -131,11 +182,25 @@ class WidgetBase(Callback.Callbacks):
         v_policy = QtGui.QSizePolicy.Policy(policy_dict[vertical])
         self.widget.setSizePolicy(QtGui.QSizePolicy(h_policy, v_policy))
 
+    def set_expanding(self, horizontal=False, vertical=False):
+        # a simple version of cfg_expand that is more cross platform
+        policy = self.widget.sizePolicy()
+        hpolicy = policy.horizontalPolicy()
+        vpolicy = policy.verticalPolicy()
+        if horizontal:
+            hpolicy = QtGui.QSizePolicy.Expanding
+        if vertical:
+            vpolicy = QtGui.QSizePolicy.Expanding
+        self.widget.setSizePolicy(QtGui.QSizePolicy(hpolicy, vpolicy))
+
     def get_rgb_array(self):
         return QtHelp.get_rgb_array(self.widget)
 
 
+Widget = WidgetBase
+
 # BASIC WIDGETS
+
 
 class TextEntry(WidgetBase):
     def __init__(self, text='', editable=True):
@@ -385,14 +450,32 @@ class Label(WidgetBase):
 
     def set_halign(self, align):
         align = align.lower()
+        # Mask the horizontal-alignment bits out of the current
+        # value and OR in the new flag, so the existing vertical
+        # bits (set via ``set_valign``) survive.
+        cur = self.widget.alignment() & ~QtCore.Qt.AlignHorizontal_Mask
         if align == 'left':
-            self.widget.setAlignment(QtCore.Qt.AlignLeft)
+            cur |= QtCore.Qt.AlignLeft
         elif align == 'center':
-            self.widget.setAlignment(QtCore.Qt.AlignHCenter)
+            cur |= QtCore.Qt.AlignHCenter
         elif align == 'right':
-            self.widget.setAlignment(QtCore.Qt.AlignRight)
+            cur |= QtCore.Qt.AlignRight
         else:
             raise ValueError(f"Don't understand alignment '{align}'")
+        self.widget.setAlignment(cur)
+
+    def set_valign(self, align):
+        align = align.lower()
+        cur = self.widget.alignment() & ~QtCore.Qt.AlignVertical_Mask
+        if align == 'top':
+            cur |= QtCore.Qt.AlignTop
+        elif align == 'center':
+            cur |= QtCore.Qt.AlignVCenter
+        elif align == 'bottom':
+            cur |= QtCore.Qt.AlignBottom
+        else:
+            raise ValueError(f"Don't understand alignment '{align}'")
+        self.widget.setAlignment(cur)
 
 
 class Button(WidgetBase):
@@ -735,11 +818,21 @@ class RadioButton(WidgetBase):
         self.make_callback('activated', val)
 
     def set_state(self, tf):
-        if self.widget.isChecked() != tf:
-            # toggled only fires when the value is toggled
-            self.widget.blockSignals(True)
+        if self.widget.isChecked() == tf:
+            return
+        # toggled only fires when the value is toggled
+        self.widget.blockSignals(True)
+        if not tf and self.widget.autoExclusive():
+            # Qt won't let us uncheck the currently-checked radio in
+            # an autoExclusive group; flip the flag, uncheck, then
+            # restore.  Matches what gtk's set_active(False) does
+            # natively and what cross-backend callers expect.
+            self.widget.setAutoExclusive(False)
+            self.widget.setChecked(False)
+            self.widget.setAutoExclusive(True)
+        else:
             self.widget.setChecked(tf)
-            self.widget.blockSignals(False)
+        self.widget.blockSignals(False)
 
     def get_state(self):
         return self.widget.isChecked()
@@ -826,20 +919,68 @@ class StatusBar(WidgetBase):
         self.widget.showMessage(msg_str, int(duration * 1000))
 
 
+def _coerce_bool(s):
+    """Best-effort string → bool conversion for sort keys."""
+    if isinstance(s, bool):
+        return s
+    if isinstance(s, (int, float)):
+        return bool(s)
+    if isinstance(s, str):
+        return s.strip().lower() in ('1', 'true', 't', 'yes', 'y',
+                                     'on', '✓')
+    return bool(s)
+
+
 class TreeWidgetItem(QtGui.QTreeWidgetItem):
-    """A hack to subclass QTreeWidgetItem to enable sorting by numbers
-    in a field.
+    """``QTreeWidgetItem`` subclass with type-aware sort comparison.
+
+    Looks up the column's declared type on the parent ``QTreeWidget``
+    (set by :meth:`TreeView.setup_table` as ``_datatypes``) and
+    compares accordingly.  Mirrors the pgw TreeView's type-aware
+    sort behaviour so a column of integers sorts numerically,
+    a column of booleans by truth value, and so on.  Falls back to
+    case-insensitive string comparison for unknown types.
     """
     def __init__(self, *args, **kwargs):
         QtGui.QTreeWidgetItem.__init__(self, *args, **kwargs)
 
-    def __lt__(self, otherItem):
-        column = self.treeWidget().sortColumn()
-        try:
-            return float(self.text(column)) < float(otherItem.text(column))
+    def __lt__(self, other):
+        tv = self.treeWidget()
+        col = tv.sortColumn()
+        dtype = getattr(tv, '_datatypes', None)
+        kind = dtype[col] if dtype and 0 <= col < len(dtype) else 'str'
 
-        except ValueError:
-            return self.text(column) < otherItem.text(column)
+        a, b = self.text(col), other.text(col)
+
+        # Empty strings always sort last (consistent both ways) so
+        # missing values don't muddle the order.
+        if a == '' and b != '':
+            return False
+        if b == '' and a != '':
+            return True
+
+        if kind in ('int', 'integer'):
+            try:
+                return int(a) < int(b)
+            except (ValueError, TypeError):
+                pass  # fall through to string compare
+        elif kind in ('float', 'number'):
+            try:
+                return float(a) < float(b)
+            except (ValueError, TypeError):
+                pass
+        elif kind in ('bool', 'boolean'):
+            return _coerce_bool(a) < _coerce_bool(b)
+        elif kind == 'check':
+            return self.checkState(col) < other.checkState(col)
+        # 'str', 'icon', 'widget', or unknown — try numeric first
+        # (preserves the old TreeView heuristic where un-typed
+        # numeric strings sort numerically), then fall back to
+        # case-insensitive string compare.
+        try:
+            return float(a) < float(b)
+        except (ValueError, TypeError):
+            return a.lower() < b.lower()
 
 
 class TreeView(WidgetBase):
@@ -860,13 +1001,21 @@ class TreeView(WidgetBase):
         self.datatypes = []
         # shadow index
         self.shadow = {}
-        self.font = 'Sans Serif'
+        # native backend font (QFont).  Aliases like "fixed" are resolved
+        # to a loadable shipped font by QtHelp/font_asst, so the font is
+        # applied via setFont() rather than a CSS font-family that Qt's
+        # stylesheet engine can't resolve.
+        self.font = self.get_font('sans', 10)
         self.fontsize = 10.0
         self.cell_pad_px = 0
+        # separate vertical (row) / horizontal (column) cell padding
+        self.row_pad_px = 0
+        self.col_pad_px = 0
         self.editable = False
 
         tv = QtGui.QTreeWidget()
         self.widget = tv
+        self.__apply_font()
         tv.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
         if selection == 'multiple':
             tv.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
@@ -876,12 +1025,17 @@ class TreeView(WidgetBase):
         tv.itemExpanded.connect(self._item_expanded_cb)
         tv.itemCollapsed.connect(self._item_collapsed_cb)
         tv.itemChanged.connect(self._item_changed_cb)
+        # Fires when the user clicks a header section to (re)sort.
+        # Lets TreeViewItem.__lt__ do type-aware comparison while
+        # the higher level gets a clean "the user sorted by col N"
+        # event.
+        tv.header().sortIndicatorChanged.connect(self._sort_indicator_cb)
         if self.dragable:
             tv.setDragEnabled(True)
             tv.startDrag = self._start_drag
 
         for cbname in ('selected', 'activated', 'drag-start', 'expanded',
-                       'collapsed', 'changed'):
+                       'collapsed', 'changed', 'sorted'):
             self.enable_callback(cbname)
 
     def setup_table(self, columns, levels, leaf_key):
@@ -914,6 +1068,10 @@ class TreeView(WidgetBase):
 
         self.datakeys = datakeys
         self.datatypes = datatypes
+        # Mirror datatypes onto the QTreeWidget itself so the
+        # TreeWidgetItem.__lt__ comparator can see them without
+        # needing a back-reference to the Ginga wrapper.
+        treeview._datatypes = datatypes
         self.leaf_idx = datakeys.index(self.leaf_key)
 
         if self.sortable:
@@ -1054,6 +1212,19 @@ class TreeView(WidgetBase):
     def _selection_cb(self):
         res_dict = self.get_selected()
         self.make_callback('selected', res_dict)
+
+    def _sort_indicator_cb(self, col, order):
+        """Fire when the user clicks a header section to (re)sort.
+
+        The callback carries the column *key* (a stable string),
+        not the column index — matching the pgw TableView's
+        ``sorted`` signature so a single handler works under both
+        widget sets.
+        """
+        ascending = (order == QtCore.Qt.AscendingOrder)
+        col_key = (self.datakeys[col]
+                   if 0 <= col < len(self.datakeys) else None)
+        self.make_callback('sorted', col_key, ascending)
 
     def _item_expanded_cb(self, item):
         path = self._get_path(item)
@@ -1293,28 +1464,46 @@ class TreeView(WidgetBase):
     def get_column_widths(self):
         return [self.widget.columnWidth(i) for i in range(len(self.columns))]
 
-    def set_font(self, fontname, size):
-        self.font = fontname
+    def set_font(self, font, size=10):
+        # Apply a real backend font, resolved through QtHelp/font_asst so
+        # that aliases like "fixed" map to a loadable shipped font.  Qt's
+        # stylesheet engine can't resolve such a font from a CSS
+        # font-family, so we set the font via setFont() (as Label does)
+        # and reserve CSS for cell padding only.
+        if not isinstance(font, QFont):
+            font = self.get_font(font, size)
+        self.font = font
         self.fontsize = size
-        self.__set_style()
+        self.__apply_font()
+
+    def __apply_font(self):
+        self.widget.setFont(self.font)
+        # render the header in the same typeface/size, but bold
+        hdr_font = QFont(self.font)
+        hdr_font.setBold(True)
+        self.widget.header().setFont(hdr_font)
 
     def set_cell_padding(self, px):
         self.cell_pad_px = int(px)
+        self.row_pad_px = self.col_pad_px = int(px)
+        self.__set_style()
+
+    def set_row_spacing(self, px):
+        # vertical padding inside each cell (controls row height)
+        self.row_pad_px = int(px)
+        self.__set_style()
+
+    def set_column_spacing(self, px):
+        # horizontal padding inside each cell
+        self.col_pad_px = int(px)
         self.__set_style()
 
     def __set_style(self):
+        # font is applied via setFont() (see set_font); CSS handles only
+        # the per-cell padding.
         style = f"""
-        QTreeWidget {{
-            font: {self.font};
-            font-size: {self.fontsize}pt;
-        }}
-        QHeaderView::section {{
-            font: {self.font};
-            font-size: {self.fontsize}pt;
-            font-weight: bold;
-        }}
         QTreeWidget::item {{
-            padding: {self.cell_pad_px};
+            padding: {self.row_pad_px}px {self.col_pad_px}px;
         }}
         """
         self.widget.setStyleSheet(style)
@@ -1324,6 +1513,1618 @@ class TreeView(WidgetBase):
         drag_pkg = DragPackage(self.widget)
         self.make_callback('drag-start', drag_pkg, res_dict)
         drag_pkg.start_drag()
+
+
+# Synthetic key used for the row-number column when show_row_numbers
+# is enabled.  Underscore-prefixed so it can't collide with a real
+# user column key.
+_ROW_NUM_KEY = '_row_num_'
+
+# Recognised values for the ``widget`` field of a column descriptor.
+# A column without ``widget`` set renders as plain text (the long-
+# standing behaviour); a column with ``widget`` set hosts a real
+# Qt widget per cell.  Keep this in sync with the same constant in
+# the pgw / gtk3w / gtk4w wrappers.
+_CELL_WIDGETS = ('checkbox', 'combobox', 'progress', 'button')
+
+
+class _CellWrapper(QtGui.QWidget):
+    """Container for widget-typed TableView cells.
+
+    Paints its own background in ``paintEvent`` (fillRect with the
+    current cell colour).  Qt's ``setItemWidget`` covers the cell
+    rect with this widget — the QTreeWidgetItem's background brush
+    is not composited under it, and stylesheet / palette tweaks
+    don't reliably re-render after the initial paint.  Painting
+    directly in paintEvent is the only technique that works
+    consistently across platform styles.
+
+    The colour is stored on the instance; ``set_cell_color`` is
+    called from ``_paint_widget_cell`` and from the install path."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._bg_color = None
+        self._fg_color = None
+
+    def set_cell_color(self, fg, bg):
+        self._bg_color = bg
+        self._fg_color = fg
+        if fg is not None:
+            qfg = QtHelp.QColor(fg)
+            pal = self.palette()
+            pal.setColor(QtHelp.QPalette.WindowText, qfg)
+            pal.setColor(QtHelp.QPalette.ButtonText, qfg)
+            self.setPalette(pal)
+            layout = self.layout()
+            if layout is not None:
+                for i in range(layout.count()):
+                    child = layout.itemAt(i).widget()
+                    if child is not None:
+                        child.setPalette(pal)
+        self.update()
+
+    def paintEvent(self, event):
+        if self._bg_color is not None:
+            p = QtHelp.QPainter(self)
+            p.fillRect(self.rect(), QtHelp.QColor(self._bg_color))
+            p.end()
+        super().paintEvent(event)
+
+
+class TableView(TreeView):
+    """Flat tabular view, API-compatible with the pgw TableView.
+
+    Backed by a ``QTreeWidget`` configured for single-level display
+    (no expand/collapse hierarchy, no indentation), so it visually
+    presents as a table while reusing all of :class:`TreeView`'s
+    selection / drag / font / padding / type-aware sort plumbing.
+    The row-oriented public API matches :class:`PGW.TableView`
+    (and the underlying pgwidgets-python ``TableView``):
+
+    Constructor options
+    -------------------
+    columns : list
+        Column descriptors.  Each entry may be:
+
+        * a ``dict``: ``{label, key, type, halign}`` (the canonical
+          form, matching pgw);
+        * a tuple/list: ``(label, key[, type])`` (the legacy form);
+        * a bare string: treated as both label and key, type
+          ``'string'``.
+
+        ``type`` is one of ``'string'``/``'str'``, ``'integer'``/
+        ``'int'``, ``'float'``/``'number'``, ``'boolean'``/``'bool'``,
+        or ``'icon'``.  Drives the sort comparator.
+    show_header : bool
+        Show the column header row.  Default ``True``.
+    selection_mode : str
+        ``'single'``, ``'multiple'``, ``'none'``, or the per-cell
+        variants ``'single-cell'`` / ``'multiple-cell'``.  Cell
+        modes light up the cell-clicked rectangle (Shift) /
+        disjoint cells (Ctrl), plus row-select via row-number
+        click and column-select via header click (with modifiers
+        if ``sortable`` is on).
+    alternate_row_colors : bool
+        Stripe alternate rows.
+    show_grid : bool
+        Draw grid lines.  ``QTreeWidget`` doesn't expose native
+        grid lines, so this is emulated via a stylesheet —
+        cosmetic only.
+    show_row_numbers : bool
+        Show a 1-based row-number column on the left, styled like
+        a vertical header (gray background, bold, narrow,
+        non-editable, non-sortable).
+    sortable : bool
+        Allow click-to-sort on column headers.
+    allow_text_selection : bool
+        Currently a no-op on qtw; accepted for API compatibility.
+    dragable : bool
+        Allow rows to be dragged out (inherited from TreeView).
+
+    Row data
+    --------
+    ``set_rows`` / ``set_data`` / ``append_row`` / ``insert_row``
+    accept either a ``dict`` keyed by column key, or a positional
+    ``list`` / ``tuple`` matching the column order.  Internally
+    rows are addressed by integer index, exposed as a length-1
+    "path" (``[row_index]``) to mirror :class:`TreeView`.
+
+    Callbacks
+    ---------
+    * ``activated(table, row_dict, [row_index], col_key)`` — fires
+      on double-click.  ``col_key`` is the user-space column key
+      that was clicked, or ``None`` if the click landed on the
+      synthetic row-number column.
+    * ``selected(table, list_of_row_dicts)`` — row-mode selection
+      changed.
+    * ``cell_selected(table, [{path, col_key, value}, ...])`` —
+      cell-mode selection changed (``single-cell`` /
+      ``multiple-cell``).
+    * ``sorted(table, col_key, ascending)`` — user clicked a
+      header to sort.
+    * ``cell_edited(table, [row_index], col_key, old_value, new_value)``
+      — an editable cell was edited (only fires for columns marked
+      editable via :meth:`set_column_editable`).
+    * ``scrolled(table, h_pct, v_pct)`` — scroll position changed.
+    * ``copy(table, tsv)`` / ``cut(table, tsv)`` /
+      ``paste(table, text)`` — Ctrl+C / X / V on the widget.  The
+      widget itself updates the visible cells on paste / cut; the
+      callbacks let plugins react (e.g. propagate to a backing
+      model).
+    """
+
+    def __init__(self, columns=None, show_header=True,
+                 selection_mode='single', alternate_row_colors=False,
+                 show_grid=False, show_row_numbers=False,
+                 sortable=False, allow_text_selection=False,
+                 dragable=False):
+        # Cell modes map to a row-level "multiple" Qt mode at the
+        # TreeView layer; per-cell behavior is enabled below by
+        # switching the SelectionBehavior to SelectItems.
+        self._selection_mode_arg = selection_mode
+        is_cell_mode = selection_mode in ('single-cell', 'multiple-cell')
+        parent_mode = 'multiple' if is_cell_mode else selection_mode
+        super().__init__(auto_expand=False, sortable=sortable,
+                         selection=parent_mode,
+                         use_alt_row_color=alternate_row_colors,
+                         dragable=dragable)
+
+        # Flat-table display tweaks.  Hides the expand/collapse
+        # indicator and zeroes out indentation so the first column
+        # starts flush left like a real table.
+        tv = self.widget
+        tv.setRootIsDecorated(False)
+        tv.setItemsExpandable(False)
+        tv.setIndentation(0)
+        if not show_header:
+            tv.header().hide()
+
+        # Per-column editable flags.  Populated by
+        # set_column_editable; consulted when rows are added.
+        self._editable_cols = set()
+        # User-supplied (normalised) column descriptors.  Excludes
+        # the synthetic row-number column even when show_row_numbers
+        # is on, so the public API indexes into the user's columns.
+        self._user_columns = []
+        self._show_row_numbers = bool(show_row_numbers)
+        self._show_grid = False
+        self._allow_text_selection = bool(allow_text_selection)  # noqa
+
+        # Colour-override state, four layers with cell > row >
+        # column > table precedence (mirrors the pgw side).  See
+        # _resolve_cell_color / _apply_color_to_cell below.
+        #
+        # Cell / row entries are keyed by ``id(QTreeWidgetItem)``
+        # so they survive header-click sort but are wiped when
+        # ``set_rows`` / ``set_columns`` rebuild the items (item
+        # objects go away).  Column / table entries persist
+        # across rebuilds and are re-applied to every new row.
+        self._cell_color_map = {}     # (id(item), user_col) -> {fg,bg}
+        self._row_color_map = {}      # id(item)             -> {fg,bg}
+        self._col_color_map = {}      # col_key              -> {fg,bg}
+        self._table_color = None      # {fg,bg} | None
+
+        # Per-cell embedded widgets (for ``widget``-typed columns).
+        # Keyed by ``(id(item), col_key)`` so they survive sort and
+        # are wiped on row delete / clear / set_rows alongside the
+        # item itself.  Qt owns the lifetime of the widget once
+        # ``setItemWidget`` is called — we just drop the reference.
+        self._cell_widgets = {}
+
+        # Replace TreeView's 'activated' / 'changed' wiring with
+        # the table-oriented signatures.  Connect to additional
+        # signals for 'scrolled'.
+        tv.verticalScrollBar().valueChanged.connect(self._scroll_cb)
+        tv.horizontalScrollBar().valueChanged.connect(self._scroll_cb)
+
+        # New callbacks (in addition to those TreeView enables).
+        # ``cell_action`` fires when the user clicks a ``widget``
+        # cell that's action-shaped (currently: ``button``).
+        for cbname in ('cell_edited', 'scrolled',
+                       'cell_selected', 'cell_action',
+                       'copy', 'cut', 'paste'):
+            self.enable_callback(cbname)
+
+        # Explicit anchor for cell-mode Shift-extends.  Qt has its
+        # own "current index" notion, but it's mutated by clicks
+        # before our handlers see them, so we track our own anchor
+        # — updated on plain/Ctrl clicks on cells, row-numbers, or
+        # headers — and read it for Shift+row-num / Shift+header
+        # extensions across whole rows / columns.
+        self._cell_anchor = None  # (row, user_col) or None
+
+        # ----- cell-mode wiring -----------------------------------
+        # When the caller asked for a cell-level selection mode,
+        # switch QTreeWidget to per-cell selection and route the
+        # 'cell_selected' callback through itemSelectionChanged.
+        if is_cell_mode:
+            tv.setSelectionBehavior(QtGui.QAbstractItemView.SelectItems)
+            if selection_mode == 'multiple-cell':
+                tv.setSelectionMode(
+                    QtGui.QAbstractItemView.ExtendedSelection)
+            else:  # single-cell
+                tv.setSelectionMode(
+                    QtGui.QAbstractItemView.SingleSelection)
+            # Take over sort triggering so plain header click sorts
+            # (when sortable) without *also* firing the column-
+            # select handler, and modifier-click selects without
+            # *also* triggering Qt's auto-sort.  We still keep the
+            # parent's sortIndicatorChanged wiring for the public
+            # ``sorted`` callback, just route the trigger ourselves.
+            # ORDER MATTERS: setSortingEnabled(False) has a side-
+            # effect of calling header().setSectionsClickable(False),
+            # so make sections clickable *after* disabling sorting.
+            tv.setSortingEnabled(False)
+            tv.header().setSectionsClickable(True)
+
+        # Header section click → handles both sort (if sortable)
+        # and column-select (with modifiers, or always in
+        # non-sortable cell mode).
+        tv.header().sectionClicked.connect(self._header_section_clicked)
+        # Track item clicks so plain-click on the synthetic row-
+        # number column selects the whole row in cell mode, and so
+        # ordinary cell clicks update the anchor.
+        tv.itemClicked.connect(self._item_clicked_cb)
+
+        # Keyboard shortcuts for Ctrl+C / Ctrl+X / Ctrl+V.  The
+        # parent shortcut ties these to *this* QTreeWidget so they
+        # only fire when it has focus.
+        for keyseq, slot in (
+                ('Ctrl+C', self.copy_selection),
+                ('Ctrl+X', self.cut_selection),
+                ('Ctrl+V', self.paste_selection)):
+            # QShortcut + QKeySequence live in different qtpy
+            # submodules across PyQt5/6 + PySide2/6 — QtHelp
+            # papers over that.
+            sc = QtHelp.QShortcut(QtHelp.QKeySequence(keyseq), tv)
+            sc.setContext(QtCore.Qt.WidgetWithChildrenShortcut)
+            sc.activated.connect(slot)
+
+        # Apply default high-contrast selection styling.  Qt's
+        # default highlight palette is often a pale tint that
+        # leaves cell text barely readable; force a saturated blue
+        # background with white text (and keep that scheme when
+        # the widget loses focus too, so the selected row stays
+        # visible while a context menu / cell editor is open).
+        self._apply_stylesheet()
+
+        if show_grid:
+            self.set_show_grid(True)
+
+        if columns is not None:
+            self.set_columns(columns)
+
+    # ----- internal helpers ------------------------------------
+
+    @staticmethod
+    def _normalise_columns(columns):
+        """Accept dicts, tuples, or strings; return list of dicts.
+
+        Recognised dict keys: ``label``, ``key``, ``type`` (data
+        type — ``'string'`` / ``'number'`` / ``'bool'`` / ``'icon'``
+        etc.), ``halign``, ``editable``, ``widget`` (presentation —
+        one of ``_CELL_WIDGETS`` or None), and widget-specific
+        extras: ``choices`` (combobox), ``min`` / ``max`` (progress),
+        ``text`` (button default label).
+        """
+        out = []
+        for i, col in enumerate(columns):
+            if isinstance(col, dict):
+                key = col.get('key') or col.get('label') or f'col{i}'
+                widget = col.get('widget')
+                if widget is not None and widget not in _CELL_WIDGETS:
+                    raise WidgetError(
+                        f"unknown column widget {widget!r} "
+                        f"(expected one of {_CELL_WIDGETS})")
+                d = {
+                    'label': col.get('label', key),
+                    'key': key,
+                    'type': col.get('type', 'string'),
+                    'halign': col.get('halign'),
+                    'editable': bool(col.get('editable', False)),
+                    'widget': widget,
+                    'choices': (list(col['choices'])
+                                if 'choices' in col else None),
+                    'min': col.get('min'),
+                    'max': col.get('max'),
+                    'text': col.get('text'),
+                    # Per-row gates for widget cells: name of a
+                    # row-dict field whose truthiness controls
+                    # whether the embedded widget is enabled /
+                    # visible.  ``None`` means "always on".
+                    'enabled_key': col.get('enabled_key'),
+                    'visible_key': col.get('visible_key'),
+                    # Initial column width in pixels.  Applied
+                    # once at column-setup time; users can resize
+                    # afterwards.  ``None`` lets the view pick.
+                    'colwidth': col.get('colwidth'),
+                }
+            elif isinstance(col, (tuple, list)):
+                label = col[0]
+                key = col[1] if len(col) > 1 else label
+                dtype = col[2] if len(col) > 2 else 'string'
+                d = {'label': label, 'key': key, 'type': dtype,
+                     'halign': None, 'editable': False,
+                     'widget': None, 'choices': None,
+                     'min': None, 'max': None, 'text': None,
+                     'enabled_key': None, 'visible_key': None,
+                     'colwidth': None}
+            elif isinstance(col, str):
+                d = {'label': col, 'key': col, 'type': 'string',
+                     'halign': None, 'editable': False,
+                     'widget': None, 'choices': None,
+                     'min': None, 'max': None, 'text': None,
+                     'enabled_key': None, 'visible_key': None,
+                     'colwidth': None}
+            else:
+                raise WidgetError(
+                    f"unrecognised column descriptor: {col!r}")
+            out.append(d)
+        return out
+
+    def _col_offset(self):
+        """How many columns to skip before the user's first column.
+
+        1 when ``show_row_numbers`` is on (the row-number column
+        sits at index 0); 0 otherwise.
+        """
+        return 1 if self._show_row_numbers else 0
+
+    def _user_col_keys(self):
+        return [c['key'] for c in self._user_columns]
+
+    def _item_to_row_dict(self, item):
+        """Reconstruct a row dict from a QTreeWidgetItem.  For
+        widget-typed cells, read the live value off the embedded
+        widget instead of the (placeholder) text."""
+        offset = self._col_offset()
+        row = {}
+        for j, col in enumerate(self._user_columns):
+            col_key = col['key']
+            w = self._cell_widgets.get((id(item), col_key))
+            if w is not None:
+                row[col_key] = self._read_widget_value(col, w)
+            else:
+                row[col_key] = item.text(j + offset)
+        return row
+
+    def _apply_editable_flags(self, item):
+        """Apply per-column editable flags to a fresh row item."""
+        offset = self._col_offset()
+        # First, clear editable on every column (including the
+        # row-number column, which is always non-editable).
+        flags = item.flags() & ~QtCore.Qt.ItemIsEditable
+        item.setFlags(flags)
+        # Then we'd need per-column editability — but QTreeWidgetItem
+        # flags are per-item, not per-column.  Practical workaround:
+        # if ANY column is marked editable, mark the whole item
+        # editable.  Callers who want per-column editability typically
+        # rely on the QTreeWidget's edit-on-double-click defaulting
+        # to whichever column was clicked.
+        if self._editable_cols:
+            item.setFlags(item.flags() | QtCore.Qt.ItemIsEditable)
+        # Row-number cell is never editable; QTreeWidgetItem flags
+        # don't differentiate per column, so we rely on user clicks
+        # not landing on column 0 (it's narrow and visually clearly
+        # a row header).
+        if offset > 0:
+            # Make the row-number cell visually a header.
+            self._style_row_number_cell(item)
+
+    def _style_row_number_cell(self, item):
+        # Background / foreground from the application palette so
+        # the styling tracks the user's theme.
+        palette = self.widget.palette()
+        bg = palette.button()
+        fg = palette.buttonText()
+        item.setBackground(0, bg)
+        item.setForeground(0, fg)
+        font = item.font(0)
+        font.setBold(True)
+        item.setFont(0, font)
+        item.setTextAlignment(0,
+                              QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+
+    def _renumber_row_column(self):
+        """Refresh the synthetic row-number column after rows
+        are inserted/deleted/reordered."""
+        if not self._show_row_numbers:
+            return
+        tv = self.widget
+        for i in range(tv.topLevelItemCount()):
+            item = tv.topLevelItem(i)
+            item.setText(0, str(i + 1))
+            self._style_row_number_cell(item)
+
+    def _build_col_specs(self):
+        """Translate ``self._user_columns`` to setup_table's tuple
+        form, prepending the row-number column if enabled."""
+        specs = [(c['label'], c['key'], c['type'])
+                 for c in self._user_columns]
+        if self._show_row_numbers:
+            specs = [('', _ROW_NUM_KEY, 'str')] + specs
+        return specs
+
+    def _rebuild_table(self, rows=None):
+        """Re-run setup_table from the current state and (optionally)
+        re-populate rows.  Called when the column shape changes."""
+        col_specs = self._build_col_specs()
+        if not col_specs:
+            return
+        # leaf_key: the first user column's key is a reasonable
+        # primary; the row-number column is never the leaf.
+        leaf_key = self._user_columns[0]['key']
+        # Per-cell / per-row colour overrides reference item
+        # identities that won't survive setup_table's rebuild.
+        # Drop them now; column / table layers persist and will
+        # be re-applied via _apply_row_colors as each new row
+        # comes back through _append_one.
+        self._cell_color_map.clear()
+        self._row_color_map.clear()
+        super().setup_table(col_specs, levels=1, leaf_key=leaf_key)
+        # Parent's setup_table calls ``setSortingEnabled(self.sortable)``
+        # which has a side-effect of resetting the header's
+        # ``setSectionsClickable`` state — so in cell mode we have
+        # to re-apply our overrides after every column rebuild,
+        # otherwise header clicks stop firing ``sectionClicked``.
+        # ORDER MATTERS: setSortingEnabled(False) itself calls
+        # setSectionsClickable(False), so toggle sections clickable
+        # *after* disabling sorting.
+        if self._is_cell_mode():
+            tv = self.widget
+            tv.setSortingEnabled(False)
+            tv.header().setSectionsClickable(True)
+        if self._show_row_numbers:
+            self._configure_row_number_column()
+        self._apply_initial_colwidths()
+        if rows is not None:
+            self.set_rows(rows)
+
+    def _apply_initial_colwidths(self):
+        """Apply any per-column ``colwidth`` declared on the
+        column descriptors.  Strings are accepted but only the
+        numeric form is meaningful here — qt column widths are
+        pixel integers (matching ``set_column_width``)."""
+        for i, col in enumerate(self._user_columns):
+            w = col.get('colwidth')
+            if w is None:
+                continue
+            try:
+                px = int(w)
+            except (TypeError, ValueError):
+                continue
+            self.set_column_width(i, px)
+
+    def _configure_row_number_column(self):
+        tv = self.widget
+        header = tv.header()
+        # Narrow, fixed-ish width.  ResizeToContents grows to fit
+        # the largest "999..." label as rows are added.
+        header.setSectionResizeMode(0, QtGui.QHeaderView.ResizeToContents)
+        # Make the row-number header itself look like a row-header
+        # corner cell: blank, no sort indicator.
+        tv.headerItem().setText(0, '')
+
+    # ----- column management -----------------------------------
+
+    def set_columns(self, columns):
+        """Replace the column layout.  Clears existing rows."""
+        self._user_columns = self._normalise_columns(columns)
+        # Pick up any ``editable: True`` flags baked into the
+        # column dicts (matches the pgw side, where the JS reads
+        # ``colDef.editable`` directly).  ``set_column_editable``
+        # may still be called later to flip individual columns.
+        self._editable_cols = {i for i, c in enumerate(self._user_columns)
+                               if c.get('editable')}
+        self._rebuild_table()
+
+    def insert_column(self, idx, column):
+        """Insert a new column at index ``idx`` (user-space)."""
+        col, = self._normalise_columns([column])
+        self._user_columns.insert(idx, col)
+        # Snapshot existing rows so we can repopulate, since
+        # changing columnCount on QTreeWidget invalidates items.
+        rows = self.get_rows()
+        for r in rows:
+            r.setdefault(col['key'], '')
+        self._rebuild_table(rows=rows)
+
+    def append_column(self, column):
+        self.insert_column(len(self._user_columns), column)
+
+    def delete_column(self, idx):
+        if not (0 <= idx < len(self._user_columns)):
+            raise WidgetError(f"column index {idx} out of range")
+        removed = self._user_columns.pop(idx)
+        rows = self.get_rows()
+        for r in rows:
+            r.pop(removed['key'], None)
+        self._rebuild_table(rows=rows)
+
+    def set_column_editable(self, col_idx, tf):
+        if tf:
+            self._editable_cols.add(col_idx)
+        else:
+            self._editable_cols.discard(col_idx)
+        # Re-apply flags on existing items
+        tv = self.widget
+        for i in range(tv.topLevelItemCount()):
+            self._apply_editable_flags(tv.topLevelItem(i))
+
+    def get_column_count(self):
+        return len(self._user_columns)
+
+    def set_column_width(self, idx, width):
+        """Set width (px) of user column ``idx``."""
+        self.widget.setColumnWidth(idx + self._col_offset(), width)
+
+    # ----- row management --------------------------------------
+
+    def set_rows(self, rows):
+        """Replace all rows.  ``rows`` is a sequence of dicts
+        (keyed by column key) or a sequence of positional values."""
+        self.widget.clear()
+        # Per-cell / per-row colour overrides reference the
+        # old item objects we're about to discard; drop those.
+        # Column / table colours persist and are re-applied to
+        # each new row via _apply_row_colors.
+        self._cell_color_map.clear()
+        self._row_color_map.clear()
+        # Same for embedded cell widgets — their host items just
+        # went away, so the widgets are destroyed by Qt.
+        self._cell_widgets.clear()
+        for i, row in enumerate(rows):
+            self._append_one(row)
+
+    def set_data(self, data):
+        """Replace all rows.  Accepts the same row forms as :meth:`set_rows`,
+        or a numpy array: a structured/record array becomes dict rows (keyed
+        by field name), a 2-D array becomes positional rows."""
+        from ginga.util import tablehelper
+        if tablehelper.is_ndarray(data):
+            data = tablehelper.rows_from_ndarray(data)
+        self.set_rows(data)
+
+    def set_table(self, table):
+        """Populate the table from an astropy Table or pandas DataFrame:
+        derive the columns from the table (name -> key/label, dtype -> type),
+        then load its contents as rows."""
+        from ginga.util import tablehelper
+        self.set_columns(tablehelper.columns_from_table(table))
+        self.set_rows(tablehelper.rows_from_table(table))
+
+    def append_row(self, values):
+        self._append_one(values)
+
+    def insert_row(self, idx, values):
+        tv = self.widget
+        item, row_dict = self._make_row_item(values)
+        tv.insertTopLevelItem(idx, item)
+        self._apply_editable_flags(item)
+        self._install_widget_cells(item, row_dict)
+        self._apply_row_colors(item)
+        self._renumber_row_column()
+
+    def delete_row(self, idx):
+        tv = self.widget
+        if not (0 <= idx < tv.topLevelItemCount()):
+            raise WidgetError(f"row index {idx} out of range")
+        item = tv.takeTopLevelItem(idx)
+        # Drop dangling colour + widget entries that referenced
+        # this item.
+        if item is not None:
+            iid = id(item)
+            self._row_color_map.pop(iid, None)
+            for key in [k for k in self._cell_color_map
+                        if k[0] == iid]:
+                del self._cell_color_map[key]
+            self._drop_widget_cells_for(item)
+        self._renumber_row_column()
+
+    def get_row_count(self):
+        return self.widget.topLevelItemCount()
+
+    def get_row(self, idx):
+        item = self.widget.topLevelItem(idx)
+        if item is None:
+            raise WidgetError(f"row index {idx} out of range")
+        return self._item_to_row_dict(item)
+
+    def get_rows(self):
+        tv = self.widget
+        return [self._item_to_row_dict(tv.topLevelItem(i))
+                for i in range(tv.topLevelItemCount())]
+
+    def set_cell(self, row, col, value):
+        item = self.widget.topLevelItem(row)
+        if item is None:
+            raise WidgetError(f"row index {row} out of range")
+        if not (0 <= col < len(self._user_columns)):
+            raise WidgetError(f"column index {col} out of range")
+        col_spec = self._user_columns[col]
+        col_idx = col + self._col_offset()
+        # Widget cells: push the value through to the embedded
+        # widget so the display reflects the change.  Signals are
+        # blocked so this programmatic update doesn't fire
+        # cell_edited (which is for user-initiated changes).
+        w = self._cell_widgets.get((id(item), col_spec['key']))
+        if w is not None:
+            w.blockSignals(True)
+            try:
+                self._write_widget_value(col_spec, w, value)
+            finally:
+                w.blockSignals(False)
+            item.setData(col_idx, QtCore.Qt.UserRole, value)
+            return
+        text = '' if value is None else str(value)
+        item.setText(col_idx, text)
+        # Mirror to UserRole so the next cell_edited callback can
+        # report old_value correctly.
+        item.setData(col_idx, QtCore.Qt.UserRole, text)
+
+    def _write_widget_value(self, col, w, value):
+        wtype = col['widget']
+        if wtype == 'checkbox':
+            w.setChecked(bool(value))
+        elif wtype == 'combobox':
+            if value is not None:
+                w.setCurrentText(str(value))
+        elif wtype == 'progress':
+            try:
+                w.setValue(int(value) if value is not None
+                           else w.minimum())
+            except (TypeError, ValueError):
+                pass
+        elif wtype == 'button':
+            if value is not None:
+                w.setText(str(value))
+
+    def _append_one(self, values):
+        tv = self.widget
+        item, row_dict = self._make_row_item(values)
+        tv.addTopLevelItem(item)
+        self._apply_editable_flags(item)
+        # Widget cells need the item to be in the tree before
+        # ``setItemWidget`` will accept it.  Install widgets
+        # *before* applying colours so ``_apply_color_to_cell``
+        # can also paint the wrapper containers in one pass.
+        self._install_widget_cells(item, row_dict)
+        self._apply_row_colors(item)
+        self._renumber_row_column()
+
+    def _make_row_item(self, values):
+        """Build a TreeWidgetItem from a row dict-or-sequence.
+        Returns ``(item, row_dict)`` — the row_dict is needed by
+        callers who install widget cells after the item is added
+        to the tree."""
+        if isinstance(values, dict):
+            row_dict = values
+        elif isinstance(values, (list, tuple)):
+            row_dict = dict(zip(self._user_col_keys(), values))
+        else:
+            raise WidgetError(
+                f"row must be a dict or sequence, got {type(values).__name__}")
+
+        item = TreeWidgetItem()
+        offset = self._col_offset()
+        for j, col in enumerate(self._user_columns):
+            val = row_dict.get(col['key'], '')
+            # Widget-typed columns don't show text — the embedded
+            # widget is installed over the cell in
+            # ``_install_widget_cells`` and any cell text would
+            # bleed out around it.  Leave the cell text empty;
+            # ``_install_widget_cells`` populates UserRole with the
+            # typed value for cell_edited's old_value tracking.
+            if col.get('widget'):
+                item.setText(j + offset, '')
+                continue
+            text = '' if val is None else str(val)
+            item.setText(j + offset, text)
+            # Stash the value in Qt.UserRole so cell_edited can
+            # report old_value without us hooking the editor.
+            item.setData(j + offset, QtCore.Qt.UserRole, text)
+        # The row-number text is filled in by _renumber_row_column
+        # after the item is in the tree.
+        return item, row_dict
+
+    # ----- embedded widget cells ------------------------------
+    #
+    # Columns whose descriptor carries ``widget='checkbox' |
+    # 'combobox' | 'progress' | 'button'`` host a real Qt widget
+    # per cell (installed via QTreeWidget.setItemWidget).  The
+    # widget is the source-of-truth for the cell's value; we sync
+    # it back into the QTreeWidgetItem's UserRole storage on every
+    # change so the rest of the wrapper (cell_edited, get_row,
+    # copy/paste) keeps working uniformly.
+
+    def _install_widget_cells(self, item, row_dict):
+        """Walk widget-typed columns and create+install a Qt
+        widget per cell on ``item``.  Caller must have already
+        added ``item`` to the tree.
+
+        Honours the per-column ``visible_key`` and ``enabled_key``
+        gates: if ``visible_key`` is set and the named row field
+        is falsy, no widget is installed (the cell stays empty);
+        if ``enabled_key`` is set, the embedded widget's enabled
+        state mirrors that field."""
+        offset = self._col_offset()
+        for j, col in enumerate(self._user_columns):
+            if not col.get('widget'):
+                continue
+            col_idx = j + offset
+            col_key = col['key']
+            visible_key = col.get('visible_key')
+            if visible_key is not None \
+                    and not row_dict.get(visible_key, True):
+                continue
+            value = row_dict.get(col_key)
+            inner = self._make_cell_widget(col, value, item, col_key)
+            enabled_key = col.get('enabled_key')
+            if enabled_key is not None:
+                inner.setEnabled(bool(row_dict.get(enabled_key, True)))
+            # Wrap inner in a _CellWrapper that paints its own bg
+            # in paintEvent.  Resolve the cell colour *before*
+            # setItemWidget so the very first paint already has
+            # the correct background — Qt caches the first paint
+            # of a widget hosted in setItemWidget, so painting
+            # in the wrapper's __init__ is far more reliable than
+            # repainting it later.
+            container = self._wrap_cell_widget(inner, col)
+            self._cell_widgets[(id(item), col_key)] = inner
+            fg0, bg0, _bold0 = self._resolve_cell_color(item, j)
+            container.set_cell_color(fg0, bg0)
+            self.widget.setItemWidget(item, col_idx, container)
+            # Stash the typed value in UserRole so cell_edited
+            # ``old_value`` reads correctly on the first change.
+            item.setData(col_idx, QtCore.Qt.UserRole, value)
+
+    def _paint_widget_cell(self, container, fg, bg):
+        """Push the resolved cell colour onto a ``_CellWrapper``
+        and force a repaint.  The wrapper's ``paintEvent`` then
+        fills the cell with ``bg``.  A bare ``update()`` is not
+        always enough — Qt sometimes caches the first paint of a
+        widget hosted via ``setItemWidget`` — so we also poke the
+        tree's viewport to invalidate that cache."""
+        if isinstance(container, _CellWrapper):
+            container.set_cell_color(fg, bg)
+        viewport = self.widget.viewport()
+        if viewport is not None:
+            viewport.update()
+
+    @staticmethod
+    def _wrap_cell_widget(inner, col):
+        """Place ``inner`` in a ``_CellWrapper`` container that
+        paints its own bg in ``paintEvent``.  Layout policy
+        depends on widget type: small widgets (checkbox) are
+        centered; wide widgets (combobox, progress, button) fill
+        the cell."""
+        container = _CellWrapper()
+        layout = QtGui.QHBoxLayout(container)
+        layout.setContentsMargins(2, 0, 2, 0)
+        layout.setSpacing(0)
+        wtype = col.get('widget')
+        if wtype == 'checkbox':
+            # Center small toggles within the cell.
+            layout.addStretch()
+            layout.addWidget(inner)
+            layout.addStretch()
+        else:
+            # Combobox / progress / button stretch to fill so they
+            # don't look orphaned in a wide cell.
+            layout.addWidget(inner)
+        return container
+
+    def _make_cell_widget(self, col, value, item, col_key):
+        wtype = col['widget']
+        if wtype == 'checkbox':
+            w = QtGui.QCheckBox()
+            w.setChecked(bool(value))
+            w.setStyleSheet('background: transparent;')
+            w.stateChanged.connect(
+                lambda _state, it=item, ck=col_key:
+                    self._on_cell_widget_changed(it, ck))
+            return w
+        if wtype == 'combobox':
+            w = QtGui.QComboBox()
+            choices = col.get('choices') or []
+            for ch in choices:
+                w.addItem(str(ch))
+            if value is not None and str(value) in [str(c) for c in choices]:
+                w.setCurrentText(str(value))
+            w.currentIndexChanged.connect(
+                lambda _i, it=item, ck=col_key:
+                    self._on_cell_widget_changed(it, ck))
+            return w
+        if wtype == 'progress':
+            w = QtGui.QProgressBar()
+            lo = col.get('min', 0) or 0
+            hi = col.get('max', 100) if col.get('max') is not None else 100
+            w.setRange(int(lo), int(hi))
+            try:
+                w.setValue(int(value) if value is not None else int(lo))
+            except (TypeError, ValueError):
+                w.setValue(int(lo))
+            return w
+        if wtype == 'button':
+            label = (str(value) if value is not None
+                     else (col.get('text') or ''))
+            w = QtGui.QPushButton(label)
+            w.clicked.connect(
+                lambda _checked=False, it=item, ck=col_key:
+                    self._on_cell_widget_clicked(it, ck))
+            return w
+        raise WidgetError(f"unknown cell widget type: {wtype!r}")
+
+    def _read_widget_value(self, col, w):
+        wtype = col['widget']
+        if wtype == 'checkbox':
+            return bool(w.isChecked())
+        if wtype == 'combobox':
+            return w.currentText()
+        if wtype == 'progress':
+            return int(w.value())
+        if wtype == 'button':
+            # No persistent value — return the current label so
+            # round-trips through get_row() preserve it.
+            return w.text()
+        return None
+
+    def _on_cell_widget_changed(self, item, col_key):
+        """Fire cell_edited(table, [row], col_key, old, new) when
+        an editable widget cell mutates."""
+        w = self._cell_widgets.get((id(item), col_key))
+        if w is None:
+            return
+        try:
+            j = self._user_col_keys().index(col_key)
+        except ValueError:
+            return
+        col = self._user_columns[j]
+        col_idx = j + self._col_offset()
+        new_value = self._read_widget_value(col, w)
+        old_value = item.data(col_idx, QtCore.Qt.UserRole)
+        if old_value == new_value:
+            return
+        item.setData(col_idx, QtCore.Qt.UserRole, new_value)
+        row_idx = self.widget.indexOfTopLevelItem(item)
+        if row_idx < 0:
+            return
+        self.make_callback('cell_edited', [row_idx], col_key,
+                           old_value, new_value)
+
+    def _on_cell_widget_clicked(self, item, col_key):
+        """Fire cell_action(table, row_dict, col_key) on button
+        cells."""
+        row_idx = self.widget.indexOfTopLevelItem(item)
+        if row_idx < 0:
+            return
+        row = self._item_to_row_dict(item)
+        self.make_callback('cell_action', row, col_key)
+
+    def _drop_widget_cells_for(self, item):
+        """Drop widget-cell entries for an item that's about to
+        be removed."""
+        iid = id(item)
+        for key in [k for k in self._cell_widgets if k[0] == iid]:
+            del self._cell_widgets[key]
+
+    def clear(self):
+        # Qt destroys the embedded cell widgets when the items
+        # holding them are cleared; drop our refs so we don't
+        # keep dangling handles to deleted C++ objects.
+        self._cell_widgets.clear()
+        super().clear()
+
+    # ----- selection -------------------------------------------
+
+    def get_selected(self):
+        """Return selected rows as a list of dicts."""
+        tv = self.widget
+        return [self._item_to_row_dict(it) for it in tv.selectedItems()]
+
+    def get_selected_paths(self):
+        """Return selected rows as a list of ``[row_index]`` paths."""
+        tv = self.widget
+        # Deduplicate row indices — selectedItems() with a per-cell
+        # selection mode returns one entry per selected cell, but
+        # callers want one entry per selected row.
+        seen, out = set(), []
+        for it in tv.selectedItems():
+            idx = tv.indexOfTopLevelItem(it)
+            if idx >= 0 and idx not in seen:
+                seen.add(idx)
+                out.append([idx])
+        out.sort()
+        return out
+
+    # ----- cell-selection public API ---------------------------
+
+    def get_selected_cells(self):
+        """Return ``[{path, col_key, value}, ...]`` for the cells
+        currently selected — sorted by (row, column).  Available in
+        any selection mode, but only meaningful in
+        ``single-cell`` / ``multiple-cell``."""
+        tv = self.widget
+        # selectionModel().selectedIndexes() returns one QModelIndex
+        # per selected cell, including the synthetic row-number
+        # column.  Filter that out.
+        offset = self._col_offset()
+        out = []
+        for qmi in tv.selectionModel().selectedIndexes():
+            col = qmi.column()
+            user_col = col - offset
+            if user_col < 0 or user_col >= len(self._user_columns):
+                continue
+            row = qmi.row()
+            col_key = self._user_columns[user_col]['key']
+            it = tv.topLevelItem(row)
+            value = it.text(col) if it is not None else ''
+            out.append({'path': [row],
+                        'col_key': col_key,
+                        'value': value})
+        out.sort(key=lambda d: (d['path'][0],
+                                self._user_col_keys()
+                                    .index(d['col_key'])))
+        return out
+
+    def select_cell(self, path, col_key, state=True):
+        """Select (or deselect) a single cell by ``(path, col_key)``."""
+        if not path:
+            return
+        idx = self._resolve_to_row_index(path)
+        if idx is None or not (0 <= idx < self.get_row_count()):
+            return
+        try:
+            user_col = self._user_col_keys().index(col_key)
+        except ValueError:
+            return
+        col = user_col + self._col_offset()
+        it = self.widget.topLevelItem(idx)
+        if it is None:
+            return
+        model = self.widget.model()
+        qmi = model.index(idx, col)
+        sm = self.widget.selectionModel()
+        flag = (QtCore.QItemSelectionModel.Select if state
+                else QtCore.QItemSelectionModel.Deselect)
+        sm.select(qmi, flag)
+
+    def select_cells(self, cells, state=True):
+        for c in (cells or []):
+            self.select_cell(c.get('path'), c.get('col_key'), state)
+
+    def clear_cell_selection(self):
+        self.widget.clearSelection()
+
+    # ----- per-cell / row / column / table colour overrides ----
+
+    def _resolve_cell_color(self, item, user_col):
+        """Walk cell → row → column → table to produce the
+        merged ``(fg, bg, bold)`` style triple for one item /
+        user-col.  Each component may be ``None`` (meaning "no
+        override at this layer" — the underlying widget palette /
+        default font wins)."""
+        iid = id(item)
+        col_key = (self._user_columns[user_col]['key']
+                   if 0 <= user_col < len(self._user_columns)
+                   else None)
+        fg = bg = bold = None
+
+        def _absorb(d):
+            nonlocal fg, bg, bold
+            if not d:
+                return
+            if fg is None:
+                fg = d.get('fg')
+            if bg is None:
+                bg = d.get('bg')
+            if bold is None:
+                bold = d.get('bold')
+
+        _absorb(self._cell_color_map.get((iid, user_col)))
+        _absorb(self._row_color_map.get(iid))
+        _absorb(self._col_color_map.get(col_key))
+        _absorb(self._table_color)
+        return fg, bg, bold
+
+    def _apply_color_to_cell(self, item, user_col):
+        """Write the resolved colour + weight to the
+        QTreeWidgetItem.  Always overwrites — a ``None`` resolved
+        value installs a default (invalid) brush or unbolds the
+        cell font, clearing the item's override and letting the
+        widget palette / default font show through again."""
+        fg, bg, bold = self._resolve_cell_color(item, user_col)
+        col = user_col + self._col_offset()
+        # ``QtGui`` in this module is actually qtpy.QtWidgets;
+        # QBrush / QColor live in qtpy.QtGui and are re-exported
+        # from QtHelp.
+        item.setForeground(col,
+                           QtHelp.QBrush(QtHelp.QColor(fg)) if fg
+                           else QtHelp.QBrush())
+        item.setBackground(col,
+                           QtHelp.QBrush(QtHelp.QColor(bg)) if bg
+                           else QtHelp.QBrush())
+        # Per-cell font weight.  ``item.font(col)`` returns the
+        # widget's current font (typeface, size); we toggle the
+        # bold bit without disturbing anything else.
+        font = item.font(col)
+        font.setBold(bool(bold))
+        item.setFont(col, font)
+        # For widget cells, the embedded widget paints over the
+        # item brush — Qt doesn't composite the delegate background
+        # through ``setItemWidget`` content.  Mirror the resolved
+        # bg onto the wrapper container so the cell colour shows
+        # behind the widget, and propagate fg into the inner
+        # widget's palette so labels (button text / checkbox box)
+        # contrast against the new bg.
+        container = self.widget.itemWidget(item, col)
+        if container is not None:
+            self._paint_widget_cell(container, fg, bg)
+
+    def _apply_row_colors(self, item):
+        """Paint every user-column cell of a single item according
+        to the current cell/row/column/table state.  Called from
+        ``_append_one`` / ``insert_row`` so newly-inserted rows
+        pick up column- and table-level overrides automatically."""
+        for user_col in range(len(self._user_columns)):
+            self._apply_color_to_cell(item, user_col)
+
+    def _apply_all_colors(self):
+        """Reapply colours to every visible cell — used when a
+        change at column or table level affects many cells at
+        once."""
+        tv = self.widget
+        for row in range(tv.topLevelItemCount()):
+            item = tv.topLevelItem(row)
+            if item is None:
+                continue
+            self._apply_row_colors(item)
+
+    def set_cell_color(self, path, col_key, fg=None, bg=None, bold=None):
+        idx = self._resolve_to_row_index(path)
+        if idx is None:
+            return
+        if col_key not in self._user_col_keys():
+            return
+        user_col = self._user_col_keys().index(col_key)
+        item = self.widget.topLevelItem(idx)
+        if item is None:
+            return
+        key = (id(item), user_col)
+        if fg is None and bg is None and bold is None:
+            self._cell_color_map.pop(key, None)
+        else:
+            self._cell_color_map[key] = {'fg': fg, 'bg': bg, 'bold': bold}
+        self._apply_color_to_cell(item, user_col)
+
+    def set_row_color(self, path, fg=None, bg=None, bold=None):
+        idx = self._resolve_to_row_index(path)
+        if idx is None:
+            return
+        item = self.widget.topLevelItem(idx)
+        if item is None:
+            return
+        iid = id(item)
+        if fg is None and bg is None and bold is None:
+            self._row_color_map.pop(iid, None)
+        else:
+            self._row_color_map[iid] = {'fg': fg, 'bg': bg, 'bold': bold}
+        self._apply_row_colors(item)
+
+    def set_column_color(self, col_key, fg=None, bg=None, bold=None):
+        if col_key not in self._user_col_keys():
+            return
+        if fg is None and bg is None and bold is None:
+            self._col_color_map.pop(col_key, None)
+        else:
+            self._col_color_map[col_key] = {'fg': fg, 'bg': bg,
+                                            'bold': bold}
+        user_col = self._user_col_keys().index(col_key)
+        tv = self.widget
+        for row in range(tv.topLevelItemCount()):
+            item = tv.topLevelItem(row)
+            if item is not None:
+                self._apply_color_to_cell(item, user_col)
+
+    def set_table_color(self, fg=None, bg=None, bold=None):
+        if fg is None and bg is None and bold is None:
+            self._table_color = None
+        else:
+            self._table_color = {'fg': fg, 'bg': bg, 'bold': bold}
+        self._apply_all_colors()
+
+    def clear_cell_color(self, path, col_key):
+        self.set_cell_color(path, col_key, fg=None, bg=None)
+
+    def clear_row_color(self, path):
+        self.set_row_color(path, fg=None, bg=None)
+
+    def clear_column_color(self, col_key):
+        self.set_column_color(col_key, fg=None, bg=None)
+
+    def clear_all_colors(self):
+        self._cell_color_map.clear()
+        self._row_color_map.clear()
+        self._col_color_map.clear()
+        self._table_color = None
+        self._apply_all_colors()
+
+    def set_selected(self, items):
+        """Select rows by integer index, by ``[row]`` path, or by
+        row dict (matched by leaf-key value)."""
+        tv = self.widget
+        # Reset
+        tv.clearSelection()
+        for it in items:
+            idx = self._resolve_to_row_index(it)
+            if idx is None or not (0 <= idx < tv.topLevelItemCount()):
+                continue
+            tv.topLevelItem(idx).setSelected(True)
+
+    def select_path(self, path, state=True):
+        """``path`` is ``[row_index]`` (length 1)."""
+        if not path:
+            return
+        idx = self._resolve_to_row_index(path)
+        if idx is None or not (0 <= idx < self.get_row_count()):
+            return
+        self.widget.topLevelItem(idx).setSelected(state)
+
+    def select_paths(self, paths, state=True):
+        for p in paths:
+            self.select_path(p, state)
+
+    def select_all(self, state=True):
+        if state:
+            self.widget.selectAll()
+        else:
+            self.widget.clearSelection()
+
+    def _resolve_to_row_index(self, item):
+        if isinstance(item, int):
+            return item
+        if isinstance(item, (list, tuple)) and item:
+            # path: [row_index] or [leaf_value]
+            head = item[0]
+            if isinstance(head, int):
+                return head
+            try:
+                return int(head)
+            except (TypeError, ValueError):
+                return None
+        if isinstance(item, dict):
+            # Match by leaf-key value
+            leaf = self.leaf_key
+            if leaf is None:
+                return None
+            want = item.get(leaf)
+            for i in range(self.get_row_count()):
+                if self.get_row(i).get(leaf) == want:
+                    return i
+        return None
+
+    # ----- sort / scroll ---------------------------------------
+
+    def set_sortable(self, tf):
+        self.sortable = bool(tf)
+        self.widget.setSortingEnabled(self.sortable)
+
+    def sort_by_column(self, col, ascending=True):
+        order = (QtCore.Qt.AscendingOrder if ascending
+                 else QtCore.Qt.DescendingOrder)
+        self.widget.sortByColumn(col + self._col_offset(), order)
+
+    def scroll_to_path(self, path):
+        idx = self._resolve_to_row_index(path)
+        if idx is None or not (0 <= idx < self.get_row_count()):
+            return
+        item = self.widget.topLevelItem(idx)
+        self.widget.scrollToItem(item)
+
+    def scroll_to_end(self):
+        n = self.get_row_count()
+        if n:
+            self.widget.scrollToItem(self.widget.topLevelItem(n - 1))
+
+    def set_scroll_position(self, h_pct, v_pct):
+        for bar, pct in ((self.widget.horizontalScrollBar(), h_pct),
+                         (self.widget.verticalScrollBar(), v_pct)):
+            mx = bar.maximum()
+            bar.setValue(int(pct * mx))
+
+    def get_scroll_position(self):
+        out = []
+        for bar in (self.widget.horizontalScrollBar(),
+                    self.widget.verticalScrollBar()):
+            mx = bar.maximum()
+            out.append(bar.value() / mx if mx else 0.0)
+        return tuple(out)
+
+    # ----- display config --------------------------------------
+
+    def set_show_grid(self, tf):
+        """Toggle grid lines.  QTreeWidget has no native grid; we
+        emulate via a stylesheet, so the result is approximate."""
+        self._show_grid = bool(tf)
+        self._apply_stylesheet()
+
+    def _apply_stylesheet(self):
+        """Apply the TableView's visual overrides.
+
+        Selection highlight is set via the widget's *palette*, not
+        a stylesheet.  This matters: any ``QTreeView::item`` rule
+        in a stylesheet (even one scoped to ``:selected``) makes
+        Qt switch to ``QStyleSheetStyle`` for item rendering,
+        which clobbers per-item ``setBackground`` brushes.  Using
+        the palette keeps the high-contrast selection scheme AND
+        lets per-cell / per-row colour overrides paint normally.
+
+        The grid-line stylesheet rule (when ``show_grid`` is on)
+        is the same hazard, so it stays as an *opt-in* trade-off:
+        with the grid on, per-item colours may not appear under
+        every Qt version.  For full grid + per-item-colour
+        compatibility, a custom QStyledItemDelegate would be
+        needed — out of scope here.
+        """
+        # High-contrast selection scheme via palette.  Both the
+        # Active and Inactive colour groups get the same blue so
+        # selected rows stay readable when focus moves off the
+        # tree (context menu open, cell editor up, etc.).
+        palette = self.widget.palette()
+        sel_bg = QtHelp.QColor('#2a64c8')
+        sel_fg = QtHelp.QColor('white')
+        # ``QPalette.Highlight`` / ``HighlightedText`` are the role
+        # enums; qtpy normalises Qt5/Qt6 access so this form works
+        # under all bindings.
+        palette.setColor(QtHelp.QPalette.Highlight, sel_bg)
+        palette.setColor(QtHelp.QPalette.HighlightedText, sel_fg)
+        palette.setColor(QtHelp.QPalette.Inactive,
+                         QtHelp.QPalette.Highlight, sel_bg)
+        palette.setColor(QtHelp.QPalette.Inactive,
+                         QtHelp.QPalette.HighlightedText, sel_fg)
+        self.widget.setPalette(palette)
+
+        # Grid lines via stylesheet (QTreeView has no native
+        # grid).  Opt-in only, since the ``::item`` rule below
+        # interferes with per-item colour painting (known Qt
+        # quirk).  Callers who need both grid AND per-item
+        # colouring should leave grid off; see the docstring.
+        if self._show_grid:
+            self.widget.setStyleSheet(
+                "QTreeView::item { "
+                "border-right: 1px solid #d0d0d0; "
+                "border-bottom: 1px solid #d0d0d0; }")
+        else:
+            self.widget.setStyleSheet("")
+
+    def set_show_row_numbers(self, tf):
+        new = bool(tf)
+        if new == self._show_row_numbers:
+            return
+        self._show_row_numbers = new
+        if self._user_columns:
+            rows = self.get_rows()
+            # set_columns wipes the table; preserve the user's data.
+            self.set_columns(self._user_columns)
+            self.set_rows(rows)
+
+    # ----- overridden callback redirects -----------------------
+
+    def _cb_redirect(self, item, col=-1):
+        # TreeView's version emits a path-keyed dict; for a flat
+        # table, emit (row_dict, path, col_key) where path is
+        # [row_index] and col_key is the user-space column key (or
+        # ``None`` if the click landed on the synthetic row-number
+        # column or couldn't be resolved).  Matches the qtw / gtk
+        # TableView 'activated' signature.
+        row_dict = self._item_to_row_dict(item)
+        idx = self.widget.indexOfTopLevelItem(item)
+        user_col = col - self._col_offset()
+        col_key = (self._user_columns[user_col]['key']
+                   if 0 <= user_col < len(self._user_columns) else None)
+        self.make_callback('activated', row_dict, [idx], col_key)
+
+    def _selection_cb(self):
+        # In cell modes, fire 'cell_selected' with per-cell records
+        # instead of (or alongside) the row-level 'selected'.
+        if self._is_cell_mode():
+            self.make_callback('cell_selected', self.get_selected_cells())
+        else:
+            self.make_callback('selected', self.get_selected())
+
+    def _is_cell_mode(self):
+        return self._selection_mode_arg in ('single-cell', 'multiple-cell')
+
+    def _item_changed_cb(self, item, col):
+        # Skip the synthetic row-number column.
+        if self._show_row_numbers and col == 0:
+            return
+        user_col = col - self._col_offset()
+        # Only fire cell_edited for columns the caller marked
+        # editable, so spurious itemChanged signals from
+        # programmatic updates don't trigger callbacks.
+        if user_col in self._editable_cols:
+            col_key = (self._user_columns[user_col]['key']
+                       if 0 <= user_col < len(self._user_columns)
+                       else None)
+            new_value = item.text(col)
+            old_value = item.data(col, QtCore.Qt.UserRole)
+            idx = self.widget.indexOfTopLevelItem(item)
+            self.make_callback('cell_edited', [idx], col_key,
+                               old_value, new_value)
+            # Update the stashed value so the next edit reports
+            # the right old_value.
+            item.setData(col, QtCore.Qt.UserRole, new_value)
+        # Keep the legacy 'changed' callback firing too for
+        # TreeView-compatible callers.
+        super()._item_changed_cb(item, col)
+
+    def _scroll_cb(self, value):
+        h, v = self.get_scroll_position()
+        self.make_callback('scrolled', h, v)
+
+    # ----- cell-mode click routing -----------------------------
+
+    def _item_clicked_cb(self, item, column):
+        """Handle clicks on a cell.  Routes row-number column
+        clicks to whole-row selection and updates the Shift-extend
+        anchor for ordinary cell clicks."""
+        if not self._is_cell_mode():
+            return
+        tv = self.widget
+        row = tv.indexOfTopLevelItem(item)
+        if row < 0:
+            return
+        offset = self._col_offset()
+        user_col = column - offset
+        mods = QtGui.QApplication.keyboardModifiers()
+        ctrl = bool(mods & QtCore.Qt.ControlModifier) or \
+            bool(mods & QtCore.Qt.MetaModifier)
+        shift = bool(mods & QtCore.Qt.ShiftModifier)
+
+        # Row-number column gets whole-row select handling.
+        if self._show_row_numbers and column == 0:
+            self._do_row_select(row, ctrl, shift)
+            return
+
+        # Ordinary cell click: Qt's built-in selection logic has
+        # already done the right thing (select / toggle / extend).
+        # We just refresh our anchor so a subsequent Shift+row-num
+        # or Shift+header click extends from this cell.
+        if not shift and user_col >= 0:
+            self._cell_anchor = (row, user_col)
+
+    def _do_row_select(self, row, ctrl, shift):
+        """Select an entire row (all user columns) via the row-
+        number gutter, honouring Ctrl-toggle and Shift-extend
+        modifiers."""
+        tv = self.widget
+        sm = tv.selectionModel()
+        model = tv.model()
+        offset = self._col_offset()
+        ncols = len(self._user_columns)
+        if ncols == 0:
+            return
+
+        if shift and self._cell_anchor is not None:
+            a_row, _ = self._cell_anchor
+            rmin, rmax = (a_row, row) if a_row <= row else (row, a_row)
+            sel = QtCore.QItemSelection(
+                model.index(rmin, offset),
+                model.index(rmax, offset + ncols - 1))
+            sm.clear()
+            sm.select(sel, QtCore.QItemSelectionModel.Select)
+            # Anchor unchanged on Shift-extend (Excel-style).
+            return
+
+        sel = QtCore.QItemSelection(
+            model.index(row, offset),
+            model.index(row, offset + ncols - 1))
+        if ctrl:
+            sm.select(sel, QtCore.QItemSelectionModel.Toggle)
+        else:
+            sm.clear()
+            sm.select(sel, QtCore.QItemSelectionModel.Select)
+        self._cell_anchor = (row, 0)
+
+    def _header_section_clicked(self, logical_index):
+        """Header click → sort and/or column-select.
+
+        When ``sortable`` is on, plain click sorts (we drive it
+        ourselves since ``setSortingEnabled`` is off in cell mode);
+        modifier clicks select.  When ``sortable`` is off, every
+        click selects.  Always: only fires in cell mode (the
+        signal is connected unconditionally but the handler bails
+        out for row modes)."""
+        if not self._is_cell_mode():
+            return
+        user_col = logical_index - self._col_offset()
+        if user_col < 0 or user_col >= len(self._user_columns):
+            return
+        mods = QtGui.QApplication.keyboardModifiers()
+        ctrl = bool(mods & QtCore.Qt.ControlModifier) or \
+            bool(mods & QtCore.Qt.MetaModifier)
+        shift = bool(mods & QtCore.Qt.ShiftModifier)
+
+        # Plain click on a sortable header → sort, not select.
+        if self.sortable and not (ctrl or shift):
+            asc = True
+            cur_col, cur_asc = (self.widget.header().sortIndicatorSection(),
+                                self.widget.header().sortIndicatorOrder()
+                                == QtCore.Qt.AscendingOrder)  # noqa318
+
+            if cur_col == logical_index:
+                asc = not cur_asc
+            self.sort_by_column(user_col, ascending=asc)
+            return
+
+        self._do_column_select(user_col, ctrl, shift)
+
+    def _do_column_select(self, user_col, ctrl, shift):
+        """Select an entire column (all rows) via header click,
+        honouring Ctrl-toggle and Shift-extend modifiers."""
+        tv = self.widget
+        sm = tv.selectionModel()
+        model = tv.model()
+        nrows = tv.topLevelItemCount()
+        if nrows == 0:
+            return
+        offset = self._col_offset()
+        col = user_col + offset
+
+        if shift and self._cell_anchor is not None:
+            _, a_col = self._cell_anchor
+            cmin, cmax = (a_col, user_col) if a_col <= user_col \
+                else (user_col, a_col)
+            sel = QtCore.QItemSelection(
+                model.index(0, cmin + offset),
+                model.index(nrows - 1, cmax + offset))
+            sm.clear()
+            sm.select(sel, QtCore.QItemSelectionModel.Select)
+            return
+
+        sel = QtCore.QItemSelection(
+            model.index(0, col),
+            model.index(nrows - 1, col))
+        if ctrl:
+            sm.select(sel, QtCore.QItemSelectionModel.Toggle)
+        else:
+            sm.clear()
+            sm.select(sel, QtCore.QItemSelectionModel.Select)
+        self._cell_anchor = (0, user_col)
+
+    # ----- clipboard -------------------------------------------
+
+    def _build_selection_tsv(self):
+        """Build a TSV string from the bounding rectangle of the
+        current selection.  Gaps emit empty cells."""
+        if self._is_cell_mode():
+            cells = self.get_selected_cells()
+            keyed = {(c['path'][0], c['col_key']):
+                     ('' if c['value'] is None else str(c['value']))
+                     for c in cells}
+            if not keyed:
+                return ''
+            rows = sorted({r for (r, _) in keyed})
+            user_keys = self._user_col_keys()
+            cols_used = sorted({user_keys.index(k)
+                                for (_, k) in keyed
+                                if k in user_keys})
+            if not cols_used:
+                return ''
+            cMin, cMax = cols_used[0], cols_used[-1]
+            lines = []
+            for r in rows:
+                cells_row = []
+                for c in range(cMin, cMax + 1):
+                    cells_row.append(keyed.get((r, user_keys[c]), ''))
+                lines.append('\t'.join(cells_row))
+            return '\n'.join(lines)
+        # Row mode: every selected row gets serialised in full.
+        paths = self.get_selected_paths()
+        if not paths:
+            return ''
+        rows = sorted(p[0] for p in paths)
+        lines = []
+        for r in rows:
+            row_dict = self.get_row(r)
+            lines.append('\t'.join(
+                ('' if row_dict.get(k) is None else str(row_dict[k]))
+                for k in self._user_col_keys()))
+        return '\n'.join(lines)
+
+    def _selection_top_left(self):
+        """Return ``(row, col_index)`` of the top-left cell in the
+        current selection, or None if empty."""
+        if self._is_cell_mode():
+            cells = self.get_selected_cells()
+            if not cells:
+                return None
+            user_keys = self._user_col_keys()
+            r_min = min(c['path'][0] for c in cells)
+            c_min = min(user_keys.index(c['col_key'])
+                        for c in cells if c['col_key'] in user_keys)
+            return (r_min, c_min)
+        paths = self.get_selected_paths()
+        if not paths:
+            return None
+        return (min(p[0] for p in paths), 0)
+
+    def copy_selection(self):
+        tsv = self._build_selection_tsv()
+        if not tsv:
+            return
+        QtGui.QApplication.clipboard().setText(tsv)
+        self.make_callback('copy', tsv)
+
+    def cut_selection(self):
+        tsv = self._build_selection_tsv()
+        if not tsv:
+            return
+        QtGui.QApplication.clipboard().setText(tsv)
+        # Clear editable cells in the selection.
+        offset = self._col_offset()
+        user_keys = self._user_col_keys()
+        if self._is_cell_mode():
+            for c in self.get_selected_cells():
+                if c['col_key'] not in user_keys:
+                    continue
+                user_col = user_keys.index(c['col_key'])
+                if user_col not in self._editable_cols:
+                    continue
+                row = c['path'][0]
+                old = c['value']
+                self.set_cell(row, user_col, '')
+                self.make_callback('cell_edited', [row], c['col_key'],
+                                   old, '')
+        else:
+            for path in self.get_selected_paths():
+                row = path[0]
+                for user_col in range(len(self._user_columns)):
+                    if user_col not in self._editable_cols:
+                        continue
+                    col_key = self._user_columns[user_col]['key']
+                    it = self.widget.topLevelItem(row)
+                    old = it.text(user_col + offset) if it else ''
+                    self.set_cell(row, user_col, '')
+                    self.make_callback('cell_edited', [row], col_key,
+                                       old, '')
+        self.make_callback('cut', tsv)
+
+    def paste_selection(self):
+        text = QtGui.QApplication.clipboard().text()
+        if text is None or text == '':
+            return
+        anchor = self._selection_top_left()
+        if anchor is None:
+            return
+        anchor_row, anchor_col = anchor
+        text = text.replace('\r\n', '\n').replace('\r', '\n')
+        rows = text.split('\n')
+        # Drop trailing empty row left over by most clipboards.
+        while rows and rows[-1] == '':
+            rows.pop()
+        n_user_cols = len(self._user_columns)
+        n_rows = self.get_row_count()
+        offset = self._col_offset()
+        for i, line in enumerate(rows):
+            r = anchor_row + i
+            if r >= n_rows:
+                break
+            cells = line.split('\t')
+            for j, val in enumerate(cells):
+                c = anchor_col + j
+                if c >= n_user_cols:
+                    break
+                if c not in self._editable_cols:
+                    continue
+                col_key = self._user_columns[c]['key']
+                it = self.widget.topLevelItem(r)
+                old = it.text(c + offset) if it else ''
+                self.set_cell(r, c, val)
+                self.make_callback('cell_edited', [r], col_key, old, val)
+        self.make_callback('paste', text)
 
 
 # CONTAINERS
@@ -1361,6 +3162,9 @@ class ContainerBase(WidgetBase):
         for w in list(self.children):
             self.remove(w, delete=delete)
 
+    def is_container(self):
+        return True
+
     def get_children(self):
         return self.children
 
@@ -1383,13 +3187,29 @@ class ContainerBase(WidgetBase):
             return None
         return self.children[idx]
 
+    def set_padding(self, px):
+        layout = self.widget.layout()
+        if layout is None:
+            return
+        if isinstance(px, int):
+            layout.setContentsMargins(px, px, px, px)
+        else:
+            layout.setContentsMargins(*px)
+
     def set_margins(self, left, right, top, bottom):
         layout = self.widget.layout()
+        if layout is None:
+            return
         layout.setContentsMargins(left, right, top, bottom)
 
     def set_border_width(self, pix):
         layout = self.widget.layout()
+        if layout is None:
+            return
         layout.setContentsMargins(pix, pix, pix, pix)
+
+    def set_border_color(self, color):
+        pass
 
 
 class Box(ContainerBase):
@@ -1421,6 +3241,36 @@ class Box(ContainerBase):
 
     def set_spacing(self, val):
         self.layout.setSpacing(val)
+
+    def set_align(self, align):
+        """Cross-axis alignment for the children laid out in this
+        Box.  Accepted values depend on the Box's ``orientation``:
+
+        * horizontal box → ``'top'`` / ``'center'`` / ``'bottom'``
+        * vertical box   → ``'left'`` / ``'center'`` / ``'right'``
+
+        Only visible when the Box's parent gives it more cross-axis
+        space than the children need."""
+        flag = self._resolve_align(align)
+        self.layout.setAlignment(flag)
+
+    def _resolve_align(self, align):
+        align = align.lower()
+        if self.orientation == 'horizontal':
+            mapping = {'top': QtCore.Qt.AlignTop,
+                       'center': QtCore.Qt.AlignVCenter,
+                       'bottom': QtCore.Qt.AlignBottom}
+            expected = "'top' | 'center' | 'bottom'"
+        else:
+            mapping = {'left': QtCore.Qt.AlignLeft,
+                       'center': QtCore.Qt.AlignHCenter,
+                       'right': QtCore.Qt.AlignRight}
+            expected = "'left' | 'center' | 'right'"
+        if align not in mapping:
+            raise ValueError(
+                f"{self.orientation} Box.set_align expects {expected}, "
+                f"got {align!r}")
+        return mapping[align]
 
 
 class HBox(Box):
@@ -1462,6 +3312,13 @@ class Frame(ContainerBase):
         if self.label is not None:
             self.label.setText(text)
 
+    def set_font(self, font, size=10):
+        # set the font of the frame's title label, if there is one
+        if self.label is not None:
+            if not isinstance(font, QFont):
+                font = self.get_font(font, size)
+            self.label.setFont(font)
+
 
 # Qt custom expander widget
 # See http://stackoverflow.com/questions/10364589/equivalent-of-gtks-expander-in-pyqt4  # noqa
@@ -1470,10 +3327,12 @@ class Expander(ContainerBase):
     r_arrow = None
     d_arrow = None
 
-    # Note: add 'text-align: left;' if you want left adjusted labels
+    # 'text-align: left;' pushes the arrow icon + title flush left, to
+    # match the pg (and gtk4) Expander styling
     widget_style = """
     QPushButton { margin: 1px,1px,1px,1px; padding: 0px;
-                  border-width: 0px; border-style: solid; }
+                  border-width: 0px; border-style: solid;
+                  text-align: left; }
     """
 
     def __init__(self, title='', notoggle=False):
@@ -1538,6 +3397,42 @@ class Expander(ContainerBase):
 
     def _toggle_widget(self, w, tf):
         self.expand(tf)
+
+    def set_font(self, font, size=10):
+        # set the font of the expander's toggle (title) button, if any
+        if self.toggle is not None:
+            if not isinstance(font, QFont):
+                font = self.get_font(font, size)
+            self.toggle.get_widget().setFont(font)
+
+
+class FixedLayout(ContainerBase):
+    """A container widget in which children can be placed at fixed
+    positions.
+    """
+    def __init__(self):
+        super().__init__()
+
+        self.widget = QtGui.QWidget()
+
+    def add_widget(self, child, x_px, y_px):
+        child_w = child.get_widget()
+        child_w.setParent(self.widget)
+
+        child_w.move(x_px, y_px)
+        self.add_ref(child)
+
+    def remove(self, child, delete=False):
+        if child not in self.children:
+            raise ValueError("Widget is not a child of this container")
+        self.children.remove(child)
+
+        child_w = child.get_widget()
+        child_w.unParent()
+        if delete:
+            child_w.deleteLater()
+
+        self.make_callback('widget-removed', child)
 
 
 class TabWidget(ContainerBase):
@@ -1781,6 +3676,14 @@ class MDIWidget(ContainerBase):
         if 0 <= idx < len(self.children):
             return self.children[idx]
         return None
+
+    def get_child_size(self, child):
+        subwin = self._get_subwin(child.get_widget())
+        return subwin.width(), subwin.height()
+
+    def get_child_position(self, child):
+        subwin = self._get_subwin(child.get_widget())
+        return subwin.x(), subwin.y()
 
     def tile_panes(self):
         self.widget.tileSubWindows()
@@ -2193,7 +4096,7 @@ class Menubar(ContainerBase):
         return self.menus[name]
 
 
-class TopLevelMixin(object):
+class TopLevelMixin:
 
     def __init__(self, title=None):
 
@@ -2386,7 +4289,7 @@ class TopLevel(TopLevelMixin, ContainerBase):
 
 class Application(Callback.Callbacks):
 
-    def __init__(self, logger=None, settings=None):
+    def __init__(self, logger=None, settings=None, ws_sock=None):
         global _app
         super(Application, self).__init__()
 
@@ -2474,6 +4377,25 @@ class Application(Callback.Callbacks):
     def make_timer(self):
         return QtHelp.Timer()
 
+    def get_url(self):
+        return None
+
+    def is_web_backend(self):
+        return False
+
+    def open_url(self, url):
+        """Open *url* in the user's web browser (desktop backend)."""
+        import webbrowser
+        webbrowser.open(url, new=2)
+
+    def register_font(self, family, path, weight='normal', style='normal'):
+        f_key = font_asst.add_loadable_font(path, family, style=style,
+                                            weight=weight)
+        QtHelp.load_font(f_key)
+
+    def set_default_font(self, family, size=None, weight=None, style=None):
+        font_asst.add_alias('sans', family.lower())
+
     def mainloop(self):
         self._qtapp.exec()
 
@@ -2515,24 +4437,18 @@ class Dialog(TopLevelMixin, WidgetBase):
         self.content = VBox()
         vbox.addWidget(self.content.get_widget(), stretch=1)
 
-        if len(buttons) > 0:
-            hbox_w = QtGui.QWidget()
-            hbox = QtGui.QHBoxLayout()
-            hbox.setContentsMargins(5, 5, 5, 5)
-            hbox.setSpacing(4)
-            hbox_w.setLayout(hbox)
+        # buttons
+        hbox = HBox()
+        hbox.set_padding(5)
+        hbox.set_spacing(4)
+        self.buttonbox = hbox
+        vbox.addWidget(hbox.get_widget(), stretch=0)
 
+        if len(buttons) > 0:
             for name, val in buttons:
                 btn = Button(name)
-                self.buttons.append(btn)
+                self.add_button(btn, val)
 
-                def cb(val):
-                    return lambda w: self._cb_redirect(val)
-
-                btn.add_callback('activated', cb(val))
-                hbox.addWidget(btn.get_widget(), stretch=1)
-
-            vbox.addWidget(hbox_w, stretch=0)
             # self.widget.closeEvent = lambda event: self.delete()
 
         self.enable_callback('activated')
@@ -2540,11 +4456,17 @@ class Dialog(TopLevelMixin, WidgetBase):
         if autoclose:
             self.add_callback('close', lambda w: w.hide())
 
-    def _cb_redirect(self, val):
+    def _cb_redirect(self, w, val):
         self.make_callback('activated', val)
 
     def get_content_area(self):
         return self.content
+
+    def add_button(self, btn, val):
+        self.buttons.append(btn)
+
+        btn.add_callback('activated', self._cb_redirect, val)
+        self.buttonbox.add_widget(btn, stretch=1)
 
     def popup(self, parent=None):
         if parent is not None:
@@ -2720,14 +4642,14 @@ class FileDialog(TopLevelMixin, WidgetBase):
         self.widget.open()
 
 
-class DragPackage(object):
+class DragPackage:
     def __init__(self, src_widget):
         self.src_widget = src_widget
         self._drag = QtHelp.QDrag(self.src_widget)
         self._data = QtCore.QMimeData()
         self._drag.setMimeData(self._data)
 
-    def set_urls(self, urls):
+    def set_uris(self, urls):
         _urls = [QtCore.QUrl(url) for url in urls]
         self._data.setUrls(_urls)
 

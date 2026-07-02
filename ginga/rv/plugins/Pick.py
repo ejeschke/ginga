@@ -471,6 +471,7 @@ class Pick(GingaPlugin.LocalPlugin):
         vtop.set_border_width(4)
 
         box, sw, orientation = Widgets.get_oriented_box(container,
+                                                        fill=True,
                                                         orientation=self.settings.get('orientation', None))
         box.set_border_width(4)
         box.set_spacing(2)
@@ -526,7 +527,6 @@ class Pick(GingaPlugin.LocalPlugin):
         self.pickcenter = p_canvas.get_object_by_tag(tag)
 
         iw = Viewers.GingaViewerWidget(viewer=di)
-        iw.resize(width, height)
         nb.add_widget(iw, title="Image")
 
         # Set up "Contour" tab viewer
@@ -578,7 +578,6 @@ class Pick(GingaPlugin.LocalPlugin):
             ci.show_mode_indicator(True)
 
             ciw = Viewers.GingaViewerWidget(viewer=ci)
-            ciw.resize(width, height)
 
             nb.add_widget(ciw, title="Contour")
 
@@ -590,7 +589,6 @@ class Pick(GingaPlugin.LocalPlugin):
                 self.contour_plot.set_background('black')
                 self.contour_plot.set_grid(False)
                 pw = self.contour_plot.get_ginga_widget()
-                pw.resize(width, height)
                 self.contour_plot.enable(pan=True, zoom=True)
 
                 self.contour_interp_methods = ('bilinear', 'nearest', 'bicubic')
@@ -606,7 +604,6 @@ class Pick(GingaPlugin.LocalPlugin):
             self.fwhm_plot.set_background('white')
             self.fwhm_plot.set_grid(True)
             pw = self.fwhm_plot.get_ginga_widget()
-            pw.resize(width, height)
             nb.add_widget(pw, title="FWHM")
 
             # Radial profile plot
@@ -615,7 +612,6 @@ class Pick(GingaPlugin.LocalPlugin):
             self.radial_plot.set_background('white')
             self.radial_plot.set_grid(True)
             pw = self.radial_plot.get_ginga_widget()
-            pw.resize(width, height)
             nb.add_widget(pw, title="Radial")
 
             # EE profile plot
@@ -624,7 +620,6 @@ class Pick(GingaPlugin.LocalPlugin):
             self.ee_plot.set_background('white')
             self.ee_plot.set_grid(True)
             pw = self.ee_plot.get_ginga_widget()
-            pw.resize(width, height)
             nb.add_widget(pw, title="EE")
 
         fr = Widgets.Frame(self._textlabel)
@@ -1028,6 +1023,7 @@ class Pick(GingaPlugin.LocalPlugin):
         nb.add_widget(vbox3, title="Controls")
 
         vbox3 = Widgets.VBox()
+        vbox3.set_expanding(True, True)
         tv = Widgets.TreeView(sortable=True, use_alt_row_color=True)
         self.rpt_tbl = tv
         vbox3.add_widget(tv, stretch=1)

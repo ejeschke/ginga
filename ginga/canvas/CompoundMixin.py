@@ -11,7 +11,7 @@ import numpy as np
 __all__ = ['CompoundMixin']
 
 
-class CompoundMixin(object):
+class CompoundMixin:
     """A CompoundMixin is a mixin class that makes an object that is an
     aggregation of other objects.
 

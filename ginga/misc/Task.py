@@ -6,6 +6,8 @@
 #
 import sys
 import time
+import inspect
+import asyncio
 import threading
 
 import queue as Queue
@@ -18,6 +20,7 @@ _swival = 0.000001
 sys.setswitchinterval(_swival)
 
 from . import Callback  # noqa
+from .aio_compat import AioCompletion, get_event_loop as aio_get_event_loop  # noqa
 
 
 class TaskError(Exception):
@@ -48,6 +51,10 @@ class Task(Callback.Callbacks):
         initialize() and start() methods.
         """
         self.ev_done = threading.Event()
+        # Allows the task to be awaited on a single event loop, in
+        # addition to being waited on via the ev_done Event above.
+        # The asyncio.Future is created lazily, only if awaited.
+        self._aio = AioCompletion()
         self.tag = None
         self.logger = None
         self.threadPool = None
@@ -61,6 +68,11 @@ class Task(Callback.Callbacks):
         super(Task, self).__init__()
 
         self.enable_callback('resolved')
+
+    def __await__(self):
+        """Await task completion on a single event loop.  Resolves to the
+        task result (the same value passed to :meth:`done`)."""
+        return self._aio.__await__()
 
     def initialize(self, taskParent, override=None):
         """This method initializes a task for (re)use.  taskParent is the
@@ -230,6 +242,9 @@ class Task(Callback.Callbacks):
         # Release thread waiters
         self.ev_done.set()
 
+        # wake any async (await) waiters
+        self._aio.resolve(self.result)
+
         # Perform callbacks for event-style waiters
         self.make_callback('resolved', self.result)
 
@@ -335,6 +350,38 @@ class FuncTask(Task):
             if self.logger:
                 self.logger.debug("Function returned %s" % (
                     str(res)))
+
+        except Exception as e:
+            if self.logger:
+                self.logger.error("Task '%s' terminated with exception: %s" %
+                                  (str(self), str(e)), exc_info=True)
+            self.done(e)
+
+
+class AsyncFuncTask(FuncTask):
+    """Like :class:`FuncTask`, but cooperative on a single event loop.
+
+    ``func`` may be either a plain callable or a coroutine function.  When
+    run by an :class:`AsyncTaskPool`, the pool awaits :meth:`execute_async`,
+    which awaits the result if ``func`` returns an awaitable.  This lets
+    ``nongui_do(some_coroutine_fn, ...)`` work without blocking the loop.
+
+    It still defines a synchronous :meth:`execute` (inherited) so the task
+    remains usable with the threaded pool; in that case a coroutine result
+    would not be awaited, so use a plain ``func`` when running threaded.
+    """
+
+    async def execute_async(self):
+        if self.logger:
+            self.logger.debug("Running (async) %s" % (self.func.__name__,))
+        try:
+            res = self.func(*self.args, **self.kwdargs)
+            if inspect.isawaitable(res):
+                res = await res
+            self.done(res)
+
+            if self.logger:
+                self.logger.debug("Function returned %s" % (str(res),))
 
         except Exception as e:
             if self.logger:
@@ -700,7 +747,7 @@ class PriorityQueue(Queue.PriorityQueue):
 
 # ------------ WORKER THREADS ------------
 
-class WorkerThread(object):
+class WorkerThread:
     """Container for a thread in which to call the execute() method of a task.
     A WorkerThread object waits on the task queue, executes a task when it
     appears, and repeats.  A call to start() is necessary to start servicing
@@ -838,16 +885,18 @@ class WorkerThread(object):
         self.my_quit.set()
 
     def cleanup(self):
+        # Called by the pool once our thread has been told to stop and the
+        # taskloop is on its way out.  Join the old thread before the worker
+        # object can be reused, otherwise we could null self.thread while the
+        # old thread is still finishing (see ThreadPool.register_dn).
         if self.thread is not None:
-            alive = self.thread.is_alive()
-            if not alive:
-                self.thread.join()
+            self.thread.join()
             self.thread = None
 
 
 # ------------ THREAD POOL ------------
 
-class ThreadPool(object):
+class ThreadPool:
     """A simple thread pool for executing tasks asynchronously.
 
     self.status states:
@@ -898,6 +947,9 @@ class ThreadPool(object):
             return
 
         self.logger.debug("startall called, starting pool attendant thread")
+        # clear the termination flag so the pool can be restarted after a
+        # prior stopall()
+        self.ev_quit.clear()
         self.status = 'start'
         self.mon_thread = threading.Thread(target=self.pool_attendant, args=[])
         self.mon_thread.start()
@@ -915,24 +967,37 @@ class ThreadPool(object):
 
     def stopall(self, wait=False):
         """Stop all threads in the worker pool.  If _wait_ is True
-        then don't return until all threads are down.
+        then don't return until all threads are down.  Safe to call when
+        the pool is not running (it is then a no-op).
         """
+        if self.mon_thread is None:
+            self.logger.debug("stopall called, but thread pool is not running")
+            return
+
         self.logger.debug("stopall called")
-        with self.lock:
+        with self.regcond:
             self.status = 'stop'
-        # Signal to all threads to terminate.
+        # Signal to all threads (and the attendant) to terminate.
         self.ev_quit.set()
+        with self.mp_cond:
+            # wake the attendant in case it is idle-waiting
+            self.mp_cond.notify()
 
         if wait:
             with self.regcond:
-                # Threads are on the way down.  Wait until last one quits.
-                while self.status != 'down':
+                # Wait until all running workers have exited.  Keying off the
+                # running count (rather than status == 'down') avoids hanging
+                # forever when there were no running workers to flip it.  The
+                # timeout makes this robust to a missed notify.
+                while len(self.running) > 0:
                     self.logger.debug("waiting for threads: count=%d" %
                                       len(self.running))
-                    self.regcond.wait()
+                    self.regcond.wait(timeout=0.25)
 
         self.mon_thread.join()
         self.mon_thread = None
+        with self.regcond:
+            self.status = 'down'
         self.logger.debug("stopall done")
 
     def add_threads(self, add_numthreads, minthreads=None):
@@ -975,18 +1040,38 @@ class ThreadPool(object):
                     self._analyze_time = cur_time
                     self.analyze_threads()
 
+            # Reclaim workers whose threads have stopped: join them OUTSIDE
+            # the lock, then return them to the waiting pool.  A worker is
+            # never put back in 'waiting' until its old thread is truly dead,
+            # so it cannot be restarted while still finishing up.
+            with self.regcond:
+                reclaim, self.cleanup = self.cleanup, []
+            for dead_worker in reclaim:
+                dead_worker.cleanup()
+            if len(reclaim) > 0:
+                with self.regcond:
+                    self.waiting.extend(reclaim)
+
             worker = None
             with self.regcond:
-                # join threads that have exited
-                while len(self.cleanup) > 0:
-                    dead_worker = self.cleanup.pop()
-                    dead_worker.cleanup()
-
                 num_running = len(self.running)
+                # number of running workers ready to take a task right now,
+                # and the amount of work waiting in the queue
+                num_idle = sum(1 for w in self.running
+                               if w.getstatus()[0] == 'idle')
+                num_pending = self.queue.qsize()
+
+                # Add a thread if we are below the minimum, or there is more
+                # pending work than idle workers to service it (up to the
+                # maximum).  Keying off the idle-worker count rather than
+                # qsize() alone avoids the race where an idle worker grabs the
+                # queued task before the attendant samples the queue -- which
+                # made it look like no extra thread was needed.
                 if (num_running < self.minthreads or
-                    self.queue.qsize() > 0 and num_running < self.numthreads):
-                    assert (len(self.waiting) > 0)
-                    worker = self.waiting[0]
+                    (num_pending > num_idle and
+                     num_running < self.numthreads)):
+                    if len(self.waiting) > 0:
+                        worker = self.waiting[0]
 
             if worker is not None:
                 worker.start(wait=True)
@@ -1068,7 +1153,8 @@ class ThreadPool(object):
         """
         with self.regcond:
             self.running.remove(worker)
-            self.waiting.append(worker)
+            # hand the worker to the attendant for cleanup (join) before it
+            # is returned to 'waiting' and possibly reused
             self.cleanup.append(worker)
             num_running = len(self.running)
             self.logger.debug("register_dn: (%d) count is %d" % (
@@ -1082,6 +1168,97 @@ class ThreadPool(object):
 
     # TO BE DEPRECATED
     addThreads = add_threads
+
+
+# Alias under the task-pool interface name.  Both ThreadPool and
+# AsyncTaskPool implement that interface: addTask(task, priority=0),
+# startall(**kw), stopall(**kw).
+ThreadedTaskPool = ThreadPool
+
+
+class AsyncTaskPool:
+    """Task pool that runs tasks on a single asyncio event loop instead of
+    a pool of worker threads.
+
+    Drop-in replacement for :class:`ThreadPool`'s
+    ``addTask``/``startall``/``stopall`` interface, intended for
+    single-threaded environments (e.g. Pyodide/the browser) where a real
+    thread pool is unavailable and all work shares one event loop.
+
+    There are no worker or monitor threads.  ``addTask`` schedules the
+    task on the loop:
+
+    - if the task defines ``execute_async`` (see :class:`AsyncFuncTask`),
+      it is awaited as a coroutine -- this is the cooperative path that
+      does not block the loop;
+    - otherwise the task's synchronous ``execute()`` is run.  It should be
+      non-blocking (CPU-bound work will still stall the single thread).
+
+    The loop is *not* started or stopped here -- it is owned and driven by
+    the host environment (the browser, or Ginga's main loop pump).
+    """
+
+    def __init__(self, logger=None, ev_quit=None, loop=None):
+        self.logger = logger
+        if ev_quit is None:
+            ev_quit = threading.Event()
+        self.ev_quit = ev_quit
+        self._loop = loop
+        self._pending = set()
+
+    def get_loop(self):
+        if self._loop is None:
+            self._loop = aio_get_event_loop()
+        return self._loop
+
+    def startall(self, wait=False, **kwargs):
+        # nothing to start: the event loop is driven by the host
+        self.get_loop()
+
+    def stopall(self, wait=False):
+        self.ev_quit.set()
+        for aio_task in list(self._pending):
+            aio_task.cancel()
+        self._pending.clear()
+
+    def addTask(self, task, priority=0):
+        loop = self.get_loop()
+        # schedule on the loop; thread-safe in case a (rare) worker thread
+        # submits while we are running single-threaded elsewhere
+        loop.call_soon_threadsafe(self._schedule, task)
+
+    def add_task(self, task, priority=0):
+        # interface alias
+        self.addTask(task, priority=priority)
+
+    def _schedule(self, task):
+        aio_task = asyncio.ensure_future(self._run_task(task))
+        self._pending.add(aio_task)
+        aio_task.add_done_callback(self._pending.discard)
+
+    async def _run_task(self, task):
+        try:
+            execute_async = getattr(task, 'execute_async', None)
+            if execute_async is not None:
+                await execute_async()
+            else:
+                res = task.execute()
+                if inspect.isawaitable(res):
+                    await res
+        except Exception as e:
+            if self.logger is not None:
+                self.logger.error("async task '%s' error: %s" %
+                                  (str(task), str(e)), exc_info=True)
+            # safety net: ensure waiters are released even if execute()
+            # raised before calling done() itself
+            try:
+                if not task.ev_done.is_set():
+                    task.done(e, noraise=True)
+            except Exception:
+                pass
+
+    def workerStatus(self):
+        return [('async', None)]
 
 
 # ------------ SUPPORT FUNCTIONS ------------

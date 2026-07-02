@@ -7,7 +7,7 @@ import sys
 from ginga.misc import log
 from ginga.qtw.QtHelp import QtGui, QtCore
 from ginga.qtw.ImageViewQt import CanvasView, ScrolledView
-from ginga.util.loader import load_data
+from ginga.util.loader import load_data, handle_drop_event
 
 
 class FitsViewer(QtGui.QMainWindow):
@@ -78,9 +78,8 @@ class FitsViewer(QtGui.QMainWindow):
         if len(fileName) != 0:
             self.load_file(fileName)
 
-    def drop_file(self, fitsimage, paths):
-        fileName = paths[0]
-        self.load_file(fileName)
+    def drop_file_cb(self, fitsimage, drop_event):
+        handle_drop_event(fitsimage, drop_event)
 
     def quit(self, *args):
         self.logger.info("Attempting to shut down the application...")

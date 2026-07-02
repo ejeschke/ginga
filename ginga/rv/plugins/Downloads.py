@@ -38,8 +38,7 @@ import time
 
 from ginga.gw import Widgets
 from ginga import GingaPlugin
-from ginga.misc import Bunch
-from ginga.util import catalog
+from ginga.misc import Bunch, Future
 
 __all__ = ['Downloads']
 
@@ -69,7 +68,7 @@ class Downloads(GingaPlugin.GlobalPlugin):
 
         sc = Widgets.ScrollArea()
         vbox2 = Widgets.VBox()
-        fr = Widgets.Frame("Downloads")
+        fr = Widgets.Frame(title="Downloads")
         self.dlbox = Widgets.VBox()
         fr.set_widget(self.dlbox)
         vbox2.add_widget(fr, stretch=0)
@@ -106,7 +105,7 @@ class Downloads(GingaPlugin.GlobalPlugin):
         prog_bar = Widgets.ProgressBar()
         prog_bar.set_value(track.progress)
         hbox.add_widget(time_lbl)
-        hbox.add_widget(prog_bar)
+        hbox.add_widget(prog_bar, stretch=1)
         rmv = Widgets.Button('Clear')
 
         def _clear_download(w):
@@ -135,14 +134,14 @@ class Downloads(GingaPlugin.GlobalPlugin):
         for track in list(self.downloads):
             self.gui_rm_track(track)
 
-    def add_download(self, info, future):
+    def add_download(self, info, future, download_cb=None):
         add_time = time.time()
         key = str(add_time)
 
         # create tracker for this download
         track = Bunch.Bunch(key=key, info=info, time_start=add_time,
                             elapsed='00:00:00', progress=0.0,
-                            future=future)
+                            future=future, download_cb=download_cb)
         self.downloads.append(track)
 
         if self.gui_up:
@@ -151,45 +150,63 @@ class Downloads(GingaPlugin.GlobalPlugin):
         self.fv.nongui_do(self.download, info.url, info.filepath, track)
 
     def download(self, url, localpath, track):
-        def _dl_indicator(count, blksize, totalsize):
-            # calculate elapsed time label
-            cur_time = time.time()
-            elapsed = cur_time - track.time_start
-            hrs = int(elapsed / 3600)
-            mins = int((elapsed % 3600) / 60)
-            secs = int((elapsed % 3600) % 60)
-            track.elapsed = "%02d:%02d:%02d" % (hrs, mins, secs)
+        # Dispatched via nongui_do().  Delegate the actual fetch to the
+        # central object's download_file() (which transparently handles
+        # the threaded vs. in-situ/async backends); this plugin just
+        # drives the progress GUI and resolves the caller's future.  We
+        # download into our own ``dl_future`` so we can keep this plugin's
+        # behavior of *not* resolving the caller's future on failure
+        # (it merely surfaces an error message).  download_file() may
+        # return a coroutine (in-situ), which we pass back up to nongui_do.
+        def _progress(fraction):
+            self._update_track(track, fraction)
+            # forward progress to any external listener (e.g. a plugin
+            # that initiated this download and shows its own progress bar)
+            if track.download_cb is not None:
+                track.download_cb(fraction)
 
-            nbytes = int(count * blksize)
-            track.progress = min(1.0, float(nbytes) / float(totalsize))
+        dl_future = Future.Future()
+        dl_future.add_callback('resolved', self._download_complete, track)
+        return self.fv.download_file(url, localpath, dl_future,
+                                     progress_cb=_progress)
 
-            if (self.settings.get('auto_clear_download', False) and
-                track.progress >= 1.0):
-                self.fv.gui_do(self.gui_rm_track, track)
-            else:
-                w_track = self.w_track.get(track.key, None)
-                if w_track is None:
-                    return
-                self.fv.gui_do(w_track.time_lbl.set_text, track.elapsed)
-                self.fv.gui_do(w_track.prog_bar.set_value, track.progress)
-            return
-
+    def _download_complete(self, dl_future, track):
         try:
-            # Try to download the URL.  We press our generic URL server
-            # into use as a generic file downloader.
-            dl = catalog.URLServer(self.logger, "downloader", "dl",
-                                   url, "")
-            filepath = dl.retrieve(url, filepath=localpath,
-                                   cb_fn=_dl_indicator)
-
-            # call the future
-            self.logger.info("download of '%s' finished" % (filepath))
-            track.future.resolve(filepath)
-
+            filepath = dl_future.get_value(block=False)
         except Exception as e:
-            self.fv.gui_do(self.fv.show_error,
-                           "Download of '%s' failed: %s" % (url, str(e)))
+            self._download_failed(track.info.url, e)
             return
+        self._download_finished(track, filepath)
+
+    def _update_track(self, track, progress):
+        # calculate elapsed time label
+        cur_time = time.time()
+        elapsed = cur_time - track.time_start
+        hrs = int(elapsed / 3600)
+        mins = int((elapsed % 3600) / 60)
+        secs = int((elapsed % 3600) % 60)
+        track.elapsed = "%02d:%02d:%02d" % (hrs, mins, secs)
+
+        track.progress = min(1.0, progress)
+
+        if (self.settings.get('auto_clear_download', False) and
+                track.progress >= 1.0):
+            self.fv.gui_do(self.gui_rm_track, track)
+        else:
+            w_track = self.w_track.get(track.key, None)
+            if w_track is None:
+                return
+            self.fv.gui_do(w_track.time_lbl.set_text, track.elapsed)
+            self.fv.gui_do(w_track.prog_bar.set_value, track.progress)
+
+    def _download_finished(self, track, filepath):
+        # call the future
+        self.logger.info("download of '%s' finished" % (filepath))
+        track.future.resolve(filepath)
+
+    def _download_failed(self, url, e):
+        self.fv.gui_do(self.fv.show_error,
+                       "Download of '%s' failed: %s" % (url, str(e)))
 
     def stop(self):
         self.dlbox = None

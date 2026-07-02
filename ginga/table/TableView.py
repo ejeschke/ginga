@@ -5,10 +5,15 @@
 # Please see the file LICENSE.txt for details.
 #
 from collections import OrderedDict
+import os.path
+import numbers
+
+import numpy as np
 
 from ginga.util.viewer import ViewerBase
+from ginga.util.paths import icondir
 from ginga.table import AstroTable
-from ginga.misc import Bunch
+from ginga.util.io import io_rgb
 
 
 class TableViewBase(ViewerBase):
@@ -84,8 +89,24 @@ class TableViewGw(TableViewBase):
                                        sortable=True,
                                        use_alt_row_color=color_alternate)
 
+        rgb_opener = io_rgb.RGBFileHandler(self.logger)
+        tmp_path = os.path.join(icondir, 'fits.png')
+        placeholder_image = rgb_opener.load_file(tmp_path)
+        self._rgb_array_placeholder = placeholder_image.get_data()
+
     def get_widget(self):
         return self.widget
+
+    def _get_table_type(self, val):
+        if isinstance(val, numbers.Number):
+            if isinstance(val, int):
+                return 'int'
+            else:
+                return 'float'
+        elif isinstance(val, bool) or val in [np.True_, np.False_]:
+            return 'bool'
+        else:
+            return 'str'
 
     def set_table_cb(self, viewer, table):
         """Display the given table object."""
@@ -95,9 +116,10 @@ class TableViewGw(TableViewBase):
         # Extract data as astropy table
         a_tab = table.get_data()
 
-        columns = [('Row', '_DISPLAY_ROW')]
+        columns = [('Row', '_DISPLAY_ROW', 'str')]
 
-        # This is to get around table widget not sorting numbers properly
+        # This is to get around some table widget implementations
+        # not sorting numbers properly
         i_fmt = '{{0:0{0}d}}'.format(len(str(table.rows)))
 
         if table.kind == 'table-astropy':
@@ -108,31 +130,36 @@ class TableViewGw(TableViewBase):
                 pass
 
             # Table header with units
-            for c in a_tab.columns.values():
-                col_str = '{0:^s}\n{1:^s}'.format(c.name, str(c.unit))
-                columns.append((col_str, c.name))
+            row = a_tab[0]
+            for i, c in enumerate(a_tab.columns.values()):
+                col_str = '{0:^s}\n{1:^s}'.format(c.name, str(c.unit)) \
+                    if c.unit is not None else '{0:^s}'.format(c.name)
+                _data_type = self._get_table_type(row[i])
+                columns.append((col_str, c.name, _data_type))
 
             # Table contents
             for i, row in enumerate(a_tab, 1):
-                bnch = Bunch.Bunch(zip(row.colnames, row.as_void()))
+                row_dct = dict(zip(row.colnames, row.as_void()))
                 i_str = i_fmt.format(i)
-                bnch['_DISPLAY_ROW'] = i_str
-                tree_dict[i_str] = bnch
+                row_dct['_DISPLAY_ROW'] = i_str
+                tree_dict[i_str] = row_dct
 
         elif table.kind == 'table-fitsio':
             colnames = table.colnames
 
             # Table header
+            row = a_tab[0]
             for c_name in colnames:
                 col_str = '{0:^s}'.format(c_name)
-                columns.append((col_str, c_name))
+                _data_type = self._get_table_type(row[i])
+                columns.append((col_str, c_name, _data_type))
 
             # Table contents
             for i, row in enumerate(a_tab, 1):
-                bnch = Bunch.Bunch(zip(colnames, row))
+                row_dct = dict(zip(colnames, row))
                 i_str = i_fmt.format(i)
-                bnch['_DISPLAY_ROW'] = i_str
-                tree_dict[i_str] = bnch
+                row_dct['_DISPLAY_ROW'] = i_str
+                tree_dict[i_str] = row_dct
 
         else:
             raise ValueError(f"I don't know how to display tables of type '{table.kind}'")
@@ -162,4 +189,7 @@ class TableViewGw(TableViewBase):
         return self.widget.get_size()
 
     def get_rgb_array(self):
+        if not hasattr(self.widget, 'get_rgb_array'):
+            return self._rgb_array_placeholder
+
         return self.widget.get_rgb_array()

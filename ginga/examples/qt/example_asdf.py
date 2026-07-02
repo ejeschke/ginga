@@ -13,6 +13,7 @@ from ginga import AstroImage, colors
 from ginga.qtw.ImageViewQt import CanvasView
 from ginga.canvas.CanvasObject import get_canvas_types
 from ginga.misc import log
+from ginga.util.loader import handle_drop_event
 
 from ginga.util import wcsmod
 wcsmod.use('astropy_ape14')
@@ -200,9 +201,8 @@ class FitsViewer(QtGui.QMainWindow):
         if len(fileName) != 0:
             self.load_file(fileName)
 
-    def drop_file_cb(self, fitsimage, paths):
-        fileName = paths[0]
-        self.load_file(fileName)
+    def drop_file_cb(self, fitsimage, drop_event):
+        handle_drop_event(fitsimage, drop_event)
 
     def cursor_cb(self, viewer, button, data_x, data_y):
         """This gets called when the data position relative to the cursor

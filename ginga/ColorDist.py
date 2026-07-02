@@ -17,7 +17,7 @@ class ColorDistError(Exception):
     pass
 
 
-class ColorDistBase(object):
+class ColorDistBase:
 
     def __init__(self, hashsize, colorlen=None):
         super(ColorDistBase, self).__init__()

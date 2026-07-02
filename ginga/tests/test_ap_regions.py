@@ -17,7 +17,7 @@ from ginga.canvas.CanvasObject import get_canvas_types
 dc = get_canvas_types()
 
 
-class Test_R2G(object):
+class Test_R2G:
     """Test conversions from astropy-regions to Ginga canvas types."""
 
     def test_point_pix1(self):
@@ -260,7 +260,7 @@ class Test_R2G(object):
                                   r.angle.to(u.deg).value)))
 
 
-class Test_G2R(object):
+class Test_G2R:
     """Test conversions from Ginga canvas types to astropy-regions Regions."""
 
     def test_point_pix1(self):

@@ -1,15 +1,26 @@
 #
 # ImageViewPg.py -- a backend for Ginga using javascript and
-#      HTML5 canvas and websockets
+#      HTML5 canvas and optionally via websockets
 #
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import threading
+import base64
 
-from ginga import ImageView, Mixins, Bindings
+from ginga import ImageView, Mixins, Bindings, events
 from ginga.canvas import render
 from ginga.cursors import cursor_info
+# from ginga.web.pgw import PgHelp
 
+in_situ_web = False
+try:
+    from pgwidgets_js.pyodide import Widgets
+    # <-- we are being imported from pyodide/pyscript
+    in_situ_web = True
+except ImportError:
+    # <-- we are being imported from python
+    from pgwidgets.sync import Widgets
 
 default_html_fmt = 'jpeg'
 
@@ -23,7 +34,7 @@ class ImageViewPg(ImageView.ImageViewBase):
     def __init__(self, logger=None, rgbmap=None, settings=None, render=None):
         ImageView.ImageViewBase.__init__(self, logger=logger,
                                          rgbmap=rgbmap, settings=settings)
-
+        self.needs_scrolledview = True
         self.pgcanvas = None
 
         # format for rendering image on HTML5 canvas
@@ -36,7 +47,10 @@ class ImageViewPg(ImageView.ImageViewBase):
         # this should already be so, but just in case...
         self.defer_redraw = True
 
+        self._timer_resize_lock = threading.RLock()
+        self._delayed_size = (0, 0)
         # these will be assigned in set_widget()
+        self.timer_resize = None
         self.timer_redraw = None
         self.timer_msg = None
 
@@ -49,20 +63,34 @@ class ImageViewPg(ImageView.ImageViewBase):
         self.possible_renderers = [preferred] + renderers
         self.choose_best_renderer()
 
+        for name in ['map']:
+            self.enable_callback(name)
+
     def set_widget(self, canvas_w):
         """Call this method with the widget that will be used
         for the display.
         """
         self.logger.debug("set widget canvas_w=%s" % canvas_w)
         self.pgcanvas = canvas_w
+        canvas_w.add_callback('map', self.canvas_map_cb)
+        canvas_w.add_callback('resize', self.canvas_resize_cb)
 
-        app = canvas_w.get_app()
-        self.timer_redraw = app.make_timer()
+        if in_situ_web:
+            self.timer_resize = Widgets.Timer()
+            self.timer_redraw = Widgets.Timer()
+            self.timer_msg = Widgets.Timer()
+        else:
+            self.timer_resize = Widgets.Timer(canvas_w.session)
+            self.timer_redraw = Widgets.Timer(canvas_w.session)
+            self.timer_msg = Widgets.Timer(canvas_w.session)
+
+        self.timer_resize.add_callback('expired',
+                                       lambda *args: self.delayed_resize_cb())
         self.timer_redraw.add_callback('expired',
-                                       lambda t: self.delayed_redraw())
-        self.timer_msg = app.make_timer()
+                                       lambda *args: self.delayed_redraw())
         self.timer_msg.add_callback('expired',
-                                    lambda t: self.clear_onscreen_message())
+                                    lambda *args: self.clear_onscreen_message())
+        canvas_w.set_expanding(True, True)
 
         wd, ht = canvas_w.get_size()
         self.configure_window(wd, ht)
@@ -106,7 +134,10 @@ class ImageViewPg(ImageView.ImageViewBase):
             self.logger.debug("got '%s' RGB image buffer, len=%d" % (
                 format, len(buf)))
 
-            self.pgcanvas.do_update(buf)
+            # Now using an image by default
+            # data_uri = PgHelp.get_image_src_from_buffer(buf, imgtype=format)
+            # self.pgcanvas.set_image(data_uri)
+            self.pgcanvas.set_binary_image(buf, format)
 
         except Exception as e:
             self.logger.error("Couldn't update canvas: %s" % (str(e)))
@@ -127,10 +158,11 @@ class ImageViewPg(ImageView.ImageViewBase):
         """Does not include overlaid graphics."""
         pass
 
-    def set_cursor(self, cursor):
+    def set_cursor(self, name):
         if self.pgcanvas is None:
             return
         #self.pgcanvas.config(cursor=cursor)
+        self.pgcanvas.set_cursor(name)
 
     def onscreen_message(self, text, delay=None, redraw=True):
         if self.pgcanvas is None:
@@ -147,32 +179,29 @@ class ImageViewPg(ImageView.ImageViewBase):
     def configure_window(self, width, height):
         self.configure(width, height)
 
-    def map_event(self, event):
-        self.logger.info("window mapped to %dx%d" % (
-            event.width, event.height))
-        self.configure_window(event.width, event.height)
-        self.redraw(whence=0)
-
-    def resize_event(self, event):
-        wd, ht = event.width, event.height
-        # Not quite ready for prime-time--browser seems to mess with the
-        # aspect ratio
-        self.logger.info("canvas resized to %dx%d" % (wd, ht))
+    def canvas_map_cb(self, canvas_w, event):
+        wd, ht = event['width'], event['height']
+        self.logger.debug(f"window mapped to {wd}x{ht}")
         self.configure_window(wd, ht)
-        self.redraw(whence=0)
+        return self.make_callback('map')
+
+    def canvas_resize_cb(self, canvas_w, event):
+        with self._timer_resize_lock:
+            self._delayed_size = (event['width'], event['height'])
+            self.timer_resize.cond_set(0.25)
+
+    def delayed_resize_cb(self):
+        with self._timer_resize_lock:
+            wd, ht = self._delayed_size
+            self.logger.debug("canvas resized to %dx%d" % (wd, ht))
+            self.configure_window(wd, ht)
+            self.redraw(whence=0)
 
     def resize(self, width, height):
-        """Resize our window to width x height.
+        """Manual call to resize our window to width x height.
         May not work---depending on how the HTML5 canvas is embedded.
         """
-        # this shouldn't be needed
-        self.configure_window(width, height)
-
         self.pgcanvas.resize(width, height)
-
-        # hack to force a browser reload
-        app = self.pgcanvas.get_app()
-        app.do_operation('reload_page', id=self.pgcanvas.id)
 
 
 class PgEventMixin:
@@ -184,180 +213,63 @@ class PgEventMixin:
         # table mapping javascript key codes to ginga key names
         # see key_down_event() and key_up_event()
         #
-        # https://www.cambiaresearch.com/articles/15/javascript-char-codes-key-codes
-        self._keytbl = {
-            8: 'backspace',
-            9: 'tab',
-            13: 'return',
-            16: 'shift_l',
-            #'shift_r': 'shift_r',
-            17: 'control_l',
-            #'control_r': 'control_r',
-            18: 'alt_l',
-            #'alt_r': 'alt_r',
-            19: 'break',
-            20: 'caps_lock',
-            27: 'escape',
-            32: 'space',
-            33: 'page_up',
-            34: 'page_down',
-            35: 'end',
-            36: 'home',
-            37: 'left',
-            38: 'up',
-            39: 'right',
-            40: 'down',
-            45: 'insert',
-            46: 'delete',
-            65: 'a',
-            66: 'b',
-            67: 'c',
-            68: 'd',
-            69: 'e',
-            70: 'f',
-            71: 'g',
-            72: 'h',
-            73: 'i',
-            74: 'j',
-            75: 'k',
-            76: 'l',
-            77: 'm',
-            78: 'n',
-            79: 'o',
-            80: 'p',
-            81: 'q',
-            82: 'r',
-            83: 's',
-            84: 't',
-            85: 'u',
-            86: 'v',
-            87: 'w',
-            88: 'x',
-            89: 'y',
-            90: 'z',
-            91: 'super_l',
-            92: 'super_r',
-            93: 'menu_r',
-            96: 'numpad_0',
-            97: 'numpad_1',
-            98: 'numpad_2',
-            99: 'numpad_3',
-            100: 'numpad_4',
-            101: 'numpad_5',
-            102: 'numpad_6',
-            103: 'numpad_7',
-            104: 'numpad_8',
-            105: 'numpad_9',
-            106: 'numpad_*',
-            107: 'numpad_+',
-            109: 'numpad_-',
-            110: 'numpad_.',
-            111: 'numpad_/',
-            112: 'f1',
-            113: 'f2',
-            114: 'f3',
-            115: 'f4',
-            116: 'f5',
-            117: 'f6',
-            118: 'f7',
-            119: 'f8',
-            120: 'f9',
-            121: 'f10',
-            122: 'f11',
-            123: 'f12',
-            144: 'num_lock',
-            145: 'scroll_lock',
-            189: '-',
-            186: ';',
-            187: '=',
-            188: ',',
-            190: '.',
-            191: '/',
-            192: 'backquote',
-            219: '[',
-            220: 'backslash',
-            221: ']',
-            222: 'singlequote',
-        }
-
-        # this is an auxilliary table used to map shifted keys to names
-        # see key_down_event() and key_up_event()
-        self._keytbl2 = {
-            ('shift_l', 'backquote'): '~',
-            ('shift_l', '1'): '!',
-            ('shift_l', '2'): '@',
-            ('shift_l', '3'): '#',
-            ('shift_l', '4'): '$',
-            ('shift_l', '5'): '%',
-            ('shift_l', '6'): '^',
-            ('shift_l', '7'): '&',
-            ('shift_l', '8'): '*',
-            ('shift_l', '9'): '(',
-            ('shift_l', '0'): ')',
-            ('shift_l', 'a'): 'A',
-            ('shift_l', 'b'): 'B',
-            ('shift_l', 'c'): 'C',
-            ('shift_l', 'd'): 'D',
-            ('shift_l', 'e'): 'E',
-            ('shift_l', 'f'): 'F',
-            ('shift_l', 'g'): 'G',
-            ('shift_l', 'h'): 'H',
-            ('shift_l', 'i'): 'I',
-            ('shift_l', 'j'): 'J',
-            ('shift_l', 'k'): 'K',
-            ('shift_l', 'l'): 'L',
-            ('shift_l', 'm'): 'M',
-            ('shift_l', 'n'): 'N',
-            ('shift_l', 'o'): 'O',
-            ('shift_l', 'p'): 'P',
-            ('shift_l', 'q'): 'Q',
-            ('shift_l', 'r'): 'R',
-            ('shift_l', 's'): 'S',
-            ('shift_l', 't'): 'T',
-            ('shift_l', 'u'): 'U',
-            ('shift_l', 'v'): 'V',
-            ('shift_l', 'w'): 'W',
-            ('shift_l', 'x'): 'X',
-            ('shift_l', 'y'): 'Y',
-            ('shift_l', 'z'): 'Z',
-            ('shift_l', '-'): '_',
-            ('shift_l', '='): '+',
-            ('shift_l', '['): '{',
-            ('shift_l', ']'): '}',
-            ('shift_l', 'backslash'): '|',
-            ('shift_l', ';'): ':',
-            ('shift_l', 'singlequote'): 'doublequote',
-            ('shift_l', ','): '<',
-            ('shift_l', '.'): '>',
-            ('shift_l', '/'): '?',
-        }
-
         # this table is used to map special characters to character names
-        # see key_press_event()
-        self._keytbl3 = {
-            '\\': 'backslash',
+        # see key_down_event()
+        self._keytbl = {
             '"': 'doublequote',
             "'": 'singlequote',
-            "`": 'backquote',
-            " ": 'space',
         }
 
-        # list of keys for which javascript will give us a keydown event,
-        # but not a keypress event.  We use this list to synthesize one.
-        self._browser_problem_keys = set(['shift_l', 'control_l', 'alt_l',
-                                          'super_l', 'super_r', 'menu_r',
-                                          'escape', 'tab',
-                                          'left', 'up', 'right', 'down',
-                                          'insert', 'delete', 'home', 'end',
-                                          'page_up', 'page_down',
-                                          ])
-        # Define cursors
+        self._keytbl2 = {
+            'Backslash': 'backslash',
+            "Backquote": 'backquote',
+            "Backspace": 'backspace',
+            "ShiftLeft": 'shift_l',
+            "ShiftRight": 'shift_r',
+            "ControlLeft": 'control_l',
+            "ControlRight": 'control_r',
+            "AltLeft": 'alt_l',
+            "AltRight": 'alt_r',
+            "CapsLock": 'caps_lock',
+            "ArrowUp": 'up',
+            "ArrowDown": 'down',
+            "ArrowLeft": 'left',
+            "ArrowRight": 'right',
+            "Tab": 'tab',
+            "Space": 'space',
+            "Escape": 'escape',
+            "Enter": 'enter',
+            "Insert": 'insert',
+            "Delete": 'delete',
+            "PageUp": 'page_up',
+            "PageDown": 'page_down',
+            "Home": 'home',
+            "End": 'end',
+            "Pause": 'break',
+            "ScrollLock": 'scroll_lock',
+            "Numpad0": 'numpad_0',
+            "Numpad1": 'numpad_1',
+            "Numpad2": 'numpad_2',
+            "Numpad3": 'numpad_3',
+            "Numpad4": 'numpad_4',
+            "Numpad5": 'numpad_5',
+            "Numpad6": 'numpad_6',
+            "Numpad7": 'numpad_7',
+            "Numpad8": 'numpad_8',
+            "Numpad9": 'numpad_9',
+            "NumpadDecimal": 'numpad_.',
+            "NumpadAdd": 'numpad_+',
+            "NumpadSubtract": 'numpad_-',
+            "NumpadDivide": 'numpad_/',
+            "NumpadMultiply": 'numpad_*',
+        }
+
+        # define cursor names to web names now--they will be reset
+        # in set_widget()
         cursor_names = cursor_info.get_cursor_names()
         for curname in cursor_names:
             curinfo = cursor_info.get_cursor_info(curname)
             self.define_cursor(curinfo.name, curinfo.web)
-
-        self._shifted = False
 
         for name in ['motion', 'button-press', 'button-release',
                      'key-press', 'key-release', 'drag-drop',
@@ -365,25 +277,73 @@ class PgEventMixin:
                      'pinch', 'rotate', 'pan', 'swipe', 'tap']:
             self.enable_callback(name)
 
-    def set_widget(self, canvas):
-        super().set_widget(canvas)
+    def set_widget(self, canvas_w):
+        super().set_widget(canvas_w)
 
-        # see event binding setup in Viewers.py
+        # event binding setup
+        canvas_w.add_callback('pointer-down',
+                              lambda w, e: self.button_press_event(e))
+        canvas_w.add_callback('pointer-move',
+                              lambda w, e: self.motion_notify_event(e))
+        canvas_w.add_callback('pointer-up',
+                              lambda w, e: self.button_release_event(e))
+        canvas_w.add_callback('scroll',
+                              lambda w, e: self.scroll_event(e))
+        canvas_w.add_callback('focus-in',
+                              lambda w, e: self.focus_event(e, True))
+        canvas_w.add_callback('focus-out',
+                              lambda w, e: self.focus_event(e, False))
+        canvas_w.add_callback('key-down',
+                              lambda w, e: self.key_down_event(e))
+        canvas_w.add_callback('key-up',
+                              lambda w, e: self.key_up_event(e))
+        canvas_w.add_callback('enter',
+                              lambda w, e: self.enter_notify_event(e))
+        canvas_w.add_callback('leave',
+                              lambda w, e: self.leave_notify_event(e))
+        canvas_w.add_callback('drop-progress',
+                              lambda w, e: self.drop_progress_event(e))
+        canvas_w.add_callback('drop-end',
+                              lambda w, e: self.drop_event(e))
 
-        #return self.make_callback('map')
+        # Define cursors
+        cursor_names = cursor_info.get_cursor_names()
+        for curname in cursor_names:
+            curinfo = cursor_info.get_cursor_info(curname)
+            self.build_cursor(canvas_w, curinfo)
+            self.define_cursor(curinfo.name, curinfo.name)
 
-    def transkey(self, keycode):
-        self.logger.debug("key code in js '%d'" % (keycode))
-        if keycode in self._keytbl:
-            key = self._keytbl[keycode]
+        canvas_w.set_cursor('pick')
+
+    def build_cursor(self, canvas_w, curinfo):
+        size_px = 16
+        wd = int(curinfo.scale_width * size_px)
+        ht = int(curinfo.scale_height * size_px)
+        hotspot_x = int(curinfo.point_x_pct * wd)
+        hotspot_y = int(curinfo.point_y_pct * ht)
+        path = curinfo.path
+        if in_situ_web:
+            with open(path, 'rb') as svg_f:
+                buf = svg_f.read()
+            b64 = base64.b64encode(buf).decode("ascii")
+            path = f"data:image/svg+xml;base64,{b64}"
+
+        canvas_w.add_cursor(curinfo.name, path,
+                            hotspot_x, hotspot_y, [wd, ht])
+
+    def set_cursor(self, name):
+        if self.pgcanvas is not None:
+            self.logger.debug(f"set cursor {name}")
+            self.pgcanvas.set_cursor(name)
+
+    def transkey(self, key_js, keycode):
+        self.logger.debug("key in js '%s'" % (key_js))
+        if key_js in self._keytbl:
+            key = self._keytbl[key_js]
+        elif keycode in self._keytbl2:
+            key = self._keytbl2[keycode]
         else:
-            key = chr(keycode)
-
-        if self._shifted:
-            try:
-                key = self._keytbl2[('shift_l', key)]
-            except KeyError:
-                pass
+            key = key_js
 
         self.logger.debug("key name in ginga '%s'" % (key))
         return key
@@ -397,9 +357,9 @@ class PgEventMixin:
 
     def enter_notify_event(self, event):
         self.logger.debug("entering widget...")
-        ## enter_focus = self.t_.get('enter_focus', False)
-        ## if enter_focus:
-        ##     self.pgcanvas.focus_set()
+        enter_focus = self.t_.get('enter_focus', False)
+        if enter_focus:
+            self.pgcanvas.set_focus()
         return self.make_callback('enter')
 
     def leave_notify_event(self, event):
@@ -410,7 +370,7 @@ class PgEventMixin:
         # For key_press_events, javascript reports the actual printable
         # key name.  We use a special keymap to just handle the few
         # characters for which we have special names
-        keyname = event.key_name
+        keyname = event['key']
         self.logger.debug("key press event, keyname=%s" % (keyname))
         if keyname in self._keytbl3:
             keyname = self._keytbl3[keyname]
@@ -419,38 +379,29 @@ class PgEventMixin:
 
     def key_down_event(self, event):
         # For key down events, javascript only validly reports a key code.
-        # We look up the code to determine the
-        keycode = event.key_code
-        self.logger.debug("key down event, keycode=%s" % (keycode))
-        keyname = self.transkey(keycode)
-        # special hack for modifiers
-        if keyname == 'shift_l':
-            self._shifted = True
+        # We look up the code to determine the key name
+        keycode = event['keycode']
+        self.logger.debug("key down event, key='%s', keycode=%s" % (event['key'],
+                                                                    keycode))
+        keyname = self.transkey(event['key'], keycode)
+        self.logger.debug("keyname=%s" % (keyname))
 
-        if keyname in self._browser_problem_keys:
-            # JS doesn't report key press callbacks for certain keys
-            # so we synthesize one here for those
-            self.logger.debug("making key-press cb, key=%s" % (keyname))
-            return self.make_ui_callback_viewer(self, 'key-press', keyname)
-        return False
+        self.logger.debug("making key-press cb, key=%s" % (keyname))
+        return self.make_ui_callback_viewer(self, 'key-press', keyname)
 
     def key_up_event(self, event):
-        keycode = event.key_code
+        keycode = event['keycode']
         self.logger.debug("key release event, keycode=%s" % (keycode))
-        keyname = self.transkey(keycode)
-        # special hack for modifiers
-        if keyname == 'shift_l':
-            self._shifted = False
+        keyname = self.transkey(event['key'], keycode)
 
         self.logger.debug("making key-release cb, key=%s" % (keyname))
         return self.make_ui_callback_viewer(self, 'key-release', keyname)
 
     def button_press_event(self, event):
-        x = event.x
-        y = event.y
+        x, y = event['x'], event['y']
         self.last_win_x, self.last_win_y = x, y
         button = 0
-        button |= 0x1 << event.button
+        button |= 0x1 << event['button_trigger'] - 1
         self._button = button
         self.logger.debug("button event at %dx%d, button=%x" % (x, y, button))
 
@@ -459,12 +410,10 @@ class PgEventMixin:
                                             data_x, data_y)
 
     def button_release_event(self, event):
-        # event.button, event.x, event.y
-        x = event.x
-        y = event.y
+        x, y = event['x'], event['y']
         self.last_win_x, self.last_win_y = x, y
         button = 0
-        button |= 0x1 << event.button
+        button |= 0x1 << event['button_trigger'] - 1
         self._button = 0
         self.logger.debug("button release at %dx%d button=%x" % (x, y, button))
 
@@ -475,7 +424,7 @@ class PgEventMixin:
     def motion_notify_event(self, event):
         #button = 0
         button = self._button
-        x, y = event.x, event.y
+        x, y = event['x'], event['y']
         self.last_win_x, self.last_win_y = x, y
 
         self.logger.debug("motion event at %dx%d, button=%x" % (x, y, button))
@@ -486,21 +435,24 @@ class PgEventMixin:
                                             data_x, data_y)
 
     def scroll_event(self, event):
-        x, y = event.x, event.y
-        delta = event.delta
-        dx, dy = event.dx, event.dy
+        x, y = event['x'], event['y']
+        delta = event['delta_y']
+        dx, dy = event['delta_x'], event['delta_y']
         self.last_win_x, self.last_win_y = x, y
 
-        if (dx != 0 or dy != 0):
-            # <= This browser gives us deltas for x and y
-            # Synthesize this as a pan gesture event
-            self.make_ui_callback_viewer(self, 'pan', 'start', 0, 0)
-            self.make_ui_callback_viewer(self, 'pan', 'move', dx, dy)
-            return self.make_ui_callback_viewer(self, 'pan', 'stop', 0, 0)
+        # if (dx != 0 or dy != 0):
+        #     # <= This browser gives us deltas for x and y
+        #     # Synthesize this as a pan gesture event
+        #     self.make_ui_callback_viewer(self, 'pan', 'start', 0, 0)
+        #     self.make_ui_callback_viewer(self, 'pan', 'move', dx, dy)
+        #     return self.make_ui_callback_viewer(self, 'pan', 'stop', 0, 0)
 
         # 15 deg is standard 1-click turn for a wheel mouse
         # delta usually returns +/- 1.0
-        num_degrees = abs(delta) * 15.0
+        #num_degrees = abs(delta) * 15.0
+        num_degrees = abs(delta)
+        # NOTE: reverse direction for mouse wheel
+        delta = - delta
 
         direction = 0.0
         if delta > 0:
@@ -515,65 +467,35 @@ class PgEventMixin:
         return self.make_ui_callback_viewer(self, 'scroll', direction,
                                             num_degrees, data_x, data_y)
 
+    def drop_progress_event(self, event):
+        pass
+
     def drop_event(self, event):
-        data = event.delta
-        self.logger.debug("data=%s" % (str(data)))
-        paths = data.split('\n')
-        self.logger.debug("dropped text(s): %s" % (str(paths)))
-        return self.make_ui_callback_viewer(self, 'drag-drop', paths)
+        if event['type'] != 'drop':
+            return
 
-    def pinch_event(self, event):
-        self.logger.debug("pinch: event=%s" % (str(event)))
-        state = 'move'
-        if event.type == 'pinchstart' or event.isfirst:
-            state = 'start'
-        elif event.type == 'pinchend' or event.isfinal:
-            state = 'end'
-        rot = event.theta
-        scale = event.scale
-        self.logger.debug("pinch gesture rot=%f scale=%f state=%s" % (
-            rot, scale, state))
+        drop = events.DropEvent()
+        # common elements for a drop
+        data_x, data_y = self.check_cursor_location()
+        drop.set(timestamp=event['time_stamp'], types=event['types'],
+                 x=event['x'], y=event['y'], data_x=data_x, data_y=data_y)
 
-        return self.make_ui_callback_viewer(self, 'pinch', state, rot, scale)
+        if len(event["files"]) > 0:
+            f_lst = event["files"]
+            drop.set_blobs(f_lst)
+            # mimetypes are more accurate in the 'files' list
+            drop.set(types=[dct['type'] for dct in f_lst])
 
-    def rotate_event(self, event):
-        state = 'move'
-        if event.type == 'rotatestart' or event.isfirst:
-            state = 'start'
-        elif event.type == 'rotateend' or event.isfinal:
-            state = 'end'
-        rot = event.theta
-        self.logger.debug("rotate gesture rot=%f state=%s" % (
-            rot, state))
+        elif len(event["text"]) > 0:
+            drop.set_text(event["text"])
 
-        return self.make_ui_callback_viewer(self, 'rotate', state, rot)
+        elif len(event["html"]) > 0:
+            drop.set_html(event["html"])
 
-    def pan_event(self, event):
-        state = 'move'
-        if event.type == 'panstart' or event.isfirst:
-            state = 'start'
-        elif event.type == 'panend' or event.isfinal:
-            state = 'end'
-        # TODO: need to know which ones to flip
-        dx, dy = -event.dx, event.dy
-        self.logger.debug("pan gesture dx=%f dy=%f state=%s" % (
-            dx, dy, state))
+        elif event["url"] is not None:
+            drop.set_uris([event["url"]])
 
-        return self.make_ui_callback_viewer(self, 'pan', state, dx, dy)
-
-    def swipe_event(self, event):
-        if event.isfinal:
-            state = 'end'  # noqa
-            self.logger.debug("swipe gesture event=%s" % (str(event)))
-            ## self.logger.debug("swipe gesture hdir=%s vdir=%s" % (
-            ##     hdir, vdir))
-            ## return self.make_ui_callback_viewer(self, 'swipe', state,
-            ##                                     hdir, vdir)
-
-    def tap_event(self, event):
-        if event.isfinal:
-            state = 'end'  # noqa
-            self.logger.debug("tap gesture event=%s" % (str(event)))
+        return self.make_ui_callback_viewer(self, 'drag-drop', drop)
 
 
 class ImageViewEvent(Mixins.UIMixin, PgEventMixin, ImageViewPg):
@@ -648,7 +570,154 @@ class CanvasView(ImageViewZoom):
         self.objects = [self.private_canvas]
 
     def set_canvas(self, canvas, private_canvas=None):
-        super(CanvasView, self).set_canvas(canvas,
-                                           private_canvas=private_canvas)
+        super().set_canvas(canvas, private_canvas=private_canvas)
 
         self.objects[0] = self.private_canvas
+
+
+class ScrolledViewPg(Widgets.AbstractScrollArea):
+    """A class that can take a viewer as a parameter and add scroll bars
+    that respond to the pan/zoom levels.
+    """
+
+    def __init__(self, *args):
+        # ScrolledView always passes (session, viewer); the in-situ path
+        # has no session (it is None), so take the viewer as the last arg
+        # rather than args[0] (which would be the None session).
+        if in_situ_web:
+            session, viewer = None, args[-1]
+            super().__init__()
+        else:
+            session, viewer = args
+            super().__init__(session)
+        self.viewer = viewer
+
+        self._bar_status = dict(horizontal='on', vertical='on')
+        # the window jiggles annoyingly as the scrollbar is alternately
+        # shown and hidden if we use the default "as needed" policy, so
+        # default to always showing them (user can change this after
+        # calling the constructor, if desired)
+        self.scroll_bars(horizontal='on', vertical='on')
+
+        self._adjusting = False
+        self._scrolling = False
+        self.pad = 0
+        self.viewer_w = None
+
+        # we parent the viewer widget
+        w = viewer.get_widget()
+        if w is None or not isinstance(w, Widgets.Image):
+            # <-- viewer has not had a widget set yet--let's create one
+            if in_situ_web:
+                self.viewer_w = Widgets.Image(interactive=True,
+                                              use_animation_frame=True)
+            else:
+                self.viewer_w = Widgets.Image(session, interactive=True,
+                                              use_animation_frame=True)
+            viewer.set_widget(self.viewer_w)
+        else:
+            # <-- viewer already had a widget
+            self.viewer_w = w
+
+        # and embed it in our scroll area
+        self.set_widget(self.viewer_w)
+
+        self.set_expanding(True, True)
+
+        self.timer_scroll_lock = threading.RLock()
+        if in_situ_web:
+            self.timer_scroll = Widgets.Timer()
+        else:
+            self.timer_scroll = Widgets.Timer(session)
+        self.timer_scroll.add_callback('expired', self.delayed_scrolled_cb)
+
+        # callback when the user scrolls
+        self.add_callback('scrolled', self._scrolled_cb)
+        # callback when the user maps our scroll area
+        # NOTE: does not appear to be needed with the latest pgwidgets
+        # self.add_callback('map', self._map_cb)
+        # callback when the user resizes our scroll area
+        # NOTE: does not appear to be needed with the latest pgwidgets
+        # self.add_callback('area-resize', self._resize_cb)
+
+        # callback when the viewer redraws
+        self.viewer.add_callback('redraw', self._calc_scrollbars)
+        # callback when the viewer limits are set
+        self.viewer.add_callback('limits-set',
+                                 lambda v, l: self._calc_scrollbars(v, 0))
+
+        self._calc_scrollbars(viewer, 0)
+
+    # def _map_cb(self, mywidget, event):
+    #     """Resize the viewer widget when the ScrolledView is mapped."""
+    #     wd, ht = event['width'], event['height']
+    #     if self.viewer_w is not None:
+    #         self.viewer_w.resize(wd, ht)
+
+    # def _resize_cb(self, mywidget, wd, ht, v_thmb_wd, h_thmb_wd):
+    #     """Resize the viewer widget when the ScrolledView is resized."""
+    #     if self.viewer_w is not None:
+    #         self.viewer_w.resize(wd, ht)
+
+    def _scrolled_cb(self, mywidget, scroll_h_pct, scroll_v_pct):
+        """Gets called when our scroll bars are manipulated."""
+        if self._adjusting:
+            return
+
+        with self.timer_scroll_lock:
+            self.timer_scroll.cond_set(0.15)
+
+    def delayed_scrolled_cb(self, timer, *args):
+        """Gets called when our scroll bars are manipulated."""
+        if self._adjusting:
+            return
+
+        self._scrolling = True
+        try:
+            scroll_h_pct, scroll_v_pct = self.get_scroll_percent()
+            pct_x = scroll_h_pct
+            # invert Y pct because of orientation of scrollbar
+            pct_y = 1.0 - scroll_v_pct
+
+            self.viewer.pan_by_pct(pct_x, pct_y, pad=self.pad)
+
+            # This shouldn't be necessary, but seems to be
+            self.viewer.redraw(whence=0)
+
+        finally:
+            self._scrolling = False
+
+    def _calc_scrollbars(self, viewer, whence):
+        """Calculate and set the scrollbar handles from the pan and
+        zoom positions.
+        """
+        if self._scrolling or whence > 0:
+            return
+
+        # flag that suppresses a cyclical callback
+        self._adjusting = True
+        try:
+            res = self.viewer.calc_pan_pct(pad=self.pad)
+            if res is None:
+                return
+
+            self.set_thumb_percent(res.thm_pct_x, res.thm_pct_y)
+            pct_x, pct_y = res.pan_pct_x, 1.0 - res.pan_pct_y
+            self.set_scroll_percent(pct_x, pct_y)
+
+        finally:
+            self._adjusting = False
+
+    def scroll_bars(self, horizontal='on', vertical='on'):
+        self._bar_status.update(dict(horizontal=horizontal,
+                                     vertical=vertical))
+        self.set_scroll_bar_visibility(horizontal, vertical)
+
+    def get_scroll_bars_status(self):
+        return self._bar_status
+
+
+class ScrolledView(ScrolledViewPg):
+    def __init__(self, viewer, parent=None):
+        from ginga.web.pgw import Widgets as Ginga_Widgets
+        super().__init__(Ginga_Widgets._session, viewer)

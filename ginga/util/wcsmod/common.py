@@ -24,7 +24,7 @@ class WCSError(Exception):
     pass
 
 
-class BaseWCS(object):
+class BaseWCS:
     """Base class for WCS."""
 
     def __init__(self, logger):

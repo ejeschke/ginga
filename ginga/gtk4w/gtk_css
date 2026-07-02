@@ -1,30 +1,175 @@
 /*
- CSS for styling Gtk4 widgets
+ * CSS for styling Gtk4 widgets to match the pgwidgets-js look.
+ *
+ * Loaded application-wide by ``GtkHelp.set_default_style()`` at
+ * STYLE_PROVIDER_PRIORITY_APPLICATION, which overrides the
+ * default theme.
  */
 
+
 /*
- under some themes, toggle buttons don't have any border, are
- crammed together too closely, and don't show any difference
- when they are checked or not.
+ * Light-grey chrome background applied at the window level.
+ * GTK's transparent containers (Box, Frame, GtkPaned splitter
+ * panes) show through to the window's bg by default, while
+ * content widgets (TreeView, TextArea, Button) paint their own.
+ *
+ * A few widgets paint their own (white) background — they don't
+ * inherit the window bg automatically — so they need explicit
+ * selectors here.  ``notebook`` (TabWidget), ``toolbar``
+ * (Toolbar), and ``grid`` (GridBox) are the most visible cases;
+ * add more here if other widgets show up looking too-white.
+ *
+ * Colour matches the pgwidgets-js Menu.css / StatusBar.css
+ * palette (``#e8e8e8``).
  */
- 
-GtkToggleButton {
-    border: 1px solid;
-    padding: 1px;
+window,
+dialog,
+notebook,
+notebook stack,
+toolbar,
+grid,
+frame,
+scrolledwindow,
+scrolledwindow viewport {
+    background-color: #e8e8e8;
 }
 
 /*
-GtkToolbar GtkToggleButton:checked {
-    background-color: shade (@theme_bg_color, 0.9);
+ * Menubar / statusbar themes sometimes paint their own background,
+ * so call out the colour explicitly too.  A thin divider under
+ * the menu bar pulls it visually apart from the content below.
+ */
+menubar,
+statusbar {
+    background-color: #e8e8e8;
 }
 
-GtkToolbar {
+menubar {
+    border-bottom: 1px solid #bbb;
+}
+
+
+/*
+ * Buttons — match the pgwidgets-js Button.css gradient + hover /
+ * active palette so the apps look the same whether they run
+ * under gtk or pg.  Applies to standalone Gtk.Button widgets
+ * (including toggle buttons, which extend the ``button`` CSS
+ * node).
+ */
+button {
+    background-image: linear-gradient(to bottom,
+                                      #fafafa 0%,
+                                      #e4e4e4 100%);
+    background-color: transparent;
+    border: 1px solid #aaa;
+    border-radius: 3px;
+    color: #222;
+    padding: 4px 8px;
+}
+
+button:hover {
+    background-image: linear-gradient(to bottom,
+                                      #ffffff 0%,
+                                      #ececec 100%);
+    border-color: #888;
+}
+
+button:active,
+button:checked {
+    background-image: linear-gradient(to bottom,
+                                      #d8d8d8 0%,
+                                      #e8e8e8 100%);
+    border-color: #777;
+}
+
+
+/*
+ * Toolbar gets a bit of padding so its children don't crowd the
+ * edges, matching the prior default.
+ */
+toolbar {
     padding: 2px;
 }
 
 
-GtkScrollbar {
-   -GtkScrollbar-has-backward-stepper: 1;
-   -GtkScrollbar-has-forward-stepper: 1;
+/*
+ * Gtk.Expander: style the clickable header (the ``title`` node
+ * inside ``expander-widget > box``) with the same button gradient
+ * as standalone buttons, so the gtk4 native Expander reads like
+ * the gtk3 custom-built one (ToggleButton + triangle icon).  The
+ * node tree in gtk4 is:
+ *
+ *   expander-widget
+ *   ╰── box
+ *       ├── title             <- the clickable header
+ *       │   ├── expander      <- the arrow indicator (yes, confusingly
+ *       │   │                    the same node name as the arrow alone)
+ *       │   ╰── <label widget>
+ *       ╰── <child>
+ */
+expander-widget > box > title {
+    padding: 4px 8px;
+    background-image: linear-gradient(to bottom,
+                                      #fafafa 0%,
+                                      #e4e4e4 100%);
+    background-color: transparent;
+    border: 1px solid #aaa;
+    border-radius: 3px;
+    color: #222;
 }
-*/
+
+expander-widget > box > title:hover {
+    background-image: linear-gradient(to bottom,
+                                      #ffffff 0%,
+                                      #ececec 100%);
+    border-color: #888;
+}
+
+expander-widget > box > title:checked,
+expander-widget > box > title:active {
+    background-image: linear-gradient(to bottom,
+                                      #d8d8d8 0%,
+                                      #e8e8e8 100%);
+    border-color: #777;
+}
+
+
+/*
+ * Popover menus (context menus and menubar drop-downs use
+ * Gtk.PopoverMenu / Gtk.PopoverMenuBar).  The default theme draws the
+ * popover with rounded corners and a drop shadow rendered in the
+ * surface margin.  Without a compositing manager / RGBA visual those
+ * transparent corner + shadow pixels composite against black, leaving
+ * a squared-off black frame around the rounded menu.
+ *
+ * Make the popover a flat, square, opaque panel with a thin border
+ * (matching the pgwidgets-js Menu look) so its appearance doesn't
+ * depend on alpha compositing.  Node tree:
+ *
+ *   popover.background
+ *   ├── arrow        (disabled via set_has_arrow(False))
+ *   ╰── contents
+ */
+popover,
+popover.background {
+    margin: 0;
+    padding: 0;
+    background-color: #e8e8e8;
+    box-shadow: none;
+    border-radius: 0;
+}
+
+popover > contents {
+    background-color: #e8e8e8;
+    border: 1px solid #888;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 2px;
+}
+
+popover > arrow {
+    min-width: 0;
+    min-height: 0;
+    background-color: transparent;
+    border: none;
+}

@@ -172,7 +172,6 @@ class PanChild(GingaPlugin.ChildPlugin):
                                            coord='percentage')
 
         pw = Viewers.GingaViewerWidget(pi)
-        pw.resize(self._wd, self._ht)
 
         self.fitsimage.copy_attributes(pi, self.copy_attrs)
         self.fitsimage.add_callback('redraw', self.redraw_cb)

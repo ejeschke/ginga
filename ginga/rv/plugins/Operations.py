@@ -100,6 +100,8 @@ class Operations(GingaPlugin.GlobalPlugin):
             return
         chname = channel.name
         self.w.channel.insert_alpha(chname)
+        idx = self.w.channel.get_index()
+        text = self.w.channel.get_text()
 
         pl_mgr = channel.opmon
         pl_mgr.add_callback('activate-plugin', self.activate_plugin_cb)
@@ -143,9 +145,12 @@ class Operations(GingaPlugin.GlobalPlugin):
         if categories is not None:
             for catname in categories:
                 try:
-                    menu = menu.get_menu(catname)
+                    _menu = menu.get_menu(catname)
+                    if _menu is None:
+                        raise KeyError(catname)
                 except KeyError:
-                    menu = menu.add_menu(catname)
+                    _menu = menu.add_menu(catname)
+                menu = _menu
 
         item = menu.add_name(menuname)
         if self.use_popup:

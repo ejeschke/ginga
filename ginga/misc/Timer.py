@@ -8,18 +8,26 @@
 import time
 
 from ginga.misc import Bunch, Callback
-from ginga.util.heaptimer import Timer as HeapTimer, TimerHeap
+from ginga.util.heaptimer import Timer as HeapTimer
 
 
 class TimerError(Exception):
     pass
 
 
-class TimerFactory(object):
+class TimerFactory:
 
-    def __init__(self, ev_quit=None, logger=None):
+    def __init__(self, ev_quit=None, logger=None, async_timers=False):
         # ev_quit retained for past and possible future use
         self.ev_quit = ev_quit
+        # In "async mode" (a single event loop, e.g. Pyodide/the browser)
+        # there are no usable threads, so use the asyncio-based timer heap
+        # (loop.call_later) instead of the thread-based one.  The two are
+        # API-compatible.
+        if async_timers:
+            from ginga.util.heaptimer_aio import TimerHeap
+        else:
+            from ginga.util.heaptimer import TimerHeap
         self.timer_heap = TimerHeap("TimerFactory", logger=logger)
 
     def timer(self):

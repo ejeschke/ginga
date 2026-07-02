@@ -18,7 +18,7 @@ undefined = '#UNDEFINED'
 default_rc_port = 11771
 
 
-class _ginga_proxy(object):
+class _ginga_proxy:
 
     def __init__(self, client):
         self._client = client
@@ -30,7 +30,7 @@ class _ginga_proxy(object):
         return _call
 
 
-class _canvas_proxy(object):
+class _canvas_proxy:
     """ Links to the canvas method in ginga.rv.plugins.RC.GingaWrapper
     User has to be savvy on the objects that can be passed through
     the XMLRPC service (e.g. lists, not arrays)
@@ -47,7 +47,7 @@ class _canvas_proxy(object):
         return _call
 
 
-class _channel_proxy(object):
+class _channel_proxy:
 
     def __init__(self, client, chname):
         self._client = client
@@ -156,7 +156,7 @@ class _channel_proxy(object):
                                 num_hdu, {})
 
 
-class RemoteClient(object):
+class RemoteClient:
 
     def __init__(self, host, port):
         self.host = host
@@ -194,7 +194,7 @@ class RemoteClient(object):
         return call
 
 
-class RemoteServer(object):
+class RemoteServer:
 
     def __init__(self, obj, host='localhost', port=None, ev_quit=None,
                  logger=None):
@@ -276,7 +276,7 @@ compound_types = [list, tuple, dict]
 
 
 # TODO: Do we still need this now that we do not support Python 2?
-class Blob(object):
+class Blob:
     """A class used to wrap objects like buffers and so on in a way that
     can be recognized in both python 2 and 3 during marshalling and
     unmarshalling.

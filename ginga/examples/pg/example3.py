@@ -1,48 +1,59 @@
 #! /usr/bin/env python
 #
-# example2.py -- Simple, configurable FITS viewer.
+# example3.py -- Simple, configurable FITS viewer in a web browser.
 #
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+"""
+This example loads widgets directly from pgwidgets-python, not Ginga
+wrappers.
+"""
 
 import sys
 import logging
 from argparse import ArgumentParser
 
+from pgwidgets.sync import Application
+#from pgwidgets.extras.file_browser import FileBrowser
+
 from ginga import colors
+from ginga.AstroImage import AstroImage
 from ginga.canvas.CanvasObject import get_canvas_types
 from ginga.canvas import render
 from ginga.misc import log
-from ginga.web.pgw import Widgets, Viewers
-from ginga.util.loader import load_data, handle_drop_event
+from ginga.web.pgw.ImageViewPg import CanvasView, ScrolledViewPg
+from ginga.util.loader import load_data
 
 
 class FitsViewer:
 
-    def __init__(self, logger, window):
+    def __init__(self, logger, session):
         self.logger = logger
         self.drawcolors = colors.get_colors()
         self.dc = get_canvas_types()
+        self.format = 'png'
 
-        self.top = window
-        self.top.add_callback('close', self.closed)
+        self.session = session
+        Widgets = session.get_widgets()
 
-        vbox = Widgets.VBox()
-        vbox.set_margins(2, 2, 2, 2)
-        vbox.set_spacing(1)
+        self.top = Widgets.TopLevel(title="FitsViewer PGW", resizable=True)
+        #self.top.add_callback('close', self.closed)
 
-        fi = Viewers.CanvasView(logger)
+        vbox = Widgets.VBox(spacing=1, padding=2)
+
+        fi = CanvasView(logger)
         fi.enable_autocuts('on')
         fi.set_autocut_params('zscale')
         fi.enable_autozoom('on')
         fi.set_zoom_algorithm('rate')
         fi.set_zoomrate(1.4)
         fi.show_pan_mark(True)
-        fi.set_callback('drag-drop', self.drop_file_cb)
+        #fi.set_callback('drag-drop', self.drop_file_cb)
         fi.set_callback('cursor-changed', self.cursor_cb)
         fi.set_bg(0.2, 0.2, 0.2)
         fi.ui_set_active(True)
+        fi.set_enter_focus(True)
         self.fitsimage = fi
 
         bd = fi.get_bindings()
@@ -75,22 +86,24 @@ class FitsViewer:
         fi.show_mode_indicator(True, corner='ur')
 
         fi.set_desired_size(512, 512)
-        w = Viewers.GingaViewerWidget(viewer=fi)
-        vbox.add_widget(w, stretch=1)
+        w_canvas = Widgets.Image(interactive=True, use_animation_frame=True)
+        w_canvas.on("drop-end", self.drop_file_cb)
+
+        fi.set_widget(w_canvas)
+        sw = ScrolledViewPg(session, fi)
+        vbox.add_widget(sw, stretch=1)
 
         self.readout = Widgets.Label("")
-        vbox.add_widget(self.readout, stretch=0)
+        vbox.add_widget(self.readout)
 
-        hbox = Widgets.HBox()
-        hbox.set_margins(2, 2, 2, 2)
-        hbox.set_spacing(4)
+        hbox = Widgets.HBox(padding=2, spacing=4)
 
         wdrawtype = Widgets.ComboBox()
         for name in self.drawtypes:
             wdrawtype.append_text(name)
         index = self.drawtypes.index('rectangle')
         wdrawtype.set_index(index)
-        wdrawtype.add_callback('activated', lambda w, idx: self.set_drawparams())
+        wdrawtype.add_callback('activated', lambda *args: self.set_drawparams())
         self.wdrawtype = wdrawtype
 
         wdrawcolor = Widgets.ComboBox()
@@ -98,37 +111,32 @@ class FitsViewer:
             wdrawcolor.append_text(name)
         index = self.drawcolors.index('lightblue')
         wdrawcolor.set_index(index)
-        wdrawcolor.add_callback('activated', lambda w, idx: self.set_drawparams())
+        wdrawcolor.add_callback('activated', lambda *args: self.set_drawparams())
         self.wdrawcolor = wdrawcolor
 
         wfill = Widgets.CheckBox("Fill")
         wfill.add_callback('activated', lambda w, tf: self.set_drawparams())
         self.wfill = wfill
 
-        walpha = Widgets.SpinBox(dtype=float)
-        walpha.set_limits(0.0, 1.0, incr_value=0.1)
+        walpha = Widgets.SpinBox(dtype='float')
+        walpha.set_limits(0.0, 1.0, 0.1)
         walpha.set_value(1.0)
         walpha.set_decimals(2)
-        walpha.add_callback('value-changed', lambda w, val: self.set_drawparams())
+        walpha.add_callback('activated', lambda w, val: self.set_drawparams())
         self.walpha = walpha
 
         wclear = Widgets.Button("Clear Canvas")
         wclear.add_callback('activated', lambda w: self.clear_canvas())
-        ## wopen = Widgets.Button("Open File")
-        ## wopen.add_callback('activated', lambda w: self.open_file())
-        ## wquit = Widgets.Button("Quit")
-        ## wquit.add_callback('activated', lambda w: self.quit())
 
         hbox.add_widget(Widgets.Label(''), stretch=1)
         for w in (wdrawtype, wdrawcolor, wfill,
                   Widgets.Label('Alpha:'), walpha, wclear):
-            hbox.add_widget(w, stretch=0)
+            hbox.add_widget(w)
 
-        vbox.add_widget(hbox, stretch=0)
+        vbox.add_widget(hbox)
 
         mode = self.canvas.get_draw_mode()
-        hbox = Widgets.HBox()
-        hbox.set_spacing(4)
+        hbox = Widgets.HBox(padding=2, spacing=6)
         btn1 = Widgets.RadioButton("Draw")
         btn1.set_state(mode == 'draw')
         btn1.add_callback('activated', lambda w, val: self.set_mode_cb('draw', val))
@@ -141,16 +149,40 @@ class FitsViewer:
         btn2.set_tooltip("Choose this to edit things on the canvas")
         hbox.add_widget(btn2)
 
+        self.open_dialog = Widgets.FileDialog(mode="file", accept=".fits")
+        # self.open_dialog = FileBrowser(session, mode="file", title="Open File")
+        # self.open_dialog.add_ext_filter("Images", "fits")
+        self.open_dialog.on('activated', self.drop_file_cb)
+        btn3 = Widgets.Button("Upload File")
+        btn3.add_callback('activated', lambda w: self.open_dialog.popup())
+        hbox.add_widget(btn3)
+
+        drop_lbl = Widgets.Label("[Drop file here]")
+        hbox.add_widget(drop_lbl)
+        drop_lbl.set_halign("center")
+        drop_lbl.set_color("#e8f0fe", "#4a86c8")
+        drop_lbl.set_font(None, 14)
+        drop_lbl.on('drop-end', self.drop_file_cb)
+
+        prog = Widgets.ProgressBar()
+        drop_lbl.on('drop-progress', self.update_download_cb, prog)
+        w_canvas.on('drop-progress', self.update_download_cb, prog)
+        hbox.add_widget(prog, stretch=1)
+
         hbox.add_widget(Widgets.Label('Zoom sensitivity: '))
-        slider = Widgets.Slider(orientation='horizontal', dtype=float)
-        slider.add_callback('value-changed',
-                            lambda w, val: self.adjust_scrolling_accel_cb(val))
-        slider.set_limits(0.0, 12.0, 0.005)
-        slider.set_value(8.0)
-        hbox.add_widget(slider, stretch=1)
+        spin = Widgets.SpinBox(dtype='float')
+        spin.add_callback('activated',
+                          lambda w, val: self.adjust_scrolling_accel_cb(val))
+        spin.set_limits(0.0, 12.0, 0.005)
+        spin.set_value(8.0)
+        hbox.add_widget(spin, stretch=1)
 
         # hbox.add_widget(Widgets.Label(''), stretch=1)
-        vbox.add_widget(hbox, stretch=0)
+        vbox.add_widget(hbox)
+
+        self.statusbar = Widgets.Label("")
+        vbox.add_widget(self.statusbar)
+
         self.top.set_widget(vbox)
 
     def set_drawparams(self):
@@ -179,9 +211,17 @@ class FitsViewer:
         self.fitsimage.set_image(image)
         self.top.set_title(filepath)
 
+    def load_buffer(self, name, buf):
+        from astropy.io import fits
+        hdu_l = fits.HDUList.fromstring(buf)
+        image = AstroImage(logger=self.logger)
+        image.load_hdu(hdu_l[0])
+        self.fitsimage.set_image(image)
+        self.top.set_title(name)
+
     def open_file(self):
-        res = Widgets.FileDialog.getOpenFileName(self, "Open FITS file",
-                                                 ".", "FITS files (*.fits)")
+        Widgets = self.session.get_widgets()
+        res = Widgets.FileDialog(mode='file', accept=".fits")
         if isinstance(res, tuple):
             fileName = res[0]
         else:
@@ -189,8 +229,17 @@ class FitsViewer:
         if len(fileName) != 0:
             self.load_file(fileName)
 
-    def drop_file_cb(self, fitsimage, drop_event):
-        handle_drop_event(fitsimage, drop_event)
+    def drop_file_cb(self, evt):
+        f = evt["files"][0]
+        name = f['name']
+        if f.get("data"):
+            # data is a raw buffer of the file
+            buf = f['data']
+            self.load_buffer(name, buf)
+
+    def update_download_cb(self, evt, prog):
+        pct = evt['transferred_bytes'] / evt['total_bytes']
+        prog.set_value(pct)
 
     def cursor_cb(self, viewer, button, data_x, data_y):
         """This gets called when the data position relative to the cursor
@@ -237,7 +286,7 @@ class FitsViewer:
         def f(x):
             return (1.0 / 2.0**(10.0 - x))
         val2 = f(val)
-        self.logger.debug("slider value is %f, setting will be %f" % (val, val2))
+        self.logger.debug("spin value is %f, setting will be %f" % (val, val2))
         settings = self.fitsimage.get_bindings().get_settings()
         settings.set(scroll_zoom_acceleration=val2)
         return True
@@ -256,44 +305,48 @@ class FitsViewer:
         sys.exit()
 
 
-def main(options, args):
-
-    logger = log.get_logger("example2", options=options)
-
-    # establish our widget application
-    app = Widgets.Application(logger=logger,
-                              host=options.host, port=options.port)
-
-    base_url = app.get_url()
-    logger.info(f"visit {base_url} to view the application")
-
-    #  create top level window
-    window = app.make_window("Ginga web example2")
-
+def do_session(logger, session, options, args):
+    """Run a session for this fits viewer application.
+    Is called when a session is created.
+    """
     # our own viewer object, customized with methods (see above)
-    viewer = FitsViewer(logger, window)
-    #server.add_callback('shutdown', viewer.quit)
+    viewer = FitsViewer(logger, session)
+    #session.add_callback('close', viewer.quit)
 
     if options.renderer is not None:
         render_class = render.get_render_class(options.renderer)
         viewer.fitsimage.set_renderer(render_class(viewer.fitsimage))
 
-    window.resize(900, 700)
-    window.show()
-    window.raise_()
+    logger.debug("showing toplevel")
+    viewer.top.resize(850, 800)
+    viewer.top.show()
 
-    if len(args) > 0:
-        viewer.load_file(args[0])
+    # base_url = session.get_url()
+    # logger.info(f"visit {base_url} to view the application")
 
-    logger.info("starting app...")
+
+def main(options, args):
+
+    logger = log.get_logger("example3", options=options)
+
+    # establish our widget application
+    app = Application(max_sessions=options.max_sessions,
+                      logger=logger,
+                      host=options.host, http_port=options.port,
+                      ws_port=options.port + 1)
+
+    @app.on_connect
+    def on_session(session):
+        do_session(logger, session, options, args)
+
     app.start()
+
+    logger.info("entering event loop...")
     try:
-        logger.info("entering event loop...")
-        app.mainloop()
+        app.run()
 
     except KeyboardInterrupt:
         logger.info("terminating viewer...")
-        window.close()
 
 
 if __name__ == "__main__":
@@ -309,6 +362,9 @@ if __name__ == "__main__":
     argprs.add_argument("--loglevel", dest="loglevel", metavar="LEVEL",
                         type=int, default=logging.INFO,
                         help="Set logging level to LEVEL")
+    argprs.add_argument("--max-sessions", dest="max_sessions", metavar="N",
+                        type=int, default=4,
+                        help="Limit number of active sessions to N")
     argprs.add_argument("--port", dest="port", metavar="PORT",
                         type=int, default=9909,
                         help="Listen on PORT for connections")

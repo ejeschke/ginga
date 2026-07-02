@@ -8,6 +8,7 @@
 #
 import threading
 from . import Callback
+from .aio_compat import AioCompletion
 
 
 class TimeoutError(Exception):
@@ -25,7 +26,15 @@ class Future(Callback.Callbacks):
         self.data = data
         self.priority = priority
 
+        # Allows the future to be awaited on a single event loop, in
+        # addition to being waited on via the threading.Event above.
+        # The asyncio.Future is created lazily, only if awaited.
+        self._aio = AioCompletion()
+
         self.enable_callback('resolved')
+
+    def __await__(self):
+        return self._aio.__await__()
 
     # for sorting in PriorityQueues
     def __lt__(self, other):
@@ -61,6 +70,8 @@ class Future(Callback.Callbacks):
     def resolve(self, value):
         self.res = value
         self.evt.set()
+        # wake any async (await) waiters
+        self._aio.resolve(value)
         # TODO: need to change callbacks on some custom plugins first
         #self.make_callback('resolved', value)
         self.make_callback('resolved')

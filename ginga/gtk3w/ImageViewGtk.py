@@ -5,10 +5,11 @@
 # Please see the file LICENSE.txt for details.
 
 import sys
+import time
 import numpy as np
 
 from ginga.gtk3w import GtkHelp
-from ginga import ImageView, Mixins, Bindings
+from ginga import ImageView, Mixins, Bindings, events
 from ginga.cursors import cursor_info
 from ginga.canvas import render
 
@@ -625,11 +626,16 @@ class GtkEventMixin:
         self.logger.debug("drag_motion_cb done")
         return False
 
-    def drop_event_cb(self, widget, context, x, y, selection, info, time):
+    def drop_event_cb(self, widget, context, x, y, selection, info, _time):
         self.logger.debug("drop event initiated")
 
         if selection is None or selection.get_length() == 0:
             return
+
+        # common elements for a drop
+        drop = events.DropEvent()
+        data_x, data_y = self.check_cursor_location()
+        drop.set(timestamp=time.time(), x=x, y=y, data_x=data_x, data_y=data_y)
 
         paths = []
         if info == GtkHelp.DND_TARGET_TYPE_TEXT:
@@ -637,20 +643,21 @@ class GtkEventMixin:
             buf = selection.get_text().strip()
             if '\r\n' in buf:
                 # windows
-                paths = buf.split('\r\n')
-            else:
-                paths = buf.split('\n')
+                buf = '\n'.join(buf.split('\r\n'))
+            drop.set_text(buf)
+            drop.set(types='text/plain')
+            self.logger.debug("dropped text")
         elif info == GtkHelp.DND_TARGET_TYPE_URIS:
             # selection contains URIs
-            paths = selection.get_uris()
+            uris = selection.get_uris()
+            drop.set_uris(uris)
+            self.logger.debug("dropped filename(s): %s" % (str(uris)))
         else:
             self.logger.error("Dropped selection type ({}) is not recognized!".format(info))
             return
 
-        self.logger.debug("dropped filename(s): %s" % (str(paths)))
-
         if len(paths) > 0:
-            self.make_ui_callback_viewer(self, 'drag-drop', paths)
+            self.make_ui_callback_viewer(self, 'drag-drop', drop)
 
         return True
 

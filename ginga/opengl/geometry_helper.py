@@ -11,7 +11,7 @@
 import numpy as np
 
 
-class Point3D(object):
+class Point3D:
 
     def __init__(self, x=0, y=0, z=0):
         self.coord = np.array([x, y, z], dtype=np.float32)
@@ -67,7 +67,7 @@ class Point3D(object):
         return not (self == other)
 
 
-class Vector3D(object):
+class Vector3D:
 
     def __init__(self, x=0, y=0, z=0):
         self.coord = np.array([x, y, z], dtype=np.float32)
@@ -150,7 +150,7 @@ class Vector3D(object):
         return not (self == other)
 
 
-class Matrix4x4(object):
+class Matrix4x4:
 
     def __init__(self, arr4x4=None):
         if arr4x4 is None:

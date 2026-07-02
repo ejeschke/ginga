@@ -6,7 +6,7 @@ from ginga import AstroImage
 from ginga.pilw.ImageViewPil import CanvasView
 
 
-class TestImageView(object):
+class TestImageView:
 
     def setup_class(self):
         self.logger = logging.getLogger("TestImageView")

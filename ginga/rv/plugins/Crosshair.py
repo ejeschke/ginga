@@ -187,7 +187,6 @@ class Crosshair(GingaPlugin.LocalPlugin):
         self.cuts_view.add_plot(self.cuts_ysrc)
 
         ciw = Viewers.GingaScrolledViewerWidget(viewer=ci)
-        ciw.resize(width, height)
         self.cuts_view.configure_scrollbars(ciw)
 
         nb.add_widget(ciw, title="Cuts")

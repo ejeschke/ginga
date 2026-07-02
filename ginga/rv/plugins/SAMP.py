@@ -322,7 +322,7 @@ class SAMP(GingaPlugin.GlobalPlugin):
         return 'samp'
 
 
-class GingaWrapper(object):
+class GingaWrapper:
 
     def __init__(self, fv, logger):
         self.fv = fv

@@ -4,12 +4,12 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
-from ginga.gw import Widgets, Viewers
+from ginga.gw import Viewers
 from ginga.misc import log
 from ginga import colors
 
 
-class Readout(object):
+class Readout:
 
     def __init__(self, width, height):
         logger = log.get_logger(null=True)
@@ -18,12 +18,17 @@ class Readout(object):
         readout = Viewers.CanvasView(logger=logger)
         readout.name = 'readout'
         readout.set_desired_size(width, height)
+
+        readout_w = Viewers.GingaViewerWidget(viewer=readout)
+        readout_w.set_expanding(True, False)
+        readout_w.set_min_size(None, height)
+        readout_w.set_max_size(None, height)
+
         bg = colors.lookup_color('#202030')
         readout.set_bg(*bg)
 
         self.viewer = readout
-        self.readout = Widgets.wrap(readout.get_widget())
-        self.readout.resize(width, height)
+        self.readout = readout_w
 
         canvas = readout.get_canvas()
         Text = canvas.get_draw_class('text')

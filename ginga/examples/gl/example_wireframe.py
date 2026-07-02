@@ -26,7 +26,7 @@ from ginga.canvas import transform  # noqa
 from ginga.misc import log  # noqa
 
 
-class Viewer(object):
+class Viewer:
 
     def __init__(self, app):
         super(Viewer, self).__init__()

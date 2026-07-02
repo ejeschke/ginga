@@ -173,7 +173,6 @@ class Compose(GingaPlugin.LocalPlugin):
         bd.enable_cmap(True)
 
         iw = Viewers.GingaViewerWidget(zi)
-        iw.resize(self._wd, self._ht)
 
         zi.get_canvas().add(self.canvas)
         self.canvas.set_surface(zi)
@@ -321,7 +320,9 @@ class Compose(GingaPlugin.LocalPlugin):
         image = self.fitsimage.get_image()
         self.insert_image(image)
 
-    def drop_file_cb(self, viewer, paths):
+    def drop_file_cb(self, viewer, drop_event):
+        # TODO: check type of drop
+        paths = drop_event.contents['body']
         self.logger.info("dropped files: %s" % str(paths))
         for path in paths[:3]:
             image = self.fv.load_image(path)

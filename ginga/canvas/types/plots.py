@@ -225,7 +225,7 @@ class Axis(CompoundObject):
     Base class for axis plotables.
     """
     def __init__(self, title=None, num_labels=4, font='sans',
-                 fontsize=10.0):
+                 fontsize=8.0):
         super(Axis, self).__init__()
 
         self.aide = None
@@ -280,7 +280,7 @@ class XAxis(Axis):
     Plotable object that defines X axis labels and grid lines.
     """
     def __init__(self, title=None, num_labels=4, font='sans',
-                 fontsize=10.0):
+                 fontsize=8.0):
         super(XAxis, self).__init__(title=title, num_labels=num_labels,
                                     font=font, fontsize=fontsize)
 
@@ -310,12 +310,17 @@ class XAxis(Axis):
         for i in range(self.num_labels):
             self.lbls[i] = aide.dc.Text(0, 0, text='', color='black',
                                         font=self.font,
-                                        fontsize=self.fontsize,
+                                        #fontsize=self.fontsize,
+                                        fontscale=True,
+                                        fontsize_min=4, fontsize_max=8,
                                         coord='window')
             self.objects.append(self.lbls[i])
 
         self._title = aide.dc.Text(0, 0, text='', color='black',
-                                   font=self.font, fontsize=self.fontsize,
+                                   font=self.font,
+                                   #fontsize=self.fontsize,
+                                   fontscale=True,
+                                   fontsize_min=4, fontsize_max=8,
                                    alpha=0.0,
                                    coord='window')
         self.objects.append(self._title)
@@ -434,14 +439,18 @@ class YAxis(Axis):
         for i in range(self.num_labels):
             self.lbls[i] = aide.dc.Text(0, 0, text='', color='black',
                                         font=self.font,
-                                        fontsize=self.fontsize,
+                                        #fontsize=self.fontsize,
+                                        fontscale=True,
+                                        fontsize_min=4, fontsize_max=8,
                                         coord='window')
             self.objects.append(self.lbls[i])
 
         # Y title
         self._title = aide.dc.Text(0, 0, text=self.title, color='black',
                                    font=self.font,
-                                   fontsize=self.fontsize,
+                                   #fontsize=self.fontsize,
+                                   fontscale=True,
+                                   fontsize_min=4, fontsize_max=8,
                                    alpha=0.0,
                                    rot_deg=90.0,
                                    coord='window')
@@ -669,7 +678,7 @@ class PlotTitle(CompoundObject):
     """
     Plotable object that defines the plot title and keys.
     """
-    def __init__(self, title='', font='sans', fontsize=12.0):
+    def __init__(self, title='', font='sans', fontsize=10.0):
         super(PlotTitle, self).__init__()
 
         self.font = font
@@ -691,7 +700,9 @@ class PlotTitle(CompoundObject):
         self.lbls = dict()
         self.lbls[0] = aide.dc.Text(0, 0, text=self.title, color='black',
                                     font=self.font,
-                                    fontsize=self.fontsize,
+                                    #fontsize=self.fontsize,
+                                    fontscale=True,
+                                    fontsize_min=4, fontsize_max=8,
                                     coord='window')
         self.objects.append(self.lbls[0])
 
@@ -754,7 +765,9 @@ class PlotTitle(CompoundObject):
         color = plot_src.color
         lbl = self.aide.dc.Text(0, 0, text=text, color=color,
                                 font=self.font,
-                                fontsize=self.fontsize,
+                                #fontsize=self.fontsize,
+                                fontscale=True,
+                                fontsize_min=4, fontsize_max=8,
                                 coord='window')
         self.lbls[plot_src] = lbl
         self.objects.append(lbl)

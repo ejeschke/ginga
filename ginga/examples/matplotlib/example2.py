@@ -27,7 +27,7 @@ from ginga.mplw.FigureCanvasQt import FigureCanvas
 from ginga.misc import log
 from ginga import colors
 from ginga.canvas.CanvasObject import get_canvas_types
-from ginga.util.loader import load_data
+from ginga.util.loader import load_data, handle_drop_event
 
 
 class FitsViewer(QtGui.QMainWindow):
@@ -198,9 +198,8 @@ class FitsViewer(QtGui.QMainWindow):
         if len(fileName) != 0:
             self.load_file(fileName)
 
-    def drop_file_cb(self, viewer, paths):
-        fileName = paths[0]
-        self.load_file(fileName)
+    def drop_file_cb(self, fitsimage, drop_event):
+        handle_drop_event(fitsimage, drop_event)
 
     def cursor_cb(self, viewer, button, data_x, data_y):
         """This gets called when the data position relative to the cursor

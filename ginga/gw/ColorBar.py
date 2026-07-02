@@ -61,12 +61,8 @@ class ColorBar(Callback.Callbacks):
         cbar.add_callback('scroll-none', self.scroll_cb)
         cbar.add_callback('pinch-none', self.pinch_cb)
 
-        #cbar.configure(width, height)
         iw = Viewers.GingaViewerWidget(viewer=cbar)
         self.widget = iw
-        # NOTE: this resize causes the widget to lose it's height somehow
-        # under Gtk due to the hack to allow resize down (see gtk3w/Widget.py)
-        #iw.resize(width, height)
 
         font = self.settings.get('font', 'sans')
         fontsize = self.settings.get('fontsize', 10)
@@ -109,7 +105,7 @@ class ColorBar(Callback.Callbacks):
 
     def resize_cb(self, viewer, width, height):
         self.logger.debug("colorbar resized to %dx%d" % (width, height))
-        self.cbar.height = height
+        # self.cbar.height = height
         self.cbar_view.redraw(whence=0)
 
     def redraw(self, whence=0):

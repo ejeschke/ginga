@@ -48,7 +48,7 @@ class PlotViewBase(ViewerBase):
             return True
         return False
 
-    def __init__(self, logger=None, settings=None, figure=None):
+    def __init__(self, logger=None, settings=None, figure=None, addaxis=True):
 
         if not have_mpl:
             raise ImportError("Install 'matplotlib' to use this viewer")
@@ -58,7 +58,7 @@ class PlotViewBase(ViewerBase):
 
         self.t_ = self.settings
         # misc
-        self.t_.add_defaults(resize_lagtime=0.25)
+        self.t_.add_defaults(defer_resize=True, resize_lagtime=0.35)
 
         self.t_.add_defaults(plot_bg='white',
                              plot_show_mode=False,
@@ -114,9 +114,18 @@ class PlotViewBase(ViewerBase):
 
         # optimization of resizing
         self.time_last_resize = time.time()
-        self.resize_lagtime = self.t_.get('resize_lagtime', 0.25)
+        self.defer_resize = self.t_.get('defer_resize', True)
+        self.resize_lagtime = self.t_.get('resize_lagtime', 0.35)
         self._resize_lock = threading.RLock()
         self._resize_dims = (0, 0)
+        # optimization of redrawing
+        self.defer_redraw = self.t_.get('defer_redraw', True)
+        self.defer_lagtime = self.t_.get('defer_lagtime', 0.2)
+
+        # these will get set in the event mixin
+        self.timer_resize = None
+        self.timer_redraw = None
+        self.timer_msg = None
 
         self._dataobj = None
         self._data_limits = None
@@ -136,9 +145,11 @@ class PlotViewBase(ViewerBase):
         self.figure = figure
 
         self.artist_dct = dict()
-        bg = self.settings.get('plot_bg', 'white')
-        self.ax = self.figure.add_subplot(111, facecolor=bg)
-        # self.ax.grid(True)
+        self.ax = None
+        if addaxis:
+            bg = self.settings.get('plot_bg', 'white')
+            self.ax = self.figure.add_subplot(111, facecolor=bg)
+            # self.ax.grid(True)
 
         self.dc = get_canvas_types()
         self.private_canvas = self.dc.DrawingCanvas()
@@ -155,11 +166,8 @@ class PlotViewBase(ViewerBase):
 
         # holds onscreen text object
         self._ost = None
-        # these will get set in the event mixin
-        self.timer_resize = None
-        self.timer_msg = None
 
-        self.add_callback('configure', self.resize_cb)
+        self.add_callback('configure', self.configure_cb)
         self.plot_w = PlotWidget(self)
 
     def set_figure(self, figure, mpl_canvas=None):
@@ -174,11 +182,46 @@ class PlotViewBase(ViewerBase):
             wd_in, ht_in = float(wd_px) / dpi, float(ht_px) / dpi
             figure.set_size_inches(wd_in, ht_in)
 
-        if hasattr(self.figure, 'set_tight_layout'):
-            self.figure.set_tight_layout(True)
+        # if hasattr(self.figure, 'set_tight_layout'):
+        #     self.figure.set_tight_layout(True)
 
     def get_figure(self):
         return self.figure
+
+    def set_widget(self, canvas_w):
+        # *** only called by pg widgets when the canvas is set ***
+        self.logger.info("set widget canvas_w=%s" % canvas_w)
+        #self.pgcanvas = canvas_w
+        canvas_w.add_callback('map', self.canvas_map_cb)
+        canvas_w.add_callback('resize', self.canvas_resize_cb)
+
+        if hasattr(canvas_w, 'session'):
+            # <-- not running "in-situ" in the browser
+            session = canvas_w.session
+            self.timer_resize = session.make_timer()
+            self.timer_resize.add_callback('expired',
+                                           lambda t, n: self.delayed_resize())
+            self.timer_redraw = session.make_timer()
+            self.timer_redraw.add_callback('expired',
+                                           lambda t, n: self.delayed_redraw())
+            self.timer_msg = session.make_timer()
+            self.timer_msg.add_callback('expired',
+                                        lambda t, n: self.clear_onscreen_message())
+        else:
+            # <-- running "in-situ"
+            from ginga.gw.Widgets import Timer
+            self.timer_resize = Timer()
+            self.timer_resize.add_callback('expired',
+                                           lambda t: self.delayed_resize())
+            self.timer_redraw = Timer()
+            self.timer_redraw.add_callback('expired',
+                                           lambda t: self.delayed_redraw())
+            self.timer_msg = Timer()
+            self.timer_msg.add_callback('expired',
+                                        lambda t: self.clear_onscreen_message())
+
+        wd, ht = canvas_w.get_size()
+        self.configure_window(wd, ht)
 
     def get_widget(self):
         return self.figure.canvas
@@ -199,6 +242,7 @@ class PlotViewBase(ViewerBase):
             ax, self.ax = self.ax, None
             ax.remove()
         self.ax = self.figure.add_subplot(111, **kwdargs)
+        self.ax.set_facecolor(self.clr_bg)
         return self.ax
 
     def get_axis(self):
@@ -246,24 +290,36 @@ class PlotViewBase(ViewerBase):
 
     def set_window_size(self, wd_px, ht_px):
         with self._resize_lock:
-            self._resize_dims = (wd_px, ht_px)
             self.time_last_resize = time.time()
-            self._resize_flag = False
 
-            self.logger.debug("canvas resized to %dx%d" % (wd_px, ht_px))
             fig = self.get_figure()
             fig.set_size_inches(float(wd_px) / fig.dpi, float(ht_px) / fig.dpi)
+            self.logger.debug("figure resized to %dx%d" % (wd_px, ht_px))
 
-        self.make_callback('configure', wd_px, ht_px)
+            self.make_callback('configure', wd_px, ht_px)
 
     configure = set_window_size
     configure_window = set_window_size
 
-    def resize_cb(self, viewer, wd_px, ht_px):
+    def configure_cb(self, viewer, wd_px, ht_px):
+        # called by ourselves in response to a 'configure' callback
+        # adjust font sizes and redraw
         self.logger.debug(f"viewer resized to {wd_px}x{ht_px}")
         self._set_variable_font_sizes()
 
         self.redraw()
+
+    def canvas_map_cb(self, canvas_w, event):
+        # *** only called by pg widgets when the canvas is mapped ***
+        wd, ht = event['width'], event['height']
+        self.logger.debug(f"window mapped to {wd}x{ht}")
+        self.set_window_size(wd, ht)
+        self.redraw(whence=0)
+
+    def canvas_resize_cb(self, canvas_w, event):
+        # *** only called by pg widgets when the canvas is resized ***
+        wd_px, ht_px = event['width'], event['height']
+        self.reschedule_resize(wd_px, ht_px)
 
     def delayed_resize(self):
         """Called when the timer for a delayed resize expires."""
@@ -272,19 +328,17 @@ class PlotViewBase(ViewerBase):
                 # <-- no deferred resize found
                 return
             wd_px, ht_px = self._resize_dims
+            self._resize_flag = False
             self.set_window_size(wd_px, ht_px)
 
     def reschedule_resize(self, wd_px, ht_px):
         with self._resize_lock:
-            if time.time() - self.time_last_resize > self.resize_lagtime:
+            if self.timer_resize is None or not self.defer_resize:
                 self.set_window_size(wd_px, ht_px)
             else:
-                if self.timer_resize is None:
-                    self.set_window_size(wd_px, ht_px)
-                else:
-                    self._resize_flag = True
-                    self._resize_dims = (wd_px, ht_px)
-                    self.timer_resize.cond_set(self.resize_lagtime)
+                self._resize_flag = True
+                self._resize_dims = (wd_px, ht_px)
+                self.timer_resize.set(self.resize_lagtime)
 
     def clear(self, redraw=True):
         """Clear plot display."""
@@ -292,7 +346,7 @@ class PlotViewBase(ViewerBase):
         self._dataobj = None
         self.clear_data()
         if redraw:
-            self.redraw_now()
+            self.redraw()
 
     def clear_data(self):
         self.artist_dct = dict()
@@ -313,6 +367,8 @@ class PlotViewBase(ViewerBase):
             self.redraw()
 
     def _set_variable_font_sizes(self):
+        if self.ax is None:
+            return
         # recalculate font sizes if left to variable setting
         width, height = self.get_window_size()
         title_font_size = self.t_['plot_title_fontsize']
@@ -603,7 +659,7 @@ class PlotViewBase(ViewerBase):
                 #self.t_['plot_pan'] = (pan_x, pan_y)
                 self.set_pan(pan_x, pan_y)
 
-        self.redraw_now()
+        self.redraw()
 
     def get_ranges(self):
         ranges = self.settings['plot_range']
@@ -670,7 +726,6 @@ class PlotViewBase(ViewerBase):
     def redraw_now(self, whence=0):
         try:
             time_start = time.time()
-
             self.figure.canvas.draw()
 
             time_done = time.time()
@@ -684,8 +739,23 @@ class PlotViewBase(ViewerBase):
         except Exception as e:
             self.logger.error(f"Error redrawing image: {e}", exc_info=True)
 
-    # Because we may implement deferred redrawing in the future
-    redraw = redraw_now
+    draw = redraw_now
+
+    def redraw(self, *args, **kwargs):
+        if self.timer_redraw is None or not self.defer_redraw:
+            self.redraw_now()
+        else:
+            self.reschedule_redraw(self.defer_lagtime)
+
+    def reschedule_redraw(self, time_sec):
+        if self.timer_redraw is not None:
+            self.timer_redraw.cond_set(time_sec)
+        else:
+            self.redraw_now()
+
+    def delayed_redraw(self):
+        """Called when the timer_redraw expires."""
+        self.redraw_now()
 
     def render_canvas(self, canvas):
         for obj in canvas.objects:
@@ -1283,7 +1353,8 @@ class PlotViewBase(ViewerBase):
         if isinstance(plotable, Plotable):
             plotable.set(clr_bg=self.clr_bg)
 
-        self.ax.set_facecolor(self.clr_bg)
+        if self.ax is not None:
+            self.ax.set_facecolor(self.clr_bg)
 
     def onscreen_message(self, text, delay=None, redraw=True):
         if self._ost is not None:
@@ -1342,9 +1413,9 @@ class PlotViewBase(ViewerBase):
 
 class PlotViewEvent(PlotEventMixin, Mixins.UIMixin, PlotViewBase):
 
-    def __init__(self, logger=None, settings=None, figure=None):
+    def __init__(self, logger=None, settings=None, figure=None, addaxis=True):
         PlotViewBase.__init__(self, logger=logger, settings=settings,
-                              figure=figure)
+                              figure=figure, addaxis=addaxis)
         Mixins.UIMixin.__init__(self)
         PlotEventMixin.__init__(self)
 
@@ -1364,9 +1435,9 @@ class CanvasView(PlotViewEvent):
         cls.bindmapClass = klass
 
     def __init__(self, logger=None, settings=None, figure=None,
-                 bindmap=None, bindings=None):
+                 addaxis=True, bindmap=None, bindings=None):
         PlotViewEvent.__init__(self, logger=logger, settings=settings,
-                               figure=figure)
+                               figure=figure, addaxis=addaxis)
 
         #self.private_canvas.ui_set_active(True, viewer=self)
         self.ui_set_active(True, viewer=self)

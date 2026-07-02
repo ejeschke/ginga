@@ -5,36 +5,95 @@
 # Please see the file LICENSE.txt for details.
 #
 import os
+import re
+from collections import namedtuple
+
 from ginga.misc import Bunch
 
+# describe a font record
+Font = namedtuple('Font', ['family', 'style', 'weight'])
+
 # lookup table of cached fonts, for backends that build them
-font_cache = Bunch.Bunch(caseless=True)
+font_cache = dict()
 
 # lookup table of font
-font_dir = Bunch.Bunch(caseless=True)
+font_dir = dict()
 
 # Set up font alias mapping
-aliases = Bunch.Bunch(caseless=True)
+aliases = dict()
 
 # font scaling factors
 default_scaling_factor = 1.0
 scaling_factor = Bunch.Bunch(caseless=True)
 
+font_regex = re.compile(r'^([\w\s\d\-\_;]+)$')
+default_family = 'sans'
 
-def add_alias(alias_name, font_name):
-    """Add an alias for a font family name.
-    e.g. add_alias('fixed', 'Monotype')
+# generic CSS font-family keywords -- these are left unquoted in a CSS
+# font-family list so the CSS engine (browser or Pango/GTK) treats them
+# as generic fallbacks rather than literal family names
+css_generic_families = set(['serif', 'sans-serif', 'monospace',
+                            'cursive', 'fantasy', 'system-ui'])
+
+
+def add_substitutes(family, family_lst):
+    global aliases
+    family = family.lower()
+    lst = aliases.setdefault(family, [])
+    for sub_family in family_lst:
+        if sub_family not in lst:
+            lst.append(sub_family)
+
+
+def add_substitute(family, sub_family):
+    return add_substitutes(family, [sub_family])
+
+
+def add_alias(family, alt_family):
+    global aliases
+    family = family.lower()
+    lst = aliases.setdefault(family, [])
+    # insert as the preferential font
+    lst.insert(0, alt_family)
+
+
+def get_substitutes(family):
+    """Get known substitutes for a font family.
+    e.g. 'fixed' => ['ubuntu mono', 'monospace', 'Courier']
     """
     global aliases
-    aliases[alias_name] = font_name
+    res = aliases.get(family.lower(), [default_family])
+    return res
 
 
-def resolve_alias(alias_name, alt_font_name):
-    """Resolve an alias for a font family name, providing an alternate
-    name if the font alias does not exist.
-    e.g. resolve_alias('fixed', 'Courier')
+def resolve_alias(family, subst_name):
+    return get_substitutes(family)[0]
+
+
+def get_css_family_list(family):
+    """Return a CSS ``font-family`` value for `family`.
+
+    For backends that style a widget's font through CSS (the web/pg
+    backend and the GTK ``CssProvider`` path), a single family name like
+    'fixed' or 'sans' can't be resolved -- the CSS engine matches it
+    literally and silently falls back to a default.  Instead, expand the
+    family into a comma-separated fallback list built from its registered
+    substitutes (see `get_substitutes`), so the CSS engine can fall back
+    gracefully when the preferred face isn't available.  Generic keywords
+    (monospace/sans-serif/...) are emitted unquoted; everything else is
+    quoted so multi-word family names survive.
     """
-    return aliases.get(alias_name, alt_font_name)
+    families = aliases.get(family.lower())
+    if not families:
+        families = [family]
+    out, seen = [], set()
+    for fam in families:
+        key = fam.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(fam if key in css_generic_families else '"{}"'.format(fam))
+    return ", ".join(out)
 
 
 def get_cache(font_key):
@@ -53,34 +112,48 @@ def add_cache(font_key, font):
     font_cache[font_key] = font
 
 
-def add_font(font_file, font_name=None):
+def add_loadable_font(font_file, family, style='normal', weight='normal'):
     """Add a font description to our directory of externally loadable fonts.
-    `font_file` is the path to the font, and optional `font_name` is the
-    name to register it under.
+    `font_file` is the path to the font, and `family` is the name to register
+    it under.
     """
     global font_dir
 
-    if font_name is None:
-        # determine family name from filename of font
-        dirname, filename = os.path.split(font_file)
-        font_name, ext = os.path.splitext(filename)
+    style = style.lower()
+    weight = weight.lower()
 
-    font_dir[font_name] = Bunch.Bunch(name=font_name, font_path=font_file)
+    font_tup = Font(family=family, style=style, weight=weight)
+    font_dir[font_tup] = Bunch.Bunch(name=family, font_path=font_file,
+                                     style=style, weight=weight)
+    # family is always a substitute for itself
+    add_substitute(family, family)
+    return font_tup
 
-    return font_name
 
-
-def have_font(font_name):
-    """Return True if the given font name is registered as one of our
-    externally loadable fonts.  If `font_name` is not found, it will try
-    to look it up as an alias and report if that is found.
+def have_loadable_font(font_tup):
+    """Return True if the given font tuple is registered as one of our
+    externally loadable fonts.
     """
-    if font_name in font_dir:
-        return True
+    return font_tup in font_dir
 
-    # try it as an alias
-    font_name = resolve_alias(font_name, font_name)
-    return font_name in font_dir
+
+def get_font_info(font_tup):
+    """Return known info on an externally loadable font (including its path).
+    """
+    try:
+        return font_dir[font_tup]
+    except KeyError:
+        raise KeyError(str(font_tup))
+
+
+def remove_font(font_tup):
+    """Remove `font_name` from the directory of loadable fonts.
+    """
+    global font_dir
+    try:
+        del font_dir[font_tup]
+    except KeyError:
+        pass
 
 
 def get_loadable_fonts():
@@ -89,33 +162,27 @@ def get_loadable_fonts():
     return list(font_dir.keys())
 
 
-def get_font_info(font_name, subst_ok=True):
-    """Return known info on an externally loadable font (including its path).
-    `font_name` is assumed to have already been resolved from an alias.
-    Will return a KeyError in the case of a missing font, unless
-    subst_ok is True, in which case an alternate font may be returned.
+def get_font_attrs(font_str):
+    vals = font_str.lower().split(';')
+    style, weight = 'normal', 'normal'
+    family = vals[0].strip().replace('"', '').replace("'", '')
+    if len(vals) > 1:
+        style = vals[1].strip()
+    if len(vals) > 2:
+        weight = vals[2].strip()
+    return (family, style, weight)
+
+
+def parse_font(font_str):
+    """Extract font information from a font string, such as supplied to the
+    'font' argument to a widget, and return a Font named tuple.
     """
-    global font_dir
-    if font_name in font_dir:
-        font_info = font_dir[font_name]
-    elif subst_ok:
-        # substitute an alternate font
-        font_name = resolve_alias('house', 'fixed')
-        font_info = font_dir[font_name]
-    else:
-        raise KeyError(font_name)
+    match = font_regex.match(font_str)
+    if not match:
+        raise ValueError(f"font spec '{font_str}' doesn't match expected format")
 
-    return font_info
-
-
-def remove_font(font_name):
-    """Remove `font_name` from the directory of loadable fonts.
-    """
-    global font_dir
-    try:
-        del font_dir[font_name]
-    except KeyError:
-        pass
+    family, style, weight = get_font_attrs(font_str)
+    return Font(family=family, style=style, weight=weight)
 
 
 def scale_fontsize(key, fontsize):
@@ -172,27 +239,44 @@ def calc_font_size(win_wd):
 
 fontdir, xx = os.path.split(__file__)
 
-add_font(os.path.join(fontdir, 'Roboto', "Roboto-Regular.ttf"),
-         font_name='roboto')
-for name in ["Black", "Bold", "Light", "Medium", "Thin"]:
-    add_font(os.path.join(fontdir, 'Roboto', f"Roboto-{name}.ttf"),
-             font_name='roboto {}'.format(name.lower()))
+add_loadable_font(os.path.join(fontdir, 'Roboto', "Roboto-Regular.ttf"), 'roboto')
+for weight in ["Black", "Bold", "Light", "Medium", "Thin"]:
+    lweight = weight.lower()
+    add_loadable_font(os.path.join(fontdir, 'Roboto', f"Roboto-{weight}.ttf"),
+                      'roboto', weight=lweight)
 
-add_font(os.path.join(fontdir, 'Roboto_Condensed', "RobotoCondensed-Regular.ttf"),
-         font_name='roboto condensed')
-for name in ["Bold", "BoldItalic", "Italic", "Light", "LightItalic"]:
-    add_font(os.path.join(fontdir, 'Roboto_Condensed', f"RobotoCondensed-{name}.ttf"),
-             font_name='roboto condensed {}'.format(name.lower()))
+add_loadable_font(os.path.join(fontdir, 'Roboto_Condensed', "RobotoCondensed-Regular.ttf"),
+                  'roboto condensed')
+for weight in ["Bold", "BoldItalic", "Italic", "Light", "LightItalic"]:
+    lweight = weight.lower()
+    style = 'normal'
+    if 'italic' in lweight:
+        lweight = lweight.replace('italic', '')
+        if len(lweight) == 0:
+            lweight = 'normal'
+        style = 'italic'
+    add_loadable_font(os.path.join(fontdir, 'Roboto_Condensed', f"RobotoCondensed-{weight}.ttf"),
+                      'roboto condensed', style=style, weight=lweight)
 
-add_font(os.path.join(fontdir, 'Ubuntu_Mono', "UbuntuMono-Regular.ttf"),
-         font_name='ubuntu mono')
-for name in ["Bold", "BoldItalic", "Italic"]:
-    add_font(os.path.join(fontdir, 'Ubuntu_Mono', f"UbuntuMono-{name}.ttf"),
-             font_name='ubuntu mono {}'.format(name.lower()))
+add_loadable_font(os.path.join(fontdir, 'Ubuntu_Mono', "UbuntuMono-Regular.ttf"),
+                  'ubuntu mono', style='normal', weight='normal')
+for weight in ["Bold", "BoldItalic", "Italic"]:
+    lweight = weight.lower()
+    style = 'normal'
+    if 'italic' in lweight:
+        lweight = lweight.replace('italic', '')
+        if len(lweight) == 0:
+            lweight = 'normal'
+        style = 'italic'
+    add_loadable_font(os.path.join(fontdir, 'Ubuntu_Mono', f"UbuntuMono-{weight}.ttf"),
+                      'ubuntu mono', style=style, weight=lweight)
 
 # house font needs to be available
-add_alias('house', 'ubuntu mono')
-add_alias('fixed', 'ubuntu mono')
-add_alias('sans', 'roboto')
-add_alias('sans serif', 'roboto')
-add_alias('sans condensed', 'roboto condensed')
+add_substitutes('house', ['ubuntu mono', 'monospace', 'courier new', 'courier'])
+add_substitutes('fixed', ['ubuntu mono', 'monospace', 'courier new', 'courier'])
+add_substitutes('monospace', ['ubuntu mono', 'monospace', 'courier new', 'courier'])
+add_substitutes('sans', ['roboto', 'arial', 'helvetica'])
+add_substitutes('sans serif', ['roboto', 'arial', 'helvetica'])
+add_substitutes('sans-serif', ['roboto', 'arial', 'helvetica'])
+add_substitutes('sans condensed', ['roboto condensed'])
+add_substitutes('sans-serif condensed', ['roboto condensed'])

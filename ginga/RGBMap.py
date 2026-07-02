@@ -16,7 +16,7 @@ from ginga.util.stages.color import (RGBInput, Distribute, ShiftMap,
                                      IntensityMap, ColorMap, RGBMapError)
 
 
-class RGBPlanes(object):
+class RGBPlanes:
 
     def __init__(self, rgbarr, order):
         self.rgbarr = rgbarr

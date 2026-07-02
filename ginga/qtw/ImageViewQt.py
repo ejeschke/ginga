@@ -5,12 +5,13 @@
 # Please see the file LICENSE.txt for details.
 #
 import os
+import time
 import tempfile
 from functools import partial
 
 import numpy as np
 
-from ginga import ImageView, Mixins, Bindings
+from ginga import ImageView, Mixins, Bindings, events
 from ginga.cursors import cursor_info
 from ginga.qtw.QtHelp import (QtGui, QtCore, QImage, QPixmap, QCursor,
                               QPainter, QOpenGLWidget, QSurfaceFormat,
@@ -396,7 +397,7 @@ class ImageViewQt(ImageView.ImageViewBase):
         self.imgwin.setFocus()
 
 
-class RenderMixin(object):
+class RenderMixin:
 
     def showEvent(self, event):
         self.viewer.map_event(self, event)
@@ -822,27 +823,37 @@ class QtEventMixin:
         formats = list(map(str, list(dropdata.formats())))
         self.logger.debug("available formats of dropped data are %s" % (
             formats))
+        # common elements for a drop
+        drop = events.DropEvent()
+        data_x, data_y = self.check_cursor_location()
+        pos = event.pos()
+        drop.set(timestamp=time.time(), x=pos.x(), y=pos.y(),
+                 data_x=data_x, data_y=data_y)
+
         if "text/thumb" in formats:
             thumbstr = str(dropdata.data("text/thumb"), encoding='ascii')
-            data = [thumbstr]
-            self.logger.debug("dropped thumb(s): %s" % (str(data)))
+            drop.set_text(thumbstr)
+            drop.set(types='text/thumb')
+            self.logger.debug("dropped thumb(s): %s" % (str(thumbstr)))
         elif dropdata.hasUrls():
             urls = list(dropdata.urls())
             data = [str(url.toString()) for url in urls]
+            drop.set_uris(data)
             self.logger.debug("dropped filename(s): %s" % (str(data)))
         elif "text/plain" in formats:
-            data = [dropdata.text()]
-            self.logger.debug("dropped filename(s): %s" % (str(data)))
+            drop.set_text(dropdata.text())
+            drop.set(types='text/plain')
+            self.logger.debug("dropped text")
         else:
             # No format that we understand--just pass it along
             ## data = dropdata.data(formats[0])
-            ## self.logger.debug("dropped data of len %d" % (len(data)))
+            self.logger.error("dropped data we don't recognize")
             event.setAccepted(False)
             return
 
         event.setAccepted(True)
         #event.acceptProposedAction()
-        self.make_ui_callback_viewer(self, 'drag-drop', data)
+        self.make_ui_callback_viewer(self, 'drag-drop', drop)
 
 
 class ImageViewEvent(Mixins.UIMixin, QtEventMixin, ImageViewQt):

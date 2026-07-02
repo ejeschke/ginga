@@ -13,7 +13,7 @@ import numpy as np
 from .geometry_helper import Point3D, Vector3D, Matrix4x4
 
 
-class Camera(object):
+class Camera:
 
     def __init__(self):
         self.fov_deg = 30.0

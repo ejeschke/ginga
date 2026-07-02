@@ -23,7 +23,7 @@ from ginga.canvas.CanvasObject import drawCatalog
 from ginga.modes import modeinfo
 
 # GUI imports
-from ginga.gw import Widgets, Viewers
+from ginga.gw import Widgets, Viewers, GwHelp
 from ginga.fonts import font_asst
 from ginga.util.paths import icondir as icon_dir
 
@@ -54,7 +54,7 @@ class GingaShell(GenericShell):
 
     """
     def __init__(self, logger, thread_pool, module_manager, preferences,
-                 ev_quit=None):
+                 ev_quit=None, ws_sock=None):
 
         # Create general preferences
         self.prefs = preferences
@@ -80,7 +80,7 @@ class GingaShell(GenericShell):
         settings.load(onError='silent')
 
         GenericShell.__init__(self, logger, thread_pool, module_manager,
-                              preferences, ev_quit=ev_quit)
+                              preferences, ev_quit=ev_quit, ws_sock=ws_sock)
 
         # For callbacks
         for name in ('add-image', 'channel-change', 'remove-image',
@@ -89,15 +89,18 @@ class GingaShell(GenericShell):
                      'viewer-create'):
             self.enable_callback(name)
 
-        # Initialize the timer factory
+        # Initialize the timer factory.  Under the async (single event
+        # loop) task pool there are no usable threads, so use event-loop
+        # timers instead of thread-based ones.
+        async_timers = (self.get_taskpool_type() == 'async')
         self.timer_factory = Timer.TimerFactory(ev_quit=self.ev_quit,
-                                                logger=self.logger)
+                                                logger=self.logger,
+                                                async_timers=async_timers)
         self.timer_factory.wind()
 
         self.channel = Bunch.caselessDict()
         self.channel_names = []
         self.cur_channel = None
-        #self.statustask = None
 
         # Load bindings preferences
         bindprefs = self.prefs.create_category('bindings')
@@ -112,7 +115,7 @@ class GingaShell(GenericShell):
 
         # state for implementing field-info callback
         self._cursor_task = self.get_backend_timer()
-        self._cursor_task.set_callback('expired', self._cursor_timer_cb)
+        self._cursor_task.add_callback('expired', self._cursor_timer_cb)
         self._cursor_last_update = time.time()
         self.cursor_interval = self.settings.get('cursor_interval', 0.050)
 
@@ -120,6 +123,7 @@ class GingaShell(GenericShell):
         fixed_font = self.settings.get('fixedFont', None)
         if fixed_font is not None:
             font_asst.add_alias('fixed', fixed_font)
+            font_asst.add_alias('house', fixed_font)
 
         serif_font = self.settings.get('serifFont', None)
         if serif_font is not None:
@@ -128,6 +132,8 @@ class GingaShell(GenericShell):
         sans_font = self.settings.get('sansFont', None)
         if sans_font is not None:
             font_asst.add_alias('sans', sans_font)
+            font_asst.add_alias('sans serif', sans_font)
+            font_asst.add_alias('sans-serif', sans_font)
 
         # GUI initialization
         self.iconpath = icon_dir
@@ -171,6 +177,9 @@ class GingaShell(GenericShell):
 
     def get_draw_classes(self):
         return drawCatalog
+
+    def get_widget_classes(self):
+        return Widgets
 
     # PLUGIN MANAGEMENT
 
@@ -390,7 +399,7 @@ class GingaShell(GenericShell):
         # Return the image
         return image
 
-    def add_download(self, info, future):
+    def add_download(self, info, future, download_cb=None):
         """
         Hand off a download to the Downloads plugin, if it is present.
 
@@ -404,15 +413,188 @@ class GingaShell(GenericShell):
             A future that represents the future computation to be performed
             after downloading the file.  Resolving the future will trigger
             the computation.
+
+        download_cb : callable, optional
+            If given, called as ``download_cb(fraction)`` with a value in
+            [0.0, 1.0] as the download proceeds (in addition to the
+            Downloads plugin's own progress display).
         """
         if self.gpmon.has_plugin('Downloads'):
             obj = self.gpmon.get_plugin('Downloads')
-            self.gui_do(obj.add_download, info, future)
+            self.gui_do(obj.add_download, info, future, download_cb=download_cb)
         else:
             self.show_error("Please activate the 'Downloads' plugin to"
                             " enable download functionality")
 
-    def open_uri_cont(self, filespec, loader_cont_fn):
+    def download_file(self, url, localpath, future, progress_cb=None):
+        """Download *url* to *localpath*, resolving *future* when done.
+
+        This is the low-level file downloader (the Downloads plugin is a
+        GUI on top of it).  It is meant to be dispatched via
+        ``nongui_do()`` and picks a fetch strategy automatically:
+
+        * in-situ in the browser (Pyodide) -> the browser's async fetch.
+          urllib/sockets don't work there, and cross-origin reads need a
+          CORS proxy.  A coroutine is returned; in-situ always uses the
+          async task pool, so nongui_do awaits it on the event loop.
+        * everywhere else (desktop, or pg driving a remote browser over a
+          websocket) -> a synchronous download on a worker thread.
+
+        On success *future* is resolved with *localpath*; on failure it is
+        resolved with the exception (so ``future.get_value()`` re-raises
+        it).  *progress_cb*, if given, is called as ``progress_cb(fraction)``
+        with a value in [0.0, 1.0] as the download proceeds.
+
+        Parameters
+        ----------
+        url : str
+            The URL to download.
+
+        localpath : str
+            The local file path to write the downloaded data to.
+
+        future : `~ginga.misc.Future.Future`
+            Resolved with *localpath* on success, or with the raised
+            exception on failure.
+
+        progress_cb : callable, optional
+            Called as ``progress_cb(fraction)`` as the download proceeds.
+        """
+        if self.is_web_backend() and self.is_in_situ():
+            return self._download_file_async(url, localpath, future,
+                                             progress_cb)
+        return self._download_file_sync(url, localpath, future, progress_cb)
+
+    def _download_file_sync(self, url, localpath, future, progress_cb):
+        def _dl_indicator(count, blksize, totalsize):
+            if progress_cb is not None and totalsize > 0:
+                nbytes = int(count * blksize)
+                progress_cb(min(1.0, float(nbytes) / float(totalsize)))
+
+        try:
+            # press our generic URL server into use as a file downloader
+            dl = catalog.URLServer(self.logger, "downloader", "dl", url, "")
+            filepath = dl.retrieve(url, filepath=localpath,
+                                   cb_fn=_dl_indicator)
+            self.logger.info("download of '%s' finished" % (filepath))
+            future.resolve(filepath)
+
+        except Exception as e:
+            self.logger.error("download of '%s' failed: %s" % (url, e),
+                              exc_info=True)
+            future.resolve(e)
+
+    async def _download_file_async(self, url, localpath, future, progress_cb):
+        try:
+            # Browsers block cross-origin *reads* (CORS), so route the
+            # external URL through a same-origin proxy when one is
+            # configured (the ``fetch_proxy`` setting names a same-origin
+            # endpoint that refetches the URL server-side and returns it
+            # with permissive CORS headers).  Falls back to a direct fetch
+            # otherwise.
+            fetch_url = url
+            proxy = self.settings.get('fetch_proxy', None)
+            if proxy:
+                import urllib.parse
+                fetch_url = proxy + urllib.parse.quote(url, safe='')
+            self.logger.info("downloading (async) '%s'..." % (fetch_url))
+            # browser fetch -- the only way to do network I/O under Pyodide
+            from pyodide.http import pyfetch
+            resp = await pyfetch(fetch_url)
+
+            # Stream the body so we can report incremental progress (and
+            # avoid buffering the whole file in memory).  We read off the
+            # JS Response's ReadableStream chunk-by-chunk.  ``total`` comes
+            # from Content-Length; if the server doesn't supply it we can't
+            # compute a fraction, so progress is only reported at the end.
+            jsresp = resp.js_response
+            clen = jsresp.headers.get('Content-Length')
+            total = int(clen) if clen else 0
+            reader = jsresp.body.getReader()
+            got = 0
+            next_update = 0
+            update_step = 64 * 1024
+            with open(localpath, 'wb') as out_f:
+                while True:
+                    chunk = await reader.read()
+                    if chunk.done:
+                        break
+                    buf = bytes(chunk.value.to_py())
+                    out_f.write(buf)
+                    got += len(buf)
+                    if (progress_cb is not None and total and
+                            got >= next_update):
+                        progress_cb(got / total)
+                        next_update += update_step
+
+            if progress_cb is not None:
+                progress_cb(1.0)
+            self.logger.info("download of '%s' finished" % (localpath))
+            future.resolve(localpath)
+
+        except Exception as e:
+            self.logger.error("download of '%s' failed: %s" % (url, e),
+                              exc_info=True)
+            future.resolve(e)
+
+    def fetch_url(self, url, future):
+        """Fetch the contents of *url* into memory, resolving *future*.
+
+        The in-memory sibling of `download_file`: instead of writing a
+        file, it resolves *future* with the response body (``bytes``).
+        Intended for small responses (name resolution, catalog queries,
+        ...) and meant to be dispatched via ``nongui_do()``.  Like
+        `download_file` it picks a strategy automatically:
+
+        * in-situ in the browser (Pyodide) -> the browser's async fetch,
+          routed through the ``fetch_proxy`` (CORS).  A coroutine is
+          returned; nongui_do awaits it on the event loop.
+        * everywhere else -> a synchronous urllib fetch on a worker thread.
+
+        On success *future* is resolved with the response bytes; on failure
+        it is resolved with the exception (so ``future.get_value()``
+        re-raises it).
+        """
+        if self.is_web_backend() and self.is_in_situ():
+            return self._fetch_url_async(url, future)
+        return self._fetch_url_sync(url, future)
+
+    def _fetch_url_sync(self, url, future):
+        try:
+            from urllib.request import Request, urlopen
+            self.logger.info("fetching '%s'..." % (url))
+            req = Request(url)
+            with urlopen(req) as response:  # nosec
+                data = response.read()
+            future.resolve(data)
+
+        except Exception as e:
+            self.logger.error("fetch of '%s' failed: %s" % (url, e),
+                              exc_info=True)
+            future.resolve(e)
+
+    async def _fetch_url_async(self, url, future):
+        try:
+            # Browsers block cross-origin reads (CORS); route through the
+            # same-origin proxy named by the ``fetch_proxy`` setting when
+            # configured (see download_file).
+            fetch_url = url
+            proxy = self.settings.get('fetch_proxy', None)
+            if proxy:
+                import urllib.parse
+                fetch_url = proxy + urllib.parse.quote(url, safe='')
+            self.logger.info("fetching (async) '%s'..." % (fetch_url))
+            from pyodide.http import pyfetch
+            resp = await pyfetch(fetch_url)
+            data = await resp.bytes()
+            future.resolve(data)
+
+        except Exception as e:
+            self.logger.error("fetch of '%s' failed: %s" % (url, e),
+                              exc_info=True)
+            future.resolve(e)
+
+    def open_uri_cont(self, filespec, loader_cont_fn, download_cb=None):
         """Download a URI (if necessary) and do some action on it.
 
         If the file is already present (e.g. a file:// URI) then this
@@ -429,6 +611,10 @@ class GingaShell(GenericShell):
             The parameter is the local filepath after download, plus
             any "index" understood by the loader.
 
+        download_cb : callable, optional
+            If given, called as ``download_cb(fraction)`` with a value in
+            [0.0, 1.0] as a download (if any) proceeds.
+
         """
         info = iohelper.get_fileinfo(filespec)
 
@@ -444,7 +630,7 @@ class GingaShell(GenericShell):
 
             future = Future.Future()
             future.add_callback('resolved', _download_cb)
-            self.add_download(info, future)
+            self.add_download(info, future, download_cb=download_cb)
             return
 
         # invoke the continuation
@@ -550,7 +736,7 @@ class GingaShell(GenericShell):
             if len(self.gui_dialog_list) == 1:
                 self.nongui_do_future(future)
 
-    def open_uris(self, uris, chname=None, bulk_add=False):
+    def open_uris(self, uris, chname=None, bulk_add=False, download_cb=None):
         """Open a set of URIs.
 
         Parameters
@@ -566,6 +752,10 @@ class GingaShell(GenericShell):
             channel without disturbing the current item there.
             If False, then the first item loaded will be displayed
             and the rest of the items will be loaded as bulk.
+
+        download_cb : callable, optional
+            If given, called as ``download_cb(fraction)`` with a value in
+            [0.0, 1.0] as each URI that needs downloading proceeds.
 
         """
         if len(uris) == 0:
@@ -593,15 +783,62 @@ class GingaShell(GenericShell):
 
         # determine whether first file is loaded as a bulk load
         if bulk_add:
-            self.open_uri_cont(uris[0], load_file_bulk)
+            self.open_uri_cont(uris[0], load_file_bulk, download_cb=download_cb)
         else:
-            self.open_uri_cont(uris[0], load_file)
+            self.open_uri_cont(uris[0], load_file, download_cb=download_cb)
         self.update_pending()
 
         for uri in uris[1:]:
             # rest of files are all loaded using bulk load
-            self.open_uri_cont(uri, load_file_bulk)
+            self.open_uri_cont(uri, load_file_bulk, download_cb=download_cb)
             self.update_pending()
+
+    def open_blobs(self, blobs, chname=None, bulk_add=False):
+        """Open a set of data blobs.
+
+        These are typically passed by drag and drop from a non-local
+        location, such as pushed from a web browser.
+
+        Parameters
+        ----------
+        blobs : list of dict
+            The dicts of the blobs to load
+
+        chname: str, optional (defaults to channel with focus)
+            The name of the channel in which to load the items
+
+        bulk_add : bool, optional (defaults to False)
+            If True, then all the data items are loaded into the
+            channel without disturbing the current item there.
+            If False, then the first item loaded will be displayed
+            and the rest of the items will be loaded as bulk.
+
+        """
+        if len(blobs) == 0:
+            return
+
+        uris = []
+        for i, f_dct in enumerate(blobs):
+            if f_dct.get("data"):
+                name = f_dct['name']
+                mimetype = f_dct['type']
+                size = f_dct['size']
+                buf = f_dct['data']
+                buf_size = len(buf)
+                if buf_size != size:
+                    self.logger.warning(f"size of blob ({buf_size}) does not"
+                                        f" match passed size ({size})")
+                self.logger.info(f"to open: {name}")
+
+                # TODO!
+                import tempfile
+                path = os.path.join(tempfile.gettempdir(), name)
+                with open(path, 'wb') as out_f:
+                    out_f.write(buf)
+
+                uris.append(f"file:///{path}")
+
+        self.open_uris(uris, chname=chname, bulk_add=bulk_add)
 
     def zoom_in(self):
         """Zoom the view in one zoom step.
@@ -802,7 +1039,7 @@ class GingaShell(GenericShell):
         ws = self.ds.make_ws(name=wsname, group=1, wstype=wstype,
                              use_toolbar=use_toolbar)
         if inSpace != 'top level':
-            self.ds.add_tab(inSpace, ws.widget, 1, ws.name)
+            self.ds.add_tab(inSpace, ws, 1, ws.name)
         else:
             #width, height = 700, 800
             #self.ds.create_toplevel_ws(width, height, group=1)
@@ -1226,34 +1463,23 @@ class GingaShell(GenericShell):
     def banner(self):
         # load banner image
         banner_file = os.path.join(self.iconpath, 'ginga-splash.png')
-        image = self.load_image(banner_file)
-        wd, ht = image.get_size()
+        wd, ht = 968, 968
+        img_native = GwHelp.get_image(banner_file, size=(wd, ht))
 
         # create dialog for banner
         title = f"Ginga v{__version__}"
         top = Widgets.Dialog(title=title, parent=self.w.root,
-                             buttons=[["Close", 0]], modal=False)
+                             buttons=[["Close", 0]], autoclose=True,
+                             modal=True)
 
         def _close_banner(*args):
             self.ds.remove_dialog(top)
 
         top.add_callback('activated', _close_banner)
         vbox = top.get_content_area()
-        viewer = Viewers.CanvasView(logger=self.logger)
-        viewer.enable_autocuts('off')
-        viewer.enable_autozoom('off')
-        viewer.enable_autocenter('on')
-        viewer.cut_levels(0, 255)
-        viewer.scale_to(1, 1)
-        viewer.set_desired_size(wd, ht)
-        t_ = viewer.get_settings()
-        t_.set(auto_orient=True)
+        img_w = Widgets.Image(native_image=img_native)
+        vbox.add_widget(img_w, stretch=1)
 
-        w = Viewers.GingaViewerWidget(viewer=viewer)
-        w.resize(wd, ht)
-        vbox.add_widget(w, stretch=1)
-
-        viewer.set_image(image)
         self.ds.show_dialog(top)
 
     def remove_image_by_name(self, chname, imname, impath=None):
@@ -1336,7 +1562,11 @@ class GingaShell(GenericShell):
         return pfx + ''.join(newname)
 
     def add_dialogs(self):
-        if hasattr(Widgets, 'FileDialog'):
+        if self.is_web_backend():
+            self.filesel = Widgets.BrowserFileDialog(title="Load File")
+            self.filesel.add_callback('activated', self.load_blobs_cb)
+
+        elif hasattr(Widgets, 'FileDialog'):
             self.filesel = Widgets.FileDialog(title="Load File",
                                               parent=self.w.root)
             self.filesel.add_callback('activated', self.load_file_cb)
@@ -1944,10 +2174,13 @@ class GingaShell(GenericShell):
         return True
 
     def delete_channel_cb(self, w, rsp, chname):
-        self.ds.remove_dialog(w)
-        if rsp != 1:
-            return
-        self.delete_channel(chname)
+        try:
+            self.ds.remove_dialog(w)
+            if rsp != 1:
+                return
+            self.delete_channel(chname)
+        except Exception as e:
+            self.logger.error(f"error deleting channel: {e}", exc_info=True)
         return True
 
     def delete_tab_cb(self, w, rsp, tabname):
@@ -2128,6 +2361,11 @@ class GingaShell(GenericShell):
         # use of FileDialog widget
         self.open_uris(paths)
 
+    def load_blobs_cb(self, w, drop_event):
+        # BrowserFileDialog widget upload event
+        blobs = drop_event['files']
+        self.open_blobs(blobs)
+
     def _get_channel_by_container(self, child):
         for chname in self.get_channel_names():
             channel = self.get_channel(chname)
@@ -2209,7 +2447,7 @@ class GingaShell(GenericShell):
 
     def page_close_cb(self, ws, child):
         # user is attempting to close the page
-        self.logger.debug("page closed in %s: '%s'" % (ws.name, str(child)))
+        self.logger.info("page closed in %s: '%s'" % (ws.name, str(child)))
 
         channel = self._get_channel_by_container(child)
         if channel is not None:
@@ -2289,15 +2527,22 @@ class GingaShell(GenericShell):
 
         self.update_pending()
 
-    def dragdrop(self, chviewer, uris):
+    def dragdrop(self, chviewer, drop):
         """Called when a drop operation is performed on a channel viewer.
-        We are called back with a URL and we attempt to (down)load it if it
-        names a file.
+        We are called back with a drop package.
         """
         # find out our channel
         chname = self.get_channel_name(chviewer)
-        self.open_uris(uris, chname=chname)
-        return True
+
+        if drop.drag_type == 'uris':
+            self.open_uris(drop.contents['body'], chname=chname)
+            return True
+
+        if drop.drag_type == 'blobs':
+            self.open_blobs(drop.contents['body'], chname=chname)
+            return True
+
+        return False
 
     def force_focus_cb(self, viewer, event, data_x, data_y):
         chname = self.get_channel_name(viewer)
@@ -2343,8 +2588,35 @@ class GuiLogHandler(logging.Handler):
 
     def __init__(self, fv, level=logging.NOTSET):
         self.fv = fv
+        self._emitting = False
         logging.Handler.__init__(self, level=level)
 
     def emit(self, record):
-        text = self.format(record)
-        self.fv.logit(text)
+        # Guard against re-entrancy: logit() updates a GUI widget (and on
+        # the web backend sends over a web socket), which can itself emit
+        # log records that would otherwise recurse back into this handler.
+        if self._emitting:
+            return
+        self._emitting = True
+        try:
+            text = self.format(record)
+            self.fv.logit(text)
+        finally:
+            self._emitting = False
+
+    def handle_batch(self, records):
+        # Called by BatchingQueueListener: format a run of records into a
+        # single block so logit() (and any web-socket round-trip behind it)
+        # fires once for the whole batch instead of once per line.  Honor the
+        # handler's own level here, since the QueueHandler enqueues at the
+        # logger's level.
+        if self._emitting:
+            return
+        self._emitting = True
+        try:
+            lines = [self.format(r) for r in records
+                     if r.levelno >= self.level]
+            if lines:
+                self.fv.logit("\n".join(lines))
+        finally:
+            self._emitting = False

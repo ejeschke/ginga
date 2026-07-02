@@ -164,7 +164,7 @@ class Command(GingaPlugin.GlobalPlugin):
         return 'command'
 
 
-class CommandInterpreter(object):
+class CommandInterpreter:
 
     def __init__(self, fv, plugin):
         super(CommandInterpreter, self).__init__()

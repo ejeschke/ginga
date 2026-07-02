@@ -91,6 +91,19 @@ class Desktop(Callback.Callbacks):
         w = self.get_nb(name)
         return self.get_size(w)
 
+    def get_ds_size(self):
+        if len(self.toplevels) == 0:
+            return None
+        # TODO: fix -- assume first widget in toplevels is our desktop
+        w = self.toplevels[0]
+        return w.get_size()
+
+    def set_ds_size(self, wd, ht):
+        if len(self.toplevels) == 0:
+            return
+        w = self.toplevels[0]
+        w.resize(wd, ht)
+
     def get_wsnames(self, group=1):
         res = []
         for name in self.workspace.keys():
@@ -288,7 +301,7 @@ class Desktop(Callback.Callbacks):
             self._cur_dialogs.remove(dialog)
         dialog.delete()
 
-    def add_toplevel(self, bnch, wsname, width=700, height=700):
+    def add_toplevel(self, ws, wsname, width=700, height=700):
         topw = self.app.make_window(title=wsname)
         topw.resize(width, height)
         self.toplevels.append(topw)
@@ -299,7 +312,7 @@ class Desktop(Callback.Callbacks):
         vbox.set_border_width(0)
         topw.set_widget(vbox)
 
-        vbox.add_widget(bnch.widget, stretch=1)
+        vbox.add_widget(ws.get_widget(), stretch=1)
         topw.show()
         return topw
 
@@ -367,7 +380,7 @@ class Desktop(Callback.Callbacks):
 
             ws.add_tab(child, title=title)
         except Exception as e:
-            print(str(e))
+            self.logger.error(f"error detaching page: {e}")
 
     def switch_page_cb(self, ws, child):
         self.logger.debug("page switch: %s" % str(child))
@@ -458,7 +471,7 @@ class Desktop(Callback.Callbacks):
                                   scrollable=params.scrollable,
                                   use_toolbar=params.use_toolbar,
                                   child_catalog=child_catalog)
-                widget = ws.widget
+                widget = ws
                 # debug(widget)
                 if params.get('default', False):
                     self.default_ws_name = params.name
@@ -829,20 +842,18 @@ class Desktop(Callback.Callbacks):
 
 # WORKSPACES #####
 
-class Workspace(Widgets.WidgetBase):
+class Workspace(Widgets.VBox):
 
     def __init__(self, name, wstype='tab', group=0, detachable=False,
                  use_toolbar=False, child_catalog={}):
-        super(Workspace, self).__init__()
+        Widgets.VBox.__init__(self)
 
         self.name = name
         self.wstype = wstype
         self.wstypes = ['tabs', 'mdi', 'stack', 'grid']
-        self.vbox = Widgets.VBox()
+        self.vbox = self
         self.vbox.set_spacing(0)
         self.vbox.set_border_width(0)
-        # for now
-        self.widget = self.vbox
         self.nb = None
         self.group = group
         self.detachable = detachable
@@ -852,6 +863,7 @@ class Workspace(Widgets.WidgetBase):
         self.extdata = Bunch.Bunch(toolbar=None)
         self.toolbar = None
         self.child_catalog = child_catalog
+        self.nb_cache = dict()
 
         if use_toolbar:
             toolbar = Widgets.Toolbar(orientation='horizontal')
@@ -897,17 +909,29 @@ class Workspace(Widgets.WidgetBase):
     def _set_wstype(self, wstype):
         if wstype in ('tabs', 'nb', 'ws'):
             wstype = 'tabs'
-            self.nb = Widgets.TabWidget(detachable=self.detachable,
-                                        reorderable=True, group=self.group)
+            nb = self.nb_cache.get(wstype, None)
+            if nb is None:
+                nb = Widgets.TabWidget(detachable=self.detachable,
+                                       reorderable=True, group=self.group)
+            self.nb = nb
 
         elif wstype == 'mdi':
-            self.nb = Widgets.MDIWidget(mode='mdi')
+            nb = self.nb_cache.get(wstype, None)
+            if nb is None:
+                nb = Widgets.MDIWidget(mode='mdi')
+            self.nb = nb
 
         elif wstype == 'stack':
-            self.nb = Widgets.StackWidget()
+            nb = self.nb_cache.get(wstype, None)
+            if nb is None:
+                nb = Widgets.StackWidget()
+            self.nb = nb
 
         elif wstype == 'grid':
-            self.nb = SymmetricGridWidget()
+            nb = self.nb_cache.get(wstype, None)
+            if nb is None:
+                nb = SymmetricGridWidget()
+            self.nb = nb
 
         self._update_mdi_menu()
         if self.nb.has_callback('page-switch'):
@@ -916,12 +940,20 @@ class Workspace(Widgets.WidgetBase):
             self.nb.add_callback('page-detach', self._detach_page_cb)
         if self.nb.has_callback('page-close'):
             self.nb.add_callback('page-close', self._close_page_cb)
-        if self.nb.has_callback('widget-added'):
+        if self.nb.has_callback('child-added'):
+            self.nb.add_callback('child-added', self._page_added_cb)
+        elif self.nb.has_callback('widget-added'):
             self.nb.add_callback('widget-added', self._page_added_cb)
-        if self.nb.has_callback('widget-removed'):
+        if self.nb.has_callback('child-removed'):
+            self.nb.add_callback('child-removed', self._page_removed_cb)
+        elif self.nb.has_callback('widget-removed'):
             self.nb.add_callback('widget-removed', self._page_removed_cb)
 
         self.wstype = wstype
+
+    def resize(self, wd, ht):
+        if self.nb is not None:
+            self.nb.resize(wd, ht)
 
     def _update_mdi_menu(self):
         if self.mdi_menu is None:
@@ -975,32 +1007,30 @@ class Workspace(Widgets.WidgetBase):
         # remember which tab was on top
         idx = old_widget.get_index()
 
-        self.vbox.remove(old_widget)
-
         old_wstype = self.wstype
+        if old_wstype == 'mdi':
+            # if we are transitioning away from an MDI window
+            # grab the size and position of all children
+            children = list(old_widget.get_children())
+            for child in children:
+                title = child.extdata.get('tab_title', '')
+                d = self.child_catalog.get(title, {})
+                d['mdi_size'] = old_widget.get_child_size(child)
+                d['mdi_pos'] = old_widget.get_child_position(child)
+
         self._set_wstype(wstype)
-        self.vbox.add_widget(self.nb, stretch=1)
 
+        # reparent children under new widget
         for child in list(old_widget.get_children()):
-            # TODO: sort by previous index so they get added to the
-            # new widget in the same order
-            if old_wstype == 'mdi':
-                # record MDI window size and position if we are leaving
-                # an MDI configuration
-                child.extdata.mdi_size = child.get_size()
-                child.extdata.mdi_pos = child.get_pos()
-            if self.wstype == 'mdi':
-                # if entering an MDI configuration and we don't have
-                # previously saved size then set it to the current size
-                if child.extdata.get('mdi_size', None) is None:
-                    child.extdata.mdi_size = child.get_size()
-                    child.extdata.mdi_pos = child.get_pos()
-
             title = child.extdata.get('tab_title', '')
             child.hide()
             old_widget.remove(child)
-            self.nb.add_widget(child, title=title)
+            self.add_tab(child, title=title)
             child.show()
+
+        # swap widgets in the parent vbox
+        self.vbox.remove(old_widget)
+        self.vbox.add_widget(self.nb, stretch=1)
 
         # restore focus to widget that was on top
         if idx >= 0:
@@ -1026,7 +1056,7 @@ class Workspace(Widgets.WidgetBase):
                 return True
             # widget can't take focus.  If it is a container widget,
             # check its children
-            if isinstance(widget, Widgets.ContainerBase):
+            if isinstance(widget, Widgets.Widget) and widget.is_container():
                 for child in widget.get_children():
                     if _f(child):
                         return True
@@ -1060,10 +1090,11 @@ class Workspace(Widgets.WidgetBase):
         if len(title) > 0 and title in self.child_catalog:
             d = self.child_catalog.get(title, {})
         w = self.nb.add_widget(child, title=title)
+        child.extdata.tab_title = title
 
         if self.wstype == 'mdi':
             mdi_pos = d.get('mdi_pos', None)
-            size = d.get('size', None)
+            size = d.get('mdi_size', None)
             if w is not None:
                 if size is not None:
                     w.resize(*size)
@@ -1080,15 +1111,23 @@ class Workspace(Widgets.WidgetBase):
         for child in self.nb.get_children():
             if child.get_widget() is None:
                 continue
-            title = child.extdata.get('tab_title', None)
-            mdi_pos = child.extdata.get('mdi_pos', (0, 0))
-            size = child.extdata.get('mdi_size', None)
-            if size is None:
-                size = child.get_size()
+            if hasattr(self.nb, 'get_configuration'):
+                bnch = Bunch.Bunch(self.nb.get_configuration(child))
+                mdi_pos = (bnch.x, bnch.y)
+                size = (bnch.width, bnch.height)
+                title = bnch.title
+            else:
+                title = child.extdata.get('tab_title', None)
+                mdi_pos = child.extdata.get('mdi_pos', (0, 0))
+                size = child.extdata.get('mdi_size', None)
+                if size is None:
+                    size = child.get_size()
             if title is not None:
                 cd[title] = dict(title=title, mdi_pos=mdi_pos,
-                                 size=size)
-        res = dict(wsname=self.name, wstype=self.wstype, tabs=cd)
+                                 mdi_size=size)
+        nb_wd, nb_ht = self.nb.get_size()
+        res = dict(wsname=self.name, wstype=self.wstype,
+                   width=nb_wd, height=nb_ht, tabs=cd)
         return res
 
     def record_position(self, child):
@@ -1098,15 +1137,14 @@ class Workspace(Widgets.WidgetBase):
         title = child.extdata.get('tab_title', None)
         if title is None:
             return
-        pos = child.extdata.get('mdi_pos', None)
-        if pos is None:
-            pos = child.get_pos()
-        size = child.extdata.get('mdi_size', None)
-        if size is None:
-            size = child.get_size()
-
         tabs_dct = self.child_catalog.setdefault(title, {})
-        tabs_dct.update(dict(title=title, mdi_pos=pos, size=size))
+        tabs_dct['title'] = title
+        pos = child.extdata.get('mdi_pos', None)
+        if pos is None and self.wstype == 'mdi':
+            tabs_dct['mdi_pos'] = self.nb.get_child_position(child)
+        size = child.extdata.get('mdi_size', None)
+        if size is None and self.wstype == 'mdi':
+            tabs_dct['mdi_size'] = self.nb.get_child_size(child)
 
     def record_positions(self):
         """Record our placement and size of child windows in the workspace."""
@@ -1182,7 +1220,8 @@ class SymmetricGridWidget(Widgets.GridBox):
             widgets.append(child)
             self._relayout(widgets)
 
-        self.make_callback('widget-added', child)
+        #self.make_callback('widget-added', child)
+        self.make_callback('page-added', child)
 
     def remove(self, child, delete=False):
 
@@ -1232,8 +1271,8 @@ class SymmetricGridWidget(Widgets.GridBox):
         num_children = self.num_children()
         if 0 <= idx < num_children:
             self.cur_index = idx
-            child = self.children[idx]
-            # child.focus()
+            child = self.get_children()[idx]
+            #child.focus()
 
             if old_index != idx:
                 self.make_callback('page-switch', child)

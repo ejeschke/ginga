@@ -10,10 +10,12 @@ import pathlib
 from functools import reduce
 
 from ginga.gtk3w import GtkHelp
+from ginga.gtk3w.GtkHelp import Timer  # noqa
 from ginga import colors
 from ginga.util.paths import icondir as ginga_icon_dir
 from ginga.misc import Callback, Bunch, Settings, LineHistory
 from ginga.util.paths import icondir, app_icon_path
+from ginga.fonts import font_asst
 from ginga.util.syncops import Shelf
 
 from gi.repository import Gtk
@@ -21,17 +23,36 @@ from gi.repository import Gdk
 from gi.repository import GLib
 from gi.repository import GObject
 
-__all__ = ['WidgetError', 'WidgetBase', 'TextEntry', 'TextEntrySet',
-           'TextArea', 'Label', 'Button', 'ComboBox',
+__all__ = ['WidgetError', 'Widget', 'WidgetBase', 'TextEntry', 'TextEntrySet',
+           'TextArea', 'Label', 'Button', 'ComboBox', 'Timer',
            'SpinBox', 'Slider', 'Dial', 'ScrollBar', 'CheckBox', 'ToggleButton',
            'RadioButton', 'Image', 'ProgressBar', 'StatusBar', 'TreeView',
-           'ContainerBase', 'Box', 'HBox', 'VBox', 'Frame',
+           'TableView', 'ContainerBase', 'Box', 'HBox', 'VBox', 'Frame',
            'Expander', 'TabWidget', 'StackWidget', 'MDIWidget', 'ScrollArea',
            'Splitter', 'GridBox', 'Toolbar', 'MenuAction',
            'Menu', 'Menubar', 'TopLevelMixin', 'TopLevel', 'Application',
            'Dialog', 'SaveDialog', 'ColorDialog', 'FileDialog', 'MessageDialog',
            'DragPackage', 'WidgetMoveEvent', 'name_mangle', 'make_widget',
            'hadjust', 'build_info', 'wrap']
+
+
+_TABLE_VIEW_ROW_NUM_KEY = '_row_num_'
+
+# Recognised values for the ``widget`` field of a column descriptor
+# — kept in sync with the same constant in the qtw / pgw / gtk4w
+# wrappers.  The gtk3 backend records the field on the normalised
+# column dict but doesn't act on it yet (phase 3 will wire it).
+_CELL_WIDGETS = ('checkbox', 'combobox', 'progress', 'button')
+
+
+def _coerce_bool(s):
+    if isinstance(s, bool):
+        return s
+    if isinstance(s, (int, float)):
+        return bool(s)
+    if isinstance(s, str):
+        return s.strip().lower() in ('1', 'true', 't', 'yes', 'y', 'on', '✓')
+    return bool(s)
 
 
 class WidgetError(Exception):
@@ -62,11 +83,31 @@ class WidgetBase(Callback.Callbacks):
     def set_tooltip(self, text):
         self.widget.set_tooltip_text(text)
 
+    def set_bg(self, color):
+        """Set the widget's background colour.  ``color`` is a CSS
+        string (``'#rrggbb'``, ``'red'``, ``'rgba(...)'``, …) or
+        ``None`` to clear the override.
+
+        Implemented via ``GtkHelp.modify_bg``, which attaches a
+        small per-widget ``CssProvider`` to the widget's style
+        context with a class-scoped rule.  This means it works
+        on transparent containers (``Gtk.Box``, ``Gtk.Grid``)
+        too; the bg only shows in cell gaps where children don't
+        paint their own bg.
+
+        Themed widgets (Button, ComboBox, …) paint multi-state
+        backgrounds; a generic ``set_bg`` may be partially
+        overridden by hover / active states there."""
+        GtkHelp.modify_bg(self.widget, color)
+
     def get_enabled(self):
         self.widget.get_sensitive()
 
     def set_enabled(self, tf):
         self.widget.set_sensitive(tf)
+
+    def is_container(self):
+        return False
 
     def get_size(self):
         try:
@@ -117,6 +158,19 @@ class WidgetBase(Callback.Callbacks):
         if width > 0 and height > 0:
             GLib.idle_add(self.widget.set_size_request, -1, -1)
 
+    def set_min_size(self, wd, ht):
+        if wd is None:
+            # sentinal for unrestricted
+            wd = -1
+        if ht is None:
+            # sentinal for unrestricted
+            ht = -1
+        self.widget.set_size_request(wd, ht)
+
+    def set_max_size(self, wd, ht):
+        # NOTE: no direct equivalent in Gtk
+        pass
+
     def get_font(self, font_family, point_size):
         font = GtkHelp.get_font(font_family, point_size)
         return font
@@ -134,12 +188,18 @@ class WidgetBase(Callback.Callbacks):
         # this is for compatibility with Qt widgets
         pass
 
+    def set_expanding(self, horizontal=False, vertical=False):
+        # NOTE: no direct equivalent in Gtk
+        pass
+
     def set_border_width(self, pix):
         self.widget.set_border_width(pix)
 
     def get_rgb_array(self):
         return GtkHelp.get_rgb_array(self.widget)
 
+
+Widget = WidgetBase
 
 # BASIC WIDGETS
 
@@ -421,9 +481,15 @@ class Label(WidgetBase):
 
     def set_color(self, fg=None, bg=None):
         if bg is not None:
+            # the EventBox is input-only by default (visible_window is
+            # False), so it never paints a background; give it a real
+            # window so the CSS background-color actually renders
+            self.evbox.props.visible_window = True
             GtkHelp.modify_bg(self.evbox, bg)
         if fg is not None:
-            self.label.modify_fg(Gtk.StateType.NORMAL, Gdk.color_parse(fg))
+            # set the label text colour via CSS; the deprecated
+            # modify_fg() no longer affects CSS-themed label text
+            GtkHelp.modify_fg(self.label, fg)
 
     def set_halign(self, align):
         align = align.lower()
@@ -435,6 +501,22 @@ class Label(WidgetBase):
             self.label.set_justify(Gtk.Justification.RIGHT)
         else:
             raise ValueError(f"Don't understand alignment '{align}'")
+
+    def set_valign(self, align):
+        align = align.lower()
+        # GtkWidget's valign property positions the label within
+        # whatever vertical space the parent allocates — only
+        # visible when the parent gives the label more height
+        # than the text needs (e.g. inside a stretched Box cell).
+        if align == 'top':
+            gtk_align = Gtk.Align.START
+        elif align == 'center':
+            gtk_align = Gtk.Align.CENTER
+        elif align == 'bottom':
+            gtk_align = Gtk.Align.END
+        else:
+            raise ValueError(f"Don't understand alignment '{align}'")
+        self.label.set_valign(gtk_align)
 
 
 class Button(WidgetBase):
@@ -901,9 +983,14 @@ class TreeView(WidgetBase):
         self.datatypes = []
         # shadow index
         self.shadow = {}
-        self.font = 'Sans Serif'
+        # a font_asst.Font(family, style, weight) tuple; we only need the
+        # CSS attributes here, not a native font object
+        self.font = font_asst.parse_font('sans')
         self.fontsize = 10.0
         self.cell_pad_px = 0
+        # separate vertical (row) / horizontal (column) cell padding
+        self.row_pad_px = 0
+        self.col_pad_px = 0
         self.editable = False
 
         # this widget has a built in ScrollArea to match Qt functionality
@@ -940,8 +1027,13 @@ class TreeView(WidgetBase):
         self._selection_shelf = Shelf()
         self._selection_stocker = self._selection_shelf.get_stocker()
 
+        # Tracks the current sort direction per column index so
+        # repeated clicks on the same header toggle ascending/
+        # descending — matches qtw's QHeaderView behaviour.
+        self._sort_ascending = {}
+
         for cbname in ('selected', 'activated', 'drag-start',
-                       'collapsed', 'expanded', 'changed'):
+                       'collapsed', 'expanded', 'changed', 'sorted'):
             self.enable_callback(cbname)
         self.__set_style()
 
@@ -994,7 +1086,7 @@ class TreeView(WidgetBase):
                 cell.set_property("editable", self.editable)
                 cell.connect("edited", self._edited_cb, datakey, n)
 
-            cell.set_padding(self.cell_pad_px, self.cell_pad_px)
+            cell.set_padding(self.col_pad_px, self.row_pad_px)
             header = headers[n]
             tvc = Gtk.TreeViewColumn(header, cell)
             tvc.set_resizable(True)
@@ -1289,14 +1381,42 @@ class TreeView(WidgetBase):
         item = self._path_to_item(path)  # noqa
         # TODO
 
-    def set_font(self, fontname, size):
-        self.font = fontname
+    def set_font(self, font, size=10):
+        # This is a CSS-styled widget, so we need the font family/style/
+        # weight, not a native font object.  A string spec ("family",
+        # "family;style;weight") is parsed via font_asst into a Font tuple
+        # (family, style, weight); a Font is used as-is.
+        if isinstance(font, str):
+            font = font_asst.parse_font(font)
+        self.font = font
         self.fontsize = size
         self.__set_style()
 
     def set_cell_padding(self, px):
         self.cell_pad_px = int(px)
+        self.row_pad_px = self.col_pad_px = int(px)
+        self._apply_cell_padding()
         self.__set_style()
+
+    def set_row_spacing(self, px):
+        # vertical padding inside each cell (controls row height)
+        self.row_pad_px = int(px)
+        self._apply_cell_padding()
+
+    def set_column_spacing(self, px):
+        # horizontal padding inside each cell
+        self.col_pad_px = int(px)
+        self._apply_cell_padding()
+
+    def _apply_cell_padding(self):
+        # update the (xpad, ypad) on existing cell renderers so a spacing
+        # change takes effect without rebuilding the table.  Note: the
+        # columns live on the GtkTreeView (self.tv), not the
+        # ScrolledWindow wrapper (self.widget).
+        for column in self.tv.get_columns():
+            for cell in column.get_cells():
+                cell.set_padding(self.col_pad_px, self.row_pad_px)
+        self.tv.queue_resize()
 
     def _path_to_item(self, path):
         s = self.shadow
@@ -1347,10 +1467,16 @@ class TreeView(WidgetBase):
 
     def __set_style(self):
         myname = self._get_name()
+        # expand the family to a CSS fallback list of registered
+        # substitutes, since Pango/GTK can't resolve an alias like
+        # 'fixed' from a single CSS font-family
+        family = font_asst.get_css_family_list(self.font.family)
         style = f"""
         .{myname} {{
-            font-family: {self.font};
+            font-family: {family};
             font-size: {self.fontsize}pt;
+            font-style: {self.font.style};
+            font-weight: {self.font.weight};
         }}
         """
         context = self.widget.get_style_context()
@@ -1362,24 +1488,62 @@ class TreeView(WidgetBase):
     def sort_cb(self, column, idx):
         treeview = column.get_tree_view()
         model = treeview.get_model()
-        model.set_sort_column_id(idx, Gtk.SortType.ASCENDING)
+        # Toggle direction if this column was already the active
+        # sort target; otherwise default to ascending.
+        ascending = not self._sort_ascending.get(idx, False)
+        self._sort_ascending = {idx: ascending}
+        order = (Gtk.SortType.ASCENDING if ascending
+                 else Gtk.SortType.DESCENDING)
         fn = self.cell_sort_funcs[idx]
         model.set_sort_func(idx, fn)
+        model.set_sort_column_id(idx, order)
+        # Fire 'sorted' with the column key (not index), to match
+        # the qtw / pgw TableView signature.
+        col_key = (self.datakeys[idx]
+                   if 0 <= idx < len(self.datakeys) else idx)
+        self.make_callback('sorted', col_key, ascending)
         return True
 
-    def _cmp(self, val1, val2):
-        if isinstance(val1, str):
-            val1, val2 = val1.lower(), val2.lower()
+    def _cmp(self, val1, val2, datatype='str'):
+        # Empty strings always sort last regardless of direction —
+        # matching the qtw TreeWidgetItem.__lt__ behaviour.
+        a_empty = (isinstance(val1, str) and val1 == '')
+        b_empty = (isinstance(val2, str) and val2 == '')
+        if a_empty and not b_empty:
+            return 1
+        if b_empty and not a_empty:
+            return -1
+
+        if datatype in ('int', 'integer'):
             try:
-                val1, val2 = float(val1), float(val2)
-            except ValueError:
+                a, b = int(val1), int(val2)
+                return (a > b) - (a < b)
+            except (ValueError, TypeError):
                 pass
-            if val1 < val2:
-                return -1
-            elif val1 > val2:
-                return 1
-            else:
-                return 0
+        elif datatype in ('float', 'number'):
+            try:
+                a, b = float(val1), float(val2)
+                return (a > b) - (a < b)
+            except (ValueError, TypeError):
+                pass
+        elif datatype in ('bool', 'boolean', 'check'):
+            a, b = _coerce_bool(val1), _coerce_bool(val2)
+            return (a > b) - (a < b)
+
+        # Default ('str' or unknown): preserve legacy "try numeric,
+        # fall back to case-insensitive string" heuristic.
+        if isinstance(val1, str):
+            a, b = val1.lower(), val2.lower() if isinstance(val2, str) else val2
+            try:
+                a, b = float(a), float(b)
+            except (ValueError, TypeError):
+                pass
+            return (a > b) - (a < b)
+        # Non-string, non-typed: fall back to direct comparison.
+        try:
+            return (val1 > val2) - (val1 < val2)
+        except TypeError:
+            return 0
 
     def _mksrtfnN(self, kwd, datatype):
         def fn(*args):
@@ -1387,9 +1551,9 @@ class TreeView(WidgetBase):
             bnch1 = model.get_value(iter1, 0)
             bnch2 = model.get_value(iter2, 0)
             if isinstance(bnch1, str):
-                return self._cmp(bnch1, bnch2)
+                return self._cmp(bnch1, bnch2, datatype=datatype)
             val1, val2 = bnch1[kwd], bnch2[kwd]
-            return self._cmp(val1, val2)
+            return self._cmp(val1, val2, datatype=datatype)
         return fn
 
     def _mkcolfnN(self, idx, kwd, datatype):
@@ -1409,6 +1573,12 @@ class TreeView(WidgetBase):
 
             if isinstance(cell, Gtk.CellRendererPixbuf):
                 if datatype == 'icon':
+                    # the 'pixbuf' property needs a GdkPixbuf (a GObject) or
+                    # None; an empty/non-leaf cell value ('' or None) would
+                    # raise "expected GObject but got ''", so coerce any
+                    # non-GObject to None
+                    if not isinstance(value, GObject.GObject):
+                        value = None
                     cell.set_property('pixbuf', value)
             elif isinstance(cell, Gtk.CellRendererToggle):
                 if datatype == 'check':
@@ -1449,6 +1619,1247 @@ class TreeView(WidgetBase):
         return GtkHelp.get_rgb_array(self.tv)
 
 
+class TableView(TreeView):
+    """Flat tabular view, API-compatible with the qtw and pgw TableView.
+
+    Backed by the same :class:`TreeView` machinery — a ``GtkTreeView``
+    over a ``GtkTreeStore(object)`` storing one dict per row — but
+    presents as a flat table (no hierarchy, no expand/collapse) with
+    a row-oriented public API matching :class:`PGW.TableView`.
+
+    See :class:`ginga.qtw.Widgets.TableView` for the full set of
+    constructor options and callback signatures; this class mirrors
+    them exactly.
+
+    Callbacks emitted (in addition to those inherited from TreeView):
+
+    * ``activated(table, row_dict, [row_index], col_key)``
+    * ``selected(table, list_of_row_dicts)``
+    * ``sorted(table, col_key, ascending)``
+    * ``cell_edited(table, [row_index], col_key, old_value, new_value)``
+    * ``scrolled(table, h_pct, v_pct)``
+    """
+
+    def __init__(self, columns=None, show_header=True,
+                 selection_mode='single', alternate_row_colors=False,
+                 show_grid=False, show_row_numbers=False,
+                 sortable=False, allow_text_selection=False,
+                 dragable=False):
+        # GTK fallback: cell modes degrade to row-equivalents on this
+        # backend (no native rectangular-cell support in GtkTreeView).
+        # The public API (get_selected_cells, copy/cut/paste callbacks)
+        # still works — selections just snap to whole rows.
+        self._selection_mode_arg = selection_mode
+        if selection_mode == 'single-cell':
+            parent_mode = 'single'
+        elif selection_mode == 'multiple-cell':
+            parent_mode = 'multiple'
+        else:
+            parent_mode = selection_mode
+        super().__init__(auto_expand=False, sortable=sortable,
+                         selection=parent_mode,
+                         use_alt_row_color=alternate_row_colors,
+                         dragable=dragable)
+
+        if not show_header:
+            self.tv.set_headers_visible(False)
+
+        # Per-column editable flags (user-space indices, excluding
+        # the synthetic row-number column).
+        self._editable_cols = set()
+        # User-supplied (normalised) column descriptors.
+        self._user_columns = []
+        self._show_row_numbers = bool(show_row_numbers)
+        self._show_grid = False
+        self._allow_text_selection = bool(allow_text_selection)  # noqa
+
+        # Colour-override layers (cell > row > column > table).
+        # Per-cell and per-row entries are keyed by ``id()`` of
+        # the row dict that's stored in the TreeStore's column 0;
+        # those entries survive sort but are dropped when the
+        # row's dict goes away (clear() / delete_row).  Initialised
+        # BEFORE super().__init__ runs setup_table so the
+        # cell-data-func closure installed there can safely
+        # consult these dicts.
+        self._cell_colors = {}     # (id(row_dict), col_key) -> {fg,bg}
+        self._row_colors = {}      # id(row_dict)            -> {fg,bg}
+        self._col_colors = {}      # col_key                 -> {fg,bg}
+        self._table_color = None   # {fg,bg} | None
+
+        # Alternating-row stripe.  Applied in ``_mkcolfnN`` only
+        # when no explicit bg is set at any override layer, so any
+        # cell/row/column/table colour wins.  The stripe is painted
+        # via the cell renderer's ``cell-background`` property, so
+        # it survives ``show_grid`` (grid lines render on top).
+        self._alternate_row_colors = bool(alternate_row_colors)
+
+        # Additional callbacks beyond TreeView's set.
+        # ``cell_action`` is reserved for ``widget``-shaped action
+        # cells (phase 3 wires it on this backend).
+        for cbname in ('cell_edited', 'scrolled',
+                       'cell_selected', 'cell_action',
+                       'copy', 'cut', 'paste'):
+            self.enable_callback(cbname)
+
+        # Hook scrolled-window adjustments for the 'scrolled' cb.
+        sw = self.widget
+        sw.get_hadjustment().connect('value-changed', self._scroll_cb)
+        sw.get_vadjustment().connect('value-changed', self._scroll_cb)
+
+        # Keyboard Ctrl+C / X / V (GTK3 style key-press-event).
+        self.tv.connect('key-press-event', self._on_key_press_clipboard)
+
+        if show_grid:
+            self.set_show_grid(True)
+
+        if columns is not None:
+            self.set_columns(columns)
+
+    # ----- internal helpers ------------------------------------
+
+    @staticmethod
+    def _normalise_columns(columns):
+        out = []
+        for i, col in enumerate(columns):
+            if isinstance(col, dict):
+                key = col.get('key') or col.get('label') or f'col{i}'
+                widget = col.get('widget')
+                if widget is not None and widget not in _CELL_WIDGETS:
+                    raise WidgetError(
+                        f"unknown column widget {widget!r} "
+                        f"(expected one of {_CELL_WIDGETS})")
+                d = {'label': col.get('label', key),
+                     'key': key,
+                     'type': col.get('type', 'string'),
+                     'halign': col.get('halign'),
+                     'editable': bool(col.get('editable', False)),
+                     'widget': widget,
+                     'choices': (list(col['choices'])
+                                 if 'choices' in col else None),
+                     'min': col.get('min'),
+                     'max': col.get('max'),
+                     'text': col.get('text'),
+                     'enabled_key': col.get('enabled_key'),
+                     'visible_key': col.get('visible_key'),
+                     'colwidth': col.get('colwidth')}
+            elif isinstance(col, (tuple, list)):
+                label = col[0]
+                key = col[1] if len(col) > 1 else label
+                dtype = col[2] if len(col) > 2 else 'string'
+                d = {'label': label, 'key': key, 'type': dtype,
+                     'halign': None, 'editable': False,
+                     'widget': None, 'choices': None,
+                     'min': None, 'max': None, 'text': None,
+                     'enabled_key': None, 'visible_key': None,
+                     'colwidth': None}
+            elif isinstance(col, str):
+                d = {'label': col, 'key': col, 'type': 'string',
+                     'halign': None, 'editable': False,
+                     'widget': None, 'choices': None,
+                     'min': None, 'max': None, 'text': None,
+                     'enabled_key': None, 'visible_key': None,
+                     'colwidth': None}
+            else:
+                raise WidgetError(
+                    f"unrecognised column descriptor: {col!r}")
+            out.append(d)
+        return out
+
+    def _col_offset(self):
+        return 1 if self._show_row_numbers else 0
+
+    def _user_col_keys(self):
+        return [c['key'] for c in self._user_columns]
+
+    def _build_col_specs(self):
+        specs = [(c['label'], c['key'], c['type'])
+                 for c in self._user_columns]
+        if self._show_row_numbers:
+            specs = [('', _TABLE_VIEW_ROW_NUM_KEY, 'str')] + specs
+        return specs
+
+    def _rebuild_table(self, rows=None):
+        col_specs = self._build_col_specs()
+        if not col_specs:
+            return
+        leaf_key = self._user_columns[0]['key']
+        # Set editable=True at the renderer level if any column is
+        # editable; per-column gating happens in _post_setup_columns.
+        self.editable = bool(self._editable_cols)
+        super().setup_table(col_specs, levels=1, leaf_key=leaf_key)
+        self._post_setup_columns()
+        if rows is not None:
+            self.set_rows(rows)
+
+    def _post_setup_columns(self):
+        offset = self._col_offset()
+        for n, tvc in enumerate(self.tv.get_columns()):
+            user_idx = n - offset
+            if 0 <= user_idx < len(self._user_columns) \
+                    and self._user_columns[user_idx].get('widget'):
+                # Swap the parent's default text renderer for the
+                # right widget-cell renderer (checkbox / combobox /
+                # progress / button).  See _swap_widget_cell_gtk.
+                self._swap_widget_cell_gtk(
+                    tvc, n, self._user_columns[user_idx])
+                continue
+            # Per-column editability for text cells.
+            for cell in tvc.get_cells():
+                if isinstance(cell, Gtk.CellRendererText):
+                    cell.set_property(
+                        "editable",
+                        user_idx >= 0 and user_idx in self._editable_cols)
+                    # Apply halign if specified for this column.
+                    if 0 <= user_idx < len(self._user_columns):
+                        halign = self._user_columns[user_idx].get('halign')
+                        if halign == 'right':
+                            cell.set_property('xalign', 1.0)
+                        elif halign == 'center':
+                            cell.set_property('xalign', 0.5)
+                        elif halign == 'left':
+                            cell.set_property('xalign', 0.0)
+        if self._show_row_numbers:
+            self._configure_row_number_column()
+        self._apply_initial_colwidths()
+        # Wire a single button-press handler the first time we get
+        # here so per-row 'button'-widget cells can fire
+        # ``cell_action`` on single click.  Idempotent: subsequent
+        # rebuilds reuse the same handler.
+        if not getattr(self, '_widget_btn_handler', False):
+            self.tv.connect('button-press-event',
+                            self._on_tv_button_press_for_widget_cells)
+            self._widget_btn_handler = True
+
+    def _configure_row_number_column(self):
+        tvc = self.tv.get_column(0)
+        if tvc is None:
+            return
+        cells = tvc.get_cells()
+        if not cells:
+            return
+        cell = cells[0]
+        # Header-like styling: bold, right-aligned text.
+        try:
+            cell.set_property('weight', 700)
+            cell.set_property('xalign', 1.0)
+            cell.set_property('editable', False)
+            # Theme-aware background for the row-header look.
+            style_ctx = self.tv.get_style_context()
+            bg = style_ctx.get_background_color(Gtk.StateFlags.NORMAL)
+            cell.set_property('cell-background-rgba', bg)
+        except Exception:
+            pass
+
+        def row_num_data(column, cell, model, it, _):
+            path = model.get_path(it)
+            indices = path.get_indices() if path is not None else [0]
+            cell.set_property('text', str(indices[0] + 1))
+
+        tvc.set_cell_data_func(cell, row_num_data, None)
+        tvc.set_resizable(False)
+        tvc.set_clickable(False)
+        tvc.set_sizing(Gtk.TreeViewColumnSizing.AUTOSIZE)
+
+    # ----- column management -----------------------------------
+
+    def set_columns(self, columns):
+        self._user_columns = self._normalise_columns(columns)
+        # Pick up any ``editable: True`` flags baked into the
+        # column dicts (matches the pgw side, where the JS reads
+        # ``colDef.editable`` directly).
+        self._editable_cols = {i for i, c in enumerate(self._user_columns)
+                               if c.get('editable')}
+        self._rebuild_table()
+
+    def insert_column(self, idx, column):
+        col, = self._normalise_columns([column])
+        self._user_columns.insert(idx, col)
+        rows = self.get_rows()
+        for r in rows:
+            r.setdefault(col['key'], '')
+        self._rebuild_table(rows=rows)
+
+    def append_column(self, column):
+        self.insert_column(len(self._user_columns), column)
+
+    def delete_column(self, idx):
+        if not (0 <= idx < len(self._user_columns)):
+            raise WidgetError(f"column index {idx} out of range")
+        removed = self._user_columns.pop(idx)
+        rows = self.get_rows()
+        for r in rows:
+            r.pop(removed['key'], None)
+        self._rebuild_table(rows=rows)
+
+    def set_column_editable(self, col_idx, tf):
+        if tf:
+            self._editable_cols.add(col_idx)
+        else:
+            self._editable_cols.discard(col_idx)
+        offset = self._col_offset()
+        tvc = self.tv.get_column(col_idx + offset)
+        if tvc is None:
+            return
+        for cell in tvc.get_cells():
+            if isinstance(cell, Gtk.CellRendererText):
+                cell.set_property("editable", tf)
+        self.editable = bool(self._editable_cols)
+
+    def get_column_count(self):
+        return len(self._user_columns)
+
+    def set_column_width(self, idx, width):
+        col = self.tv.get_column(idx + self._col_offset())
+        if col is None:
+            return
+        col.set_sizing(Gtk.TreeViewColumnSizing.FIXED)
+        col.set_fixed_width(width)
+
+    def _apply_initial_colwidths(self):
+        """Apply any per-column ``colwidth`` declared on the
+        column descriptors.  Pixel integers only — string forms
+        (used by the pgw backend's grid track syntax) are ignored
+        here."""
+        for i, col in enumerate(self._user_columns):
+            w = col.get('colwidth')
+            if w is None:
+                continue
+            try:
+                px = int(w)
+            except (TypeError, ValueError):
+                continue
+            self.set_column_width(i, px)
+
+    # ----- row management --------------------------------------
+
+    def set_rows(self, rows):
+        self.clear()
+        for r in rows:
+            self._append_one(r)
+
+    def set_data(self, data):
+        """Replace all rows.  Accepts the same row forms as :meth:`set_rows`,
+        or a numpy array: a structured/record array becomes dict rows (keyed
+        by field name), a 2-D array becomes positional rows."""
+        from ginga.util import tablehelper
+        if tablehelper.is_ndarray(data):
+            data = tablehelper.rows_from_ndarray(data)
+        self.set_rows(data)
+
+    def set_table(self, table):
+        """Populate the table from an astropy Table or pandas DataFrame:
+        derive the columns from the table (name -> key/label, dtype -> type),
+        then load its contents as rows."""
+        from ginga.util import tablehelper
+        self.set_columns(tablehelper.columns_from_table(table))
+        self.set_rows(tablehelper.rows_from_table(table))
+
+    def append_row(self, values):
+        self._append_one(values)
+
+    def insert_row(self, idx, values):
+        d = self._row_to_dict(values)
+        model = self.tv.get_model()
+        n = model.iter_n_children(None)
+        if idx < 0:
+            idx = 0
+        if idx > n:
+            idx = n
+        new_iter = model.insert(None, idx)
+        model.set_value(new_iter, 0, d)
+
+    def delete_row(self, idx):
+        model = self.tv.get_model()
+        n = model.iter_n_children(None)
+        if not (0 <= idx < n):
+            raise WidgetError(f"row index {idx} out of range")
+        # Capture the row dict's id before removing the row so we
+        # can purge dangling colour entries that referenced it.
+        it = model.iter_nth_child(None, idx)
+        d = model.get_value(it, 0)
+        rid = id(d) if isinstance(d, dict) else None
+        model.remove(it)
+        if rid is not None:
+            self._row_colors.pop(rid, None)
+            for key in [k for k in self._cell_colors if k[0] == rid]:
+                del self._cell_colors[key]
+
+    def clear(self):
+        # Drop per-cell / per-row colour entries — they reference
+        # dict identities about to be discarded.  Column / table
+        # layers persist across a clear.
+        self._cell_colors.clear()
+        self._row_colors.clear()
+        super().clear()
+
+    def get_row_count(self):
+        model = self.tv.get_model()
+        return model.iter_n_children(None) if model is not None else 0
+
+    def get_row(self, idx):
+        model = self.tv.get_model()
+        n = model.iter_n_children(None) if model is not None else 0
+        if not (0 <= idx < n):
+            raise WidgetError(f"row index {idx} out of range")
+        it = model.iter_nth_child(None, idx)
+        d = model.get_value(it, 0)
+        return dict(d) if isinstance(d, dict) else {}
+
+    def get_rows(self):
+        model = self.tv.get_model()
+        if model is None:
+            return []
+        out = []
+        for i in range(model.iter_n_children(None)):
+            it = model.iter_nth_child(None, i)
+            d = model.get_value(it, 0)
+            out.append(dict(d) if isinstance(d, dict) else {})
+        return out
+
+    def set_cell(self, row, col, value):
+        if not (0 <= col < len(self._user_columns)):
+            raise WidgetError(f"column index {col} out of range")
+        model = self.tv.get_model()
+        n = model.iter_n_children(None) if model is not None else 0
+        if not (0 <= row < n):
+            raise WidgetError(f"row index {row} out of range")
+        it = model.iter_nth_child(None, row)
+        d = model.get_value(it, 0)
+        if not isinstance(d, dict):
+            d = {}
+            model.set_value(it, 0, d)
+        key = self._user_columns[col]['key']
+        d[key] = value
+        # Trigger a redraw.
+        model.row_changed(model.get_path(it), it)
+
+    def _row_to_dict(self, values):
+        if isinstance(values, dict):
+            return dict(values)
+        if isinstance(values, (list, tuple)):
+            return dict(zip(self._user_col_keys(), values))
+        raise WidgetError(
+            f"row must be a dict or sequence, got {type(values).__name__}")
+
+    def _append_one(self, values):
+        d = self._row_to_dict(values)
+        model = self.tv.get_model()
+        model.append(None, [d])
+
+    # ----- selection -------------------------------------------
+
+    def get_selected(self):
+        treeselection = self.tv.get_selection()
+        model, pathlist = treeselection.get_selected_rows()
+        out = []
+        for path in pathlist:
+            it = model.get_iter(path)
+            d = model.get_value(it, 0)
+            if isinstance(d, dict):
+                out.append(dict(d))
+        return out
+
+    def get_selected_paths(self):
+        """Return selected rows as a list of ``[row_index]`` paths."""
+        treeselection = self.tv.get_selection()
+        _model, pathlist = treeselection.get_selected_rows()
+        out = []
+        for path in pathlist:
+            indices = path.get_indices() if path is not None else []
+            if indices:
+                out.append([indices[0]])
+        return out
+
+    def set_selected(self, items):
+        treeselection = self.tv.get_selection()
+        with self._selection_stocker:
+            treeselection.unselect_all()
+            for it in items:
+                idx = self._resolve_to_row_index(it)
+                if idx is None or not (0 <= idx < self.get_row_count()):
+                    continue
+                model = self.tv.get_model()
+                gtk_iter = model.iter_nth_child(None, idx)
+                if gtk_iter is not None:
+                    treeselection.select_iter(gtk_iter)
+
+    def select_path(self, path, state=True):
+        if not path:
+            return
+        idx = self._resolve_to_row_index(path)
+        if idx is None or not (0 <= idx < self.get_row_count()):
+            return
+        model = self.tv.get_model()
+        gtk_iter = model.iter_nth_child(None, idx)
+        treeselection = self.tv.get_selection()
+        with self._selection_stocker:
+            if state:
+                treeselection.select_iter(gtk_iter)
+            else:
+                treeselection.unselect_iter(gtk_iter)
+
+    def select_paths(self, paths, state=True):
+        for p in paths:
+            self.select_path(p, state=state)
+
+    def select_all(self, state=True):
+        treeselection = self.tv.get_selection()
+        with self._selection_stocker:
+            if state:
+                treeselection.select_all()
+            else:
+                treeselection.unselect_all()
+
+    def _resolve_to_row_index(self, item):
+        if isinstance(item, int):
+            return item
+        if isinstance(item, (list, tuple)) and item:
+            head = item[0]
+            if isinstance(head, int):
+                return head
+            if isinstance(head, str) and head.startswith('row'):
+                try:
+                    return int(head[3:])
+                except ValueError:
+                    return None
+            try:
+                return int(head)
+            except (TypeError, ValueError):
+                return None
+        if isinstance(item, dict):
+            leaf = self.leaf_key
+            if leaf is None:
+                return None
+            want = item.get(leaf)
+            for i in range(self.get_row_count()):
+                if self.get_row(i).get(leaf) == want:
+                    return i
+        return None
+
+    # ----- sort / scroll ---------------------------------------
+
+    def set_sortable(self, tf):
+        self.sortable = bool(tf)
+        for tvc in self.tv.get_columns():
+            tvc.set_clickable(self.sortable)
+
+    def sort_by_column(self, col, ascending=True):
+        n = col + self._col_offset()
+        if not (0 <= n < len(self.cell_sort_funcs)):
+            return
+        model = self.tv.get_model()
+        order = (Gtk.SortType.ASCENDING if ascending
+                 else Gtk.SortType.DESCENDING)
+        fn = self.cell_sort_funcs[n]
+        model.set_sort_func(n, fn)
+        model.set_sort_column_id(n, order)
+        self._sort_ascending = {n: ascending}
+
+    def scroll_to_path(self, path):
+        idx = self._resolve_to_row_index(path)
+        if idx is None or not (0 <= idx < self.get_row_count()):
+            return
+        model = self.tv.get_model()
+        gtk_path = model.get_path(model.iter_nth_child(None, idx))
+        self.tv.scroll_to_cell(gtk_path, None, True, 0.5, 0.0)
+
+    def scroll_to_end(self):
+        n = self.get_row_count()
+        if not n:
+            return
+        model = self.tv.get_model()
+        it = model.iter_nth_child(None, n - 1)
+        self.tv.scroll_to_cell(model.get_path(it), None, True, 1.0, 0.0)
+
+    def set_scroll_position(self, h_pct, v_pct):
+        sw = self.widget
+        for adj, pct in ((sw.get_hadjustment(), h_pct),
+                         (sw.get_vadjustment(), v_pct)):
+            lower = adj.get_lower()
+            upper = adj.get_upper() - adj.get_page_size()
+            adj.set_value(lower + pct * max(upper - lower, 0))
+
+    def get_scroll_position(self):
+        sw = self.widget
+        out = []
+        for adj in (sw.get_hadjustment(), sw.get_vadjustment()):
+            lower = adj.get_lower()
+            upper = adj.get_upper() - adj.get_page_size()
+            rng = upper - lower
+            out.append((adj.get_value() - lower) / rng if rng > 0 else 0.0)
+        return tuple(out)
+
+    # ----- display config --------------------------------------
+
+    def set_show_grid(self, tf):
+        self._show_grid = bool(tf)
+        self.tv.set_grid_lines(
+            Gtk.TreeViewGridLines.BOTH if self._show_grid
+            else Gtk.TreeViewGridLines.NONE)
+        # GTK paints grid lines using ``gtk_render_line``, which
+        # picks up the style context's ``border-color`` for
+        # ``treeview.view``.  Most light themes set that at
+        # ~rgba(0,0,0,0.1) — invisible on white.  Add (idempotently)
+        # a stronger CSS rule so the lines actually show up.
+        self._apply_grid_css()
+
+    _GRID_CSS = b"""
+    treeview.view {
+        border-color: #999999;
+    }
+    """
+
+    def _apply_grid_css(self):
+        if getattr(self, '_grid_css_provider', None) is not None:
+            return
+        provider = Gtk.CssProvider()
+        try:
+            provider.load_from_data(self._GRID_CSS)
+        except Exception:
+            return
+        ctx = self.tv.get_style_context()
+        ctx.add_provider(provider,
+                         Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        self._grid_css_provider = provider
+
+    def set_show_row_numbers(self, tf):
+        new = bool(tf)
+        if new == self._show_row_numbers:
+            return
+        self._show_row_numbers = new
+        if self._user_columns:
+            rows = self.get_rows()
+            self.set_columns(self._user_columns)
+            self.set_rows(rows)
+
+    # ----- overridden callback redirects -----------------------
+
+    def _selection_cb(self, treeselection):
+        if self._selection_shelf.is_blocked():
+            return
+        self.make_callback('selected', self.get_selected())
+
+    def _cb_redirect(self, treeview, path, column):
+        model = treeview.get_model()
+        it = model.get_iter(path)
+        d = model.get_value(it, 0)
+        row_dict = dict(d) if isinstance(d, dict) else {}
+        indices = path.get_indices() if path is not None else [0]
+        # Resolve column key (user-space) from the clicked column.
+        col_key = None
+        try:
+            col_idx = self.tv.get_columns().index(column)
+            user_col = col_idx - self._col_offset()
+            if 0 <= user_col < len(self._user_columns):
+                col_key = self._user_columns[user_col]['key']
+        except (ValueError, IndexError):
+            pass
+        self.make_callback('activated', row_dict, [indices[0]], col_key)
+
+    def _edited_cb(self, cell, path, new_text, datakey, col):
+        # Override to emit the unified 'cell_edited' signature in
+        # addition to the legacy 'changed' callback.
+        model = self.tv.get_model()
+        it = model.get_iter(path)
+        d = model.get_value(it, 0)
+        if not isinstance(d, dict):
+            d = {}
+            model.set_value(it, 0, d)
+        old_value = d.get(datakey)
+        d[datakey] = new_text
+        model.row_changed(model.get_path(it), it)
+        try:
+            idx = int(str(path).split(':')[0])
+        except (ValueError, TypeError):
+            idx = -1
+        user_col = col - self._col_offset()
+        col_key = (self._user_columns[user_col]['key']
+                   if 0 <= user_col < len(self._user_columns) else datakey)
+        self.make_callback('changed', [idx], col_key, new_text)
+        self.make_callback('cell_edited', [idx], col_key,
+                           old_value, new_text)
+
+    def _toggled_cb(self, cell, path, datakey, col):
+        model = self.tv.get_model()
+        it = model.get_iter(path)
+        d = model.get_value(it, 0)
+        if not isinstance(d, dict):
+            d = {}
+            model.set_value(it, 0, d)
+        old_value = d.get(datakey)
+        new_value = not _coerce_bool(old_value)
+        d[datakey] = new_value
+        model.row_changed(model.get_path(it), it)
+        try:
+            idx = int(str(path).split(':')[0])
+        except (ValueError, TypeError):
+            idx = -1
+        user_col = col - self._col_offset()
+        col_key = (self._user_columns[user_col]['key']
+                   if 0 <= user_col < len(self._user_columns) else datakey)
+        self.make_callback('changed', [idx], col_key, new_value)
+        self.make_callback('cell_edited', [idx], col_key,
+                           old_value, new_value)
+
+    def _scroll_cb(self, *args):
+        h, v = self.get_scroll_position()
+        self.make_callback('scrolled', h, v)
+
+    def _on_key_press_clipboard(self, widget, event):
+        # GDK Ctrl+C / X / V → widget-level clipboard shortcuts.
+        ctrl = bool(event.state & Gdk.ModifierType.CONTROL_MASK)
+        if not ctrl:
+            return False  # let other handlers run
+        keyname = Gdk.keyval_name(event.keyval) or ''
+        keyname = keyname.lower()
+        if keyname == 'c':
+            self.copy_selection()
+            return True
+        if keyname == 'x':
+            self.cut_selection()
+            return True
+        if keyname == 'v':
+            self.paste_selection()
+            return True
+        return False
+
+    # ----- cell-selection API (row-only fallback on gtk) ------
+
+    def get_selected_cells(self):
+        """Return cells in selected rows as ``[{path, col_key, value}, ...]``.
+
+        GtkTreeView doesn't expose native rectangular-cell selection,
+        so on this backend cell-mode selections snap to whole rows
+        and we expand each selected row into one entry per column.
+        """
+        out = []
+        for path in self.get_selected_paths():
+            row_idx = path[0]
+            row_dict = self.get_row(row_idx)
+            for col in self._user_columns:
+                key = col['key']
+                value = row_dict.get(key, '')
+                out.append({'path': [row_idx],
+                            'col_key': key, 'value': value})
+        return out
+
+    def select_cell(self, path, col_key, state=True):
+        # Row-level fallback — selects (or deselects) the whole row.
+        self.select_path(path, state=state)
+
+    def select_cells(self, cells, state=True):
+        seen = set()
+        for c in (cells or []):
+            p = c.get('path')
+            if not p:
+                continue
+            key = tuple(p)
+            if key in seen:
+                continue
+            seen.add(key)
+            self.select_path(p, state=state)
+
+    def clear_cell_selection(self):
+        self.clear_selection()
+
+    # ----- colour overrides (per-cell / row / column / table) ---
+    #
+    # Implementation strategy: the cell-data-func already attached
+    # to each column (via the parent's ``_mkcolfnN``) is invoked
+    # by GTK on every paint of every cell.  We override the
+    # factory to wrap the parent's value-setting logic with an
+    # additional ``_apply_color_to_cell_gtk`` step that reads the
+    # current colour state and sets the cell renderer's
+    # ``foreground`` / ``foreground-set`` / ``cell-background`` /
+    # ``cell-background-set`` properties.  GTK then paints the
+    # cell with those props.  Mutators just update the storage
+    # dicts and ``queue_draw`` the tree to force a fresh paint
+    # pass — GTK calls the cell-data-func per cell, the func
+    # consults the (now updated) dicts.
+
+    # Stripe palette for ``alternate_row_colors=True``.  Even rows
+    # get white, odd rows get a soft grey — both written explicitly
+    # so the appearance is independent of theme rules-hint support.
+    _ALT_ROW_BG_EVEN = '#ffffff'
+    _ALT_ROW_BG_ODD = '#f4f4f4'
+
+    def _mkcolfnN(self, idx, kwd, datatype):
+        parent_fn = super()._mkcolfnN(idx, kwd, datatype)
+
+        def fn(*args):
+            parent_fn(*args)
+            column, cell, model, iter = args[:4]
+            bnch = model.get_value(iter, 0)
+            if isinstance(bnch, dict):
+                fg, bg, bold = self._resolve_cell_color_gtk(
+                    id(bnch), kwd)
+            else:
+                fg, bg, bold = self._resolve_cell_color_gtk(None, kwd)
+            if bg is None and self._alternate_row_colors:
+                bg = self._alt_row_bg_for(model, iter)
+            self._apply_color_to_cell_gtk(cell, fg, bg, bold)
+        return fn
+
+    # ----- widget-cell support (gtk3) -------------------------
+    #
+    # GTK has no real "widget per cell" facility — cells are
+    # drawn by ``CellRenderer`` subclasses, not by hosted widgets.
+    # We approximate by swapping the renderer per column based on
+    # the column's ``widget`` field:
+    #
+    #   checkbox  → CellRendererToggle
+    #   combobox  → CellRendererCombo
+    #   progress  → CellRendererProgress
+    #   button    → CellRendererText (bold label, click handled by
+    #              a TreeView-level button-press hook)
+    #
+    # Per-row gates (``enabled_key`` / ``visible_key``) and the
+    # widget cell value are applied in a custom cell-data-func.
+
+    def _swap_widget_cell_gtk(self, tvc, model_col_idx, col):
+        """Replace the column's default text renderer with the
+        renderer appropriate for ``col['widget']`` and re-attach
+        a widget-aware cell-data-func."""
+        wtype = col['widget']
+        cell = self._make_widget_cell_gtk(col)
+        tvc.clear()
+        tvc.pack_start(cell, True)
+        tvc.set_cell_data_func(
+            cell,
+            self._mk_widget_colfn(model_col_idx, col['key'], col))
+        self._wire_widget_cell_signal_gtk(cell, col)
+
+    def _make_widget_cell_gtk(self, col):
+        wtype = col['widget']
+        if wtype == 'checkbox':
+            cell = Gtk.CellRendererToggle()
+            cell.set_property('activatable', True)
+            return cell
+        if wtype == 'combobox':
+            cell = Gtk.CellRendererCombo()
+            cell.set_property('editable', True)
+            cell.set_property('has-entry', False)
+            choices = col.get('choices') or []
+            store = Gtk.ListStore(str)
+            for ch in choices:
+                store.append([str(ch)])
+            cell.set_property('model', store)
+            cell.set_property('text-column', 0)
+            return cell
+        if wtype == 'progress':
+            cell = Gtk.CellRendererProgress()
+            return cell
+        if wtype == 'button':
+            cell = Gtk.CellRendererText()
+            # Bold text + centered to look button-ish (GTK has no
+            # true button cell).
+            cell.set_property('weight', 700)
+            cell.set_property('weight-set', True)
+            cell.set_property('xalign', 0.5)
+            return cell
+        raise WidgetError(f"unknown widget cell type: {wtype!r}")
+
+    def _mk_widget_colfn(self, idx, kwd, col):
+        """Cell-data-func for a widget cell.  Pushes the row's
+        value onto the right cell property, applies fg/bg/bold
+        colour overrides, and honours ``enabled_key`` /
+        ``visible_key`` per-row gates."""
+        wtype = col['widget']
+        enabled_key = col.get('enabled_key')
+        visible_key = col.get('visible_key')
+        default_text = col.get('text') or ''
+
+        def fn(column, cell, model, iter, _data=None):
+            bnch = model.get_value(iter, 0)
+            row_id = id(bnch) if isinstance(bnch, dict) else None
+            value = bnch.get(kwd) if isinstance(bnch, dict) else None
+            # Per-row visibility / enabled gates.
+            if visible_key is not None and isinstance(bnch, dict):
+                cell.set_property('visible',
+                                  bool(bnch.get(visible_key, True)))
+            else:
+                cell.set_property('visible', True)
+            if enabled_key is not None and isinstance(bnch, dict):
+                cell.set_property('sensitive',
+                                  bool(bnch.get(enabled_key, True)))
+            else:
+                cell.set_property('sensitive', True)
+            # Push value onto the right cell property per type.
+            if wtype == 'checkbox':
+                cell.set_property('active', bool(value))
+            elif wtype == 'combobox':
+                cell.set_property('text',
+                                  '' if value is None else str(value))
+            elif wtype == 'progress':
+                lo = col.get('min', 0) or 0
+                hi = col.get('max', 100) \
+                    if col.get('max') is not None else 100
+                try:
+                    v = float(value) if value is not None else lo
+                except (TypeError, ValueError):
+                    v = lo
+                span = max(1.0, float(hi - lo))
+                pct = int(round(100.0 * (v - lo) / span))
+                cell.set_property('value', max(0, min(100, pct)))
+            elif wtype == 'button':
+                cell.set_property(
+                    'text',
+                    str(value) if value is not None else default_text)
+            # Colour / weight overrides (same cascade as text cells).
+            fg, bg, bold = self._resolve_cell_color_gtk(row_id, kwd)
+            if bg is None and self._alternate_row_colors:
+                bg = self._alt_row_bg_for(model, iter)
+            # ``foreground`` only applies to text-based renderers;
+            # ``cell-background`` works for every renderer.
+            if isinstance(cell, (Gtk.CellRendererText,)):
+                if fg is not None:
+                    cell.set_property('foreground', fg)
+                    cell.set_property('foreground-set', True)
+                else:
+                    cell.set_property('foreground-set', False)
+                # weight (bold) — Pango 700 / 400.
+                if bold is True:
+                    cell.set_property('weight', 700)
+                    cell.set_property('weight-set', True)
+                elif bold is False and wtype != 'button':
+                    # Button cells keep the bold styling we set in
+                    # _make_widget_cell_gtk; an explicit non-bold
+                    # row-color override would undo that look.
+                    cell.set_property('weight', 400)
+                    cell.set_property('weight-set', True)
+            if bg is not None:
+                cell.set_property('cell-background', bg)
+                cell.set_property('cell-background-set', True)
+            else:
+                cell.set_property('cell-background-set', False)
+        return fn
+
+    def _wire_widget_cell_signal_gtk(self, cell, col):
+        """Connect the renderer's interaction signal to the
+        framework callback (``cell_edited`` for checkbox/combobox
+        — progress is read-only, button is wired separately via
+        the TreeView's button-press handler)."""
+        wtype = col['widget']
+        col_key = col['key']
+        if wtype == 'checkbox':
+            cell.connect('toggled',
+                         self._on_widget_toggle_gtk, col_key)
+        elif wtype == 'combobox':
+            cell.connect('edited',
+                         self._on_widget_combo_edited_gtk, col_key)
+
+    def _row_dict_at_path_str(self, path_str):
+        """Look up the row dict stored in column 0 of the model
+        for the path string ``path_str`` (the form GTK callbacks
+        receive)."""
+        model = self.tv.get_model()
+        if model is None:
+            return None, None
+        it = model.get_iter_from_string(path_str)
+        if it is None:
+            return None, None
+        d = model.get_value(it, 0)
+        return (d if isinstance(d, dict) else None), it
+
+    def _on_widget_toggle_gtk(self, cell, path_str, col_key):
+        d, it = self._row_dict_at_path_str(path_str)
+        if d is None:
+            return
+        # Honour enabled_key (treat insensitive cells as no-op).
+        col = next((c for c in self._user_columns
+                    if c['key'] == col_key), None)
+        if col is None:
+            return
+        ekey = col.get('enabled_key')
+        if ekey is not None and not d.get(ekey, True):
+            return
+        old_value = bool(d.get(col_key))
+        new_value = not old_value
+        d[col_key] = new_value
+        self.tv.queue_draw()
+        # Resolve the visible row index for the callback path.
+        model = self.tv.get_model()
+        path = model.get_path(it)
+        idx = path.get_indices()[0] if path is not None else -1
+        if idx < 0:
+            return
+        self.make_callback('cell_edited', [idx], col_key,
+                           old_value, new_value)
+
+    def _on_widget_combo_edited_gtk(self, cell, path_str,
+                                    new_text, col_key):
+        d, it = self._row_dict_at_path_str(path_str)
+        if d is None:
+            return
+        old_value = d.get(col_key)
+        if old_value == new_text:
+            return
+        d[col_key] = new_text
+        self.tv.queue_draw()
+        model = self.tv.get_model()
+        path = model.get_path(it)
+        idx = path.get_indices()[0] if path is not None else -1
+        if idx < 0:
+            return
+        self.make_callback('cell_edited', [idx], col_key,
+                           old_value, new_text)
+
+    def _on_tv_button_press_for_widget_cells(self, tv, event):
+        """Handle clicks on cells whose column has
+        ``widget='button'`` — fire ``cell_action(table, row_dict,
+        col_key)``.  Other widget cells (toggle / combo) handle
+        their own clicks through their renderer's native signal."""
+        if event.button != 1:
+            return False
+        info = tv.get_path_at_pos(int(event.x), int(event.y))
+        if info is None:
+            return False
+        path, tvc, _cx, _cy = info
+        # Find the matching user column for this TreeViewColumn.
+        cols = tv.get_columns()
+        try:
+            n = cols.index(tvc)
+        except ValueError:
+            return False
+        user_idx = n - self._col_offset()
+        if not (0 <= user_idx < len(self._user_columns)):
+            return False
+        col = self._user_columns[user_idx]
+        if col.get('widget') != 'button':
+            return False
+        # Check visibility gate.
+        model = tv.get_model()
+        if model is None:
+            return False
+        it = model.get_iter(path)
+        if it is None:
+            return False
+        d = model.get_value(it, 0)
+        if not isinstance(d, dict):
+            return False
+        vkey = col.get('visible_key')
+        if vkey is not None and not d.get(vkey, True):
+            return False
+        ekey = col.get('enabled_key')
+        if ekey is not None and not d.get(ekey, True):
+            return False
+        # Fire cell_action with the row dict (matches qtw).
+        self.make_callback('cell_action', dict(d), col['key'])
+        return True
+
+    def _alt_row_bg_for(self, model, iter):
+        """Return the stripe bg colour for the row at ``iter``,
+        based on its visible (top-level) row index.  Returns None
+        if the path can't be determined."""
+        path = model.get_path(iter)
+        if path is None:
+            return None
+        indices = path.get_indices()
+        if not indices:
+            return None
+        return (self._ALT_ROW_BG_ODD if indices[0] % 2
+                else self._ALT_ROW_BG_EVEN)
+
+    def _resolve_cell_color_gtk(self, row_id, col_key):
+        """Walk cell → row → column → table layers, merging fg,
+        bg, and bold channels independently across levels."""
+        fg = bg = bold = None
+
+        def _absorb(d):
+            nonlocal fg, bg, bold
+            if not d:
+                return
+            if fg is None:
+                fg = d.get('fg')
+            if bg is None:
+                bg = d.get('bg')
+            if bold is None:
+                bold = d.get('bold')
+
+        if row_id is not None:
+            _absorb(self._cell_colors.get((row_id, col_key)))
+            _absorb(self._row_colors.get(row_id))
+        _absorb(self._col_colors.get(col_key))
+        _absorb(self._table_color)
+        return fg, bg, bold
+
+    @staticmethod
+    def _apply_color_to_cell_gtk(cell, fg, bg, bold=None):
+        """Apply the resolved colour + weight to a single cell
+        renderer.  ``foreground`` only makes sense on
+        CellRendererText (icon / toggle cells ignore it);
+        ``cell-background`` works on all renderer types."""
+        if isinstance(cell, Gtk.CellRendererText):
+            if fg is not None:
+                cell.set_property('foreground', fg)
+                cell.set_property('foreground-set', True)
+            else:
+                cell.set_property('foreground-set', False)
+            # Pango weight: 700 == bold, 400 == normal.  Only set
+            # the property when bold is explicitly True/False so
+            # cells without a weight override keep theme defaults.
+            if bold is True:
+                cell.set_property('weight', 700)
+                cell.set_property('weight-set', True)
+            elif bold is False:
+                cell.set_property('weight', 400)
+                cell.set_property('weight-set', True)
+            else:
+                cell.set_property('weight-set', False)
+        if bg is not None:
+            cell.set_property('cell-background', bg)
+            cell.set_property('cell-background-set', True)
+        else:
+            cell.set_property('cell-background-set', False)
+
+    def _row_dict_at(self, idx):
+        """Return the dict stored in the TreeStore's column 0 at
+        visible row ``idx``, or None if the index is out of range."""
+        model = self.tv.get_model()
+        if model is None:
+            return None
+        if not (0 <= idx < model.iter_n_children(None)):
+            return None
+        it = model.iter_nth_child(None, idx)
+        d = model.get_value(it, 0) if it is not None else None
+        return d if isinstance(d, dict) else None
+
+    # ----- public colour API ----------------------------------
+
+    def set_cell_color(self, path, col_key, fg=None, bg=None, bold=None):
+        idx = self._resolve_to_row_index(path)
+        if idx is None:
+            return
+        d = self._row_dict_at(idx)
+        if d is None:
+            return
+        key = (id(d), col_key)
+        if fg is None and bg is None and bold is None:
+            self._cell_colors.pop(key, None)
+        else:
+            self._cell_colors[key] = {'fg': fg, 'bg': bg, 'bold': bold}
+        self.tv.queue_draw()
+
+    def set_row_color(self, path, fg=None, bg=None, bold=None):
+        idx = self._resolve_to_row_index(path)
+        if idx is None:
+            return
+        d = self._row_dict_at(idx)
+        if d is None:
+            return
+        rid = id(d)
+        if fg is None and bg is None and bold is None:
+            self._row_colors.pop(rid, None)
+        else:
+            self._row_colors[rid] = {'fg': fg, 'bg': bg, 'bold': bold}
+        self.tv.queue_draw()
+
+    def set_column_color(self, col_key, fg=None, bg=None, bold=None):
+        if col_key not in (c['key'] for c in self._user_columns):
+            return
+        if fg is None and bg is None and bold is None:
+            self._col_colors.pop(col_key, None)
+        else:
+            self._col_colors[col_key] = {'fg': fg, 'bg': bg,
+                                         'bold': bold}
+        self.tv.queue_draw()
+
+    def set_table_color(self, fg=None, bg=None, bold=None):
+        if fg is None and bg is None and bold is None:
+            self._table_color = None
+        else:
+            self._table_color = {'fg': fg, 'bg': bg, 'bold': bold}
+        self.tv.queue_draw()
+
+    def clear_cell_color(self, path, col_key):
+        self.set_cell_color(path, col_key, fg=None, bg=None)
+
+    def clear_row_color(self, path):
+        self.set_row_color(path, fg=None, bg=None)
+
+    def clear_column_color(self, col_key):
+        self.set_column_color(col_key, fg=None, bg=None)
+
+    def clear_all_colors(self):
+        self._cell_colors.clear()
+        self._row_colors.clear()
+        self._col_colors.clear()
+        self._table_color = None
+        self.tv.queue_draw()
+
+    # ----- clipboard (system + widget-level callbacks) --------
+
+    def _build_selection_tsv(self):
+        paths = self.get_selected_paths()
+        if not paths:
+            return ''
+        rows = sorted(p[0] for p in paths)
+        lines = []
+        for r in rows:
+            d = self.get_row(r)
+            lines.append('\t'.join(
+                ('' if d.get(c['key']) is None else str(d[c['key']]))
+                for c in self._user_columns))
+        return '\n'.join(lines)
+
+    def copy_selection(self):
+        tsv = self._build_selection_tsv()
+        if not tsv:
+            return
+        clip = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+        clip.set_text(tsv, -1)
+        self.make_callback('copy', tsv)
+
+    def cut_selection(self):
+        tsv = self._build_selection_tsv()
+        if not tsv:
+            return
+        clip = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+        clip.set_text(tsv, -1)
+        # Clear editable cells in selected rows.
+        for path in self.get_selected_paths():
+            r = path[0]
+            for user_col in range(len(self._user_columns)):
+                if user_col not in self._editable_cols:
+                    continue
+                col_key = self._user_columns[user_col]['key']
+                old = self.get_row(r).get(col_key, '')
+                self.set_cell(r, user_col, '')
+                self.make_callback('cell_edited', [r], col_key, old, '')
+        self.make_callback('cut', tsv)
+
+    def paste_selection(self):
+        clip = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+        text = clip.wait_for_text()
+        if not text:
+            return
+        paths = self.get_selected_paths()
+        if not paths:
+            return
+        anchor_row = min(p[0] for p in paths)
+        text = text.replace('\r\n', '\n').replace('\r', '\n')
+        rows = text.split('\n')
+        while rows and rows[-1] == '':
+            rows.pop()
+        n_rows = self.get_row_count()
+        n_cols = len(self._user_columns)
+        for i, line in enumerate(rows):
+            r = anchor_row + i
+            if r >= n_rows:
+                break
+            cells = line.split('\t')
+            for j, val in enumerate(cells):
+                if j >= n_cols:
+                    break
+                if j not in self._editable_cols:
+                    continue
+                col_key = self._user_columns[j]['key']
+                old = self.get_row(r).get(col_key, '')
+                self.set_cell(r, j, val)
+                self.make_callback('cell_edited', [r], col_key, old, val)
+        self.make_callback('paste', text)
+
+
 # CONTAINERS
 
 class ContainerBase(WidgetBase):
@@ -1480,6 +2891,9 @@ class ContainerBase(WidgetBase):
         for child in list(self.children):
             self.remove(child, delete=delete)
 
+    def is_container(self):
+        return True
+
     def get_children(self):
         return self.children
 
@@ -1503,15 +2917,26 @@ class ContainerBase(WidgetBase):
         self.widget.set_margin_top(top)
         self.widget.set_margin_bottom(bottom)
 
+    def set_padding(self, px):
+        if isinstance(px, int):
+            self.set_margins(px, px, px, px)
+        else:
+            self.set_margins(*px)
+
 
 class Box(ContainerBase):
     def __init__(self, orientation='horizontal'):
         super(Box, self).__init__()
 
+        self.orientation = orientation
         if orientation == 'horizontal':
             self.widget = Gtk.HBox()
         else:
             self.widget = Gtk.VBox()
+        # Cross-axis alignment to apply to each child as it joins
+        # the box (and to existing children when ``set_align`` is
+        # called).  ``None`` means use Gtk's default (FILL).
+        self._cross_align = None
 
     def set_spacing(self, val):
         self.widget.set_spacing(val)
@@ -1523,6 +2948,7 @@ class Box(ContainerBase):
         self.widget.pack_start(child_w, expand, True, 0)
         self.widget.reorder_child(child_w, idx)
         self.children.insert(idx, child)
+        self._apply_cross_align(child_w)
         self.widget.show_all()
         self.make_callback('widget-added', child)
 
@@ -1532,8 +2958,44 @@ class Box(ContainerBase):
         # TODO: can this be made more accurate?
         expand = (float(stretch) > 0.0)
         self.widget.pack_start(child_w, expand, True, 0)
+        self._apply_cross_align(child_w)
         self.widget.show_all()
         self.make_callback('widget-added', child)
+
+    def set_align(self, align):
+        """Cross-axis alignment for children of this Box.  Accepts
+        ``'top'`` / ``'center'`` / ``'bottom'`` on a horizontal
+        box, ``'left'`` / ``'center'`` / ``'right'`` on a vertical
+        box.  Mismatch raises ``ValueError``."""
+        self._cross_align = self._resolve_align(align)
+        for child in self.get_children():
+            self._apply_cross_align(child.get_widget())
+
+    def _resolve_align(self, align):
+        align = align.lower()
+        if self.orientation == 'horizontal':
+            mapping = {'top': Gtk.Align.START,
+                       'center': Gtk.Align.CENTER,
+                       'bottom': Gtk.Align.END}
+            expected = "'top' | 'center' | 'bottom'"
+        else:
+            mapping = {'left': Gtk.Align.START,
+                       'center': Gtk.Align.CENTER,
+                       'right': Gtk.Align.END}
+            expected = "'left' | 'center' | 'right'"
+        if align not in mapping:
+            raise ValueError(
+                f"{self.orientation} Box.set_align expects {expected}, "
+                f"got {align!r}")
+        return mapping[align]
+
+    def _apply_cross_align(self, child_w):
+        if self._cross_align is None:
+            return
+        if self.orientation == 'horizontal':
+            child_w.set_valign(self._cross_align)
+        else:
+            child_w.set_halign(self._cross_align)
 
 
 class VBox(Box):
@@ -1565,6 +3027,14 @@ class Frame(ContainerBase):
         w = self.get_widget()
         lbl = w.get_label_widget()
         lbl.set_text(text)
+
+    def set_font(self, font, size=10):
+        # set the font of the frame's title label, if there is one
+        if isinstance(font, str):
+            font = self.get_font(font, size)
+        lbl = self.widget.get_label_widget()
+        if lbl is not None:
+            lbl.modify_font(font)
 
 
 class Expander(ContainerBase):
@@ -1598,6 +3068,13 @@ class Expander(ContainerBase):
             toggle_w.set_always_show_image(True)
             r_arrow = Gtk.Image.new_from_pixbuf(Expander.r_arrow)
             toggle_w.set_image(r_arrow)
+            # The button's internal HBox (image + label) defaults to
+            # centred inside the full-width toggle; halign=START on
+            # that inner box pushes the arrow + title flush left to
+            # match the gtk4 Expander styling.
+            inner = toggle_w.get_child()
+            if inner is not None:
+                inner.set_halign(Gtk.Align.START)
             toggle.add_callback('activated', self._toggle_widget)
             vbox.add_widget(toggle, stretch=0)
 
@@ -1631,6 +3108,14 @@ class Expander(ContainerBase):
 
     def _toggle_widget(self, w, tf):
         self.expand(tf)
+
+    def set_font(self, font, size=10):
+        # set the font of the expander's toggle (title) button, if any;
+        # modify_font on the button propagates to its label child
+        if self.toggle is not None:
+            if isinstance(font, str):
+                font = self.get_font(font, size)
+            self.toggle.get_widget().modify_font(font)
 
 
 class TabWidget(ContainerBase):
@@ -1859,6 +3344,12 @@ class MDIWidget(ContainerBase):
         nchild = self.mdi_w.get_nth_page(idx)
         return self._native_to_child(nchild)
 
+    def get_child_size(self, child):
+        return self.mdi_w.get_widget_size(child.get_widget())
+
+    def get_child_position(self, child):
+        return self.mdi_w.get_widget_position(child.get_widget())
+
     def tile_panes(self):
         self.mdi_w.tile_pages()
 
@@ -1996,16 +3487,30 @@ class Splitter(ContainerBase):
         self.panes = [self.widget]
 
     def _get_pane(self):
+        # ``background-color: transparent`` on the separator keeps
+        # the custom dots image visible while letting the window's
+        # chrome-grey background show through behind it — without
+        # it the theme's default ``separator.wide`` colour wins,
+        # which is usually a slightly lighter shade than the rest
+        # of the window.
         if self.orientation == 'horizontal':
             w = Gtk.HPaned()
             # NOTE: styling the separator doesn't seem to work in Gtk4
             iconfile = pathlib.Path(icondir) / 'vdots.png'
-            content = "background-image: url('file://%s'); background-repeat: no-repeat; background-position: center center; background-size: 10px 30px;" % (iconfile)
+            content = ("background-image: url('file://%s'); "
+                       "background-color: transparent; "
+                       "background-repeat: no-repeat; "
+                       "background-position: center center; "
+                       "background-size: 10px 30px;" % (iconfile))
         else:
             w = Gtk.VPaned()
             # NOTE: styling the separator doesn't seem to work in Gtk4
             iconfile = pathlib.Path(icondir) / 'hdots.png'
-            content = "background-image: url('file://%s'); background-repeat: no-repeat; background-position: center center; background-size: 30px 10px;" % (iconfile)
+            content = ("background-image: url('file://%s'); "
+                       "background-color: transparent; "
+                       "background-repeat: no-repeat; "
+                       "background-position: center center; "
+                       "background-size: 30px 10px;" % (iconfile))
         w.set_wide_handle(True)
         context = w.get_style_context()
         css_data = "paned separator.wide { %s }" % (content)
@@ -2385,7 +3890,7 @@ class Menubar(ContainerBase):
         return self.menus[name]
 
 
-class TopLevelMixin(object):
+class TopLevelMixin:
 
     def __init__(self, title=None):
         self._fullscreen = False
@@ -2571,7 +4076,7 @@ class TopLevel(TopLevelMixin, ContainerBase):
 
 class Application(Callback.Callbacks):
 
-    def __init__(self, logger=None, settings=None):
+    def __init__(self, logger=None, settings=None, ws_sock=None):
         global _app
         super(Application, self).__init__()
 
@@ -2678,6 +4183,27 @@ class Application(Callback.Callbacks):
     def make_timer(self):
         return GtkHelp.Timer()
 
+    def get_url(self):
+        return None
+
+    def is_web_backend(self):
+        return False
+
+    def open_url(self, url):
+        """Open *url* in the user's web browser (desktop backend)."""
+        import webbrowser
+        webbrowser.open(url, new=2)
+
+    def register_font(self, family, path, weight='normal', style='normal'):
+        # This is almost a no-op for Gtk3--no easy way to load a font
+        # we'll just register it in case there is a way to do that in
+        # the future
+        f_key = font_asst.add_loadable_font(path, family, style=style,
+                                            weight=weight)  # noqa
+
+    def set_default_font(self, family, size=None, weight=None, style=None):
+        font_asst.add_alias('sans', family.lower())
+
     def mainloop(self):
         Gtk.main()
 
@@ -2741,6 +4267,10 @@ class Dialog(WidgetBase):
 
     def get_content_area(self):
         return self.content
+
+    def add_button(self, btn):
+        # TODO
+        pass
 
     def show(self):
         self.popup()
@@ -2945,7 +4475,7 @@ class FileDialog(Dialog):
             self.make_callback('activated', paths)
 
 
-class SaveDialog(object):
+class SaveDialog:
     # TODO: deprecate and use only FileDialog
     def __init__(self, title='Save File', selectedfilter=None):
         action = Gtk.FileChooserAction.SAVE
@@ -2988,12 +4518,12 @@ class SaveDialog(object):
             return None
 
 
-class DragPackage(object):
+class DragPackage:
     def __init__(self, src_widget, selection):
         self.src_widget = src_widget
         self._selection = selection
 
-    def set_urls(self, urls):
+    def set_uris(self, urls):
         self._selection.set_uris(urls)
 
     def set_text(self, text):
@@ -3003,7 +4533,7 @@ class DragPackage(object):
         pass
 
 
-class WidgetMoveEvent(object):
+class WidgetMoveEvent:
     def __init__(self, src_widget, child):
         self.src_widget = src_widget
         self.child = child

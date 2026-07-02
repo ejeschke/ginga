@@ -157,6 +157,7 @@ class WCSAxes(LocalPlugin):
         fr.set_widget(w)
         vbox.add_widget(fr, stretch=0)
 
+        vbox.add_widget(Widgets.Label(''), stretch=1)
         top.add_widget(sw, stretch=1)
 
         btns = Widgets.HBox()

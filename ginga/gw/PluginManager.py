@@ -590,10 +590,29 @@ class PluginManager(Callback.Callbacks):
 
     def tab_closed_cb(self, ws, widget):
         bnch = self.ds._find_tab(widget)
-        if bnch is not None:
-            p_info = bnch.get('plugin_info', None)
-            if p_info is not None:
-                self.deactivate(p_info.name)
+        if bnch is None:
+            return
+        p_info = bnch.get('plugin_info', None)
+        if p_info is None:
+            return
+        # Record the window's current size/position before it (and the
+        # plugin) are torn down, so that reopening restores its geometry.
+        # The plugin-stop path (dispose_gui) doesn't go through remove_tab
+        # -- where geometry is normally captured -- and on some backends
+        # (pg) the window is removed immediately after this callback.
+        try:
+            ws.record_position(widget)
+        except Exception as e:
+            self.logger.warning("could not record window geometry on "
+                                "close: %s" % (str(e)))
+        # Invoke the plugin's own close() so the title-bar 'X' behaves
+        # exactly like the plugin's Close button; fall back to deactivating
+        # by name if the plugin doesn't define close().
+        obj = getattr(p_info, 'obj', None)
+        if obj is not None and hasattr(obj, 'close'):
+            obj.close()
+        else:
+            self.deactivate(p_info.name)
 
     def channel_change(self):
         """Called from the Ginga shell when the channel is changed.
@@ -615,7 +634,7 @@ class PluginManager(Callback.Callbacks):
         else:
             self.ds._cleanup_tab(vbox)
         p_info.widget = None
-        if vbox.widget is not None:
+        if vbox.get_widget() is not None:
             vbox.hide()
             vbox.delete()
 

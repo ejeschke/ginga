@@ -134,9 +134,11 @@ class Blink(GingaPlugin.LocalPlugin):
 
     def close(self):
         if self.fitsimage is None:
-            self.fv.stop_global_plugin(str(self))
+            name = str(self) + "[channels]"
+            self.fv.stop_global_plugin(name)
         else:
-            self.fv.stop_local_plugin(self.chname, str(self))
+            name = str(self) + "[images]"
+            self.fv.stop_local_plugin(self.chname, name)
         return True
 
     def start(self):

@@ -396,7 +396,9 @@ class SlideShow(LocalPlugin):
         self.def_duration = duration
         self.update_duration()
 
-    def drop_cb(self, canvas, uris):
+    def drop_cb(self, canvas, drop_event):
+        # TODO: check type of drop
+        uris = drop_event.contents['body']
         self.w.load_progress.set_value(0.0)
         for i, uri in enumerate(uris):
             self.add_slide(uri)

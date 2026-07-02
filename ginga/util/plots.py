@@ -17,8 +17,9 @@ mpl.rcParams['axes.unicode_minus'] = False
 
 class Plot(PlotView.CanvasView):
 
-    def __init__(self, figure=None, logger=None, width=500, height=500):
-        super().__init__(logger=logger, figure=figure)
+    def __init__(self, figure=None, logger=None, width=500, height=500,
+                 addaxis=True):
+        super().__init__(logger=logger, figure=figure, addaxis=addaxis)
 
         self.logx = False
         self.logy = False

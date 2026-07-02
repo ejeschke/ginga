@@ -16,7 +16,6 @@ Hovering over an icon on the toolbar should provide you with usage tool tip.
 import os.path
 
 from ginga.gw import Widgets
-from ginga.toolkit import family
 from ginga.misc import Bunch
 from ginga.events import KeyEvent
 from ginga import GingaPlugin
@@ -39,7 +38,7 @@ class Toolbar(GingaPlugin.GlobalPlugin):
         # get local plugin preferences
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_Toolbar')
-        self.settings.add_defaults(close_unfocused_toolbars=True)
+        self.settings.add_defaults(close_unfocused_toolbars=False)
         self.settings.load(onError='silent')
 
         fv.add_callback('add-channel', self.add_channel_cb)
@@ -332,11 +331,7 @@ class Toolbar_Ginga_Image(Toolbar_Common):
              lambda w: self.start_global_plugin('Zoom'))]
 
     def build_gui(self, container):
-        # TODO: fix for GTK
-        if family.startswith('gtk'):
-            self.orientation = 'horizontal'
-        else:
-            self.orientation = Widgets.get_orientation(container)
+        self.orientation = 'horizontal'
         tb_w = Widgets.Toolbar(orientation=self.orientation)
 
         self.build_toolbar(tb_w, self.layout_common)
@@ -591,11 +586,7 @@ class Toolbar_Ginga_Plot(Toolbar_Common):
              lambda w: self.start_global_plugin('Header'))]
 
     def build_gui(self, container):
-        # TODO: fix for GTK
-        if family.startswith('gtk'):
-            self.orientation = 'horizontal'
-        else:
-            self.orientation = Widgets.get_orientation(container)
+        self.orientation = 'horizontal'
         tb_w = Widgets.Toolbar(orientation=self.orientation)
 
         self.build_toolbar(tb_w, self.layout_common)
@@ -685,11 +676,7 @@ class Toolbar_Ginga_Table(Toolbar_Common):
              lambda w: self.start_global_plugin('Header'))]
 
     def build_gui(self, container):
-        # TODO: fix for GTK
-        if family.startswith('gtk'):
-            self.orientation = 'horizontal'
-        else:
-            self.orientation = Widgets.get_orientation(container)
+        self.orientation = 'horizontal'
         tb_w = Widgets.Toolbar(orientation=self.orientation)
 
         self.build_toolbar(tb_w, self.layout_common)

@@ -110,6 +110,8 @@ class Info_Ginga_Image(Info_Common):
         sw = Widgets.ScrollArea()
 
         vbox = Widgets.VBox()
+        vbox.set_padding(2)
+        vbox.set_spacing(2)
         sw.set_widget(vbox)
 
         captions = (('Channel:', 'label', 'Channel', 'llabel'),
@@ -140,7 +142,9 @@ class Info_Ginga_Image(Info_Common):
         col.add_widget(Widgets.Label(''), stretch=1)
         sw2 = Widgets.ScrollArea()
         sw2.set_widget(col)
-        vbox.add_widget(sw2, stretch=1)
+        fr = Widgets.Frame(title="Content Info")
+        fr.set_widget(sw2)
+        vbox.add_widget(fr, stretch=1)
 
         captions = (('Zoom:', 'label', 'Zoom', 'llabel',
                      'Color Dist', 'combobox'),

@@ -12,47 +12,83 @@ from ginga.fonts import font_asst
 import matplotlib.textpath as textpath
 
 
-def load_font(font_name, font_file):
-    from matplotlib import font_manager
-    # may raise an exception
-    font_manager.fontManager.addfont(font_file)
+def get_font(font_spec, font_size):
+    """Function to obtain a native font for the matplotlib backend.
 
+    Parameters
+    ----------
+    font_spec : str or `~ginga.fonts.font_asst.Font`
+        The desired font
 
-def get_cached_font(font_name, font_size):
-    key = ('mpl', font_name)
+    font_size : int
+        The point size requested for the given font
+
+    Returns
+    -------
+    font : matplotlib font
+        The desired font in native backend form
+    """
+    key = ('mpl', font_spec, font_size)
     try:
         return font_asst.get_cache(key)
 
     except KeyError:
         pass
 
+    if isinstance(font_spec, str):
+        font_tup = font_asst.parse_font(font_spec)
+    elif isinstance(font_spec, font_asst.Font):
+        font_tup = font_spec
+    else:
+        raise ValueError("not a valid font spec: {}".format(str(font_spec)))
+
     # font not loaded? try and load it
-    try:
-        info = font_asst.get_font_info(font_name, subst_ok=False)
-        load_font(font_name, info.font_path)
+    font_name = None
+    if font_asst.have_loadable_font(font_tup):
+        try:
+            font_name = load_font(font_tup)
+
+        except Exception as e:
+            pass
+
+    if font_name is None:
+        # try to create the font from the family name directly, plus in any
+        # other substitute fonts
+        families = font_asst.get_substitutes(font_tup.family)
+        for family in families:
+            font_tup2 = font_asst.Font(family=family, style=font_tup.style,
+                                       weight=font_tup.weight)
+            if font_asst.have_loadable_font(font_tup2):
+                try:
+                    font_name = load_font(font_tup2, font_size)
+                    break
+                except Exception as e:
+                    continue
+
+    # TODO: is there a default font for matplotlib?
+
+    if font_name is not None:
         font_asst.add_cache(key, font_name)
+        if isinstance(font_spec, str):
+            # also store the font under a secondary key
+            key2 = ('mpl', font_tup, font_size)
+            font_asst.add_cache(key2, font_name)
         return font_name
 
-    except Exception as e:
-        # couldn't load font
-        pass
+    raise ValueError(f"Couldn't create font for family '{font_tup.family}', "
+                     f"style={font_tup.style}, weight={font_tup.weight}")
 
-    # try and substitute one of the built in fonts
-    try:
-        info = font_asst.get_font_info(font_name, subst_ok=True)
-        load_font(font_name, info.font_path)
 
-        font_asst.add_cache(key, font_name)
-        return font_name
-
-    except Exception as e:
-        # couldn't load substitute font
-        pass
-
+def load_font(font_tup, font_size):
+    from matplotlib import font_manager
+    # may raise an exception
+    info = font_asst.get_font_info(font_tup)
+    font_manager.fontManager.addfont(info.font_path)
+    font_name = info.family
     return font_name
 
 
-class MplContext(object):
+class MplContext:
 
     def __init__(self, axes):
         self.axes = axes
@@ -110,7 +146,7 @@ class MplContext(object):
             self.kwdargs['linestyle'] = style
 
     def get_fontdict(self, font, fill):
-        _font = get_cached_font(font.fontname, font.fontsize)
+        _font = get_font(font.fontname, font.fontsize)
         fontdict = dict(color=fill._color_4tup, family=_font,
                         size=font.fontsize, transform=None)
         return fontdict

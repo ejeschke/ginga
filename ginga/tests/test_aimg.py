@@ -10,7 +10,7 @@ from ginga.util import wcs, wcsmod
 wcsmod.use('astropy')
 
 
-class TestAstroImage(object):
+class TestAstroImage:
     def setup_class(self):
         self.logger = log.get_logger("TestAstroImage", null=True)
         self.image = AstroImage.AstroImage(logger=self.logger)

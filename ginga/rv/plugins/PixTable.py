@@ -91,8 +91,8 @@ In "Move" mode the following keys are active:
 """
 import numpy as np
 
-from ginga.gw import Widgets, Viewers
-from ginga import GingaPlugin, BaseImage, colors
+from ginga.gw import Widgets
+from ginga import GingaPlugin, BaseImage
 
 __all__ = ['PixTable']
 
@@ -108,7 +108,7 @@ class PixTable(GingaPlugin.LocalPlugin):
 
         prefs = self.fv.get_preferences()
         self.settings = prefs.create_category('plugin_PixTable')
-        self.settings.add_defaults(fontsize=10,
+        self.settings.add_defaults(fontsize=12,
                                    font='fixed',
                                    mark_radius=10,
                                    mark_style='cross',
@@ -135,8 +135,6 @@ class PixTable(GingaPlugin.LocalPlugin):
 
         # For pixel table
         self.pixtbl_radius = 2
-        self.txt_arr = None
-        self.sum_arr = None
         self.sizes = [1, 2, 3, 4]
         self.maxdigits = 9
         self.fmt_cell = f'^{self.maxdigits}.4g'
@@ -146,6 +144,14 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.fontsize = self.settings.get('fontsize', 12)
         self.fontsizes = [6, 8, 9, 10, 11, 12, 14, 16, 18, 24, 28, 32]
         self.pixview = None
+        self.summary = None
+        self.columns = [dict(label='Min', key='min', type='str'),
+                        dict(label='Max', key='max', type='str'),
+                        dict(label='Mean', key='mean', type='str'),
+                        dict(label='Median', key='median', type='str'),
+                        dict(label='RMS', key='rms', type='str'),
+                        dict(label='Sum', key='sum', type='str')]
+
         self._wd = 400
         self._ht = 300
         # hack to set a reasonable starting position for the splitter
@@ -181,28 +187,38 @@ class PixTable(GingaPlugin.LocalPlugin):
         box.set_border_width(4)
         box.set_spacing(2)
 
+        vbox = Widgets.VBox()
         fr = Widgets.Frame("Pixel Values")
 
-        # We just use a ginga widget to implement the pixtable
-        pixview = Viewers.CanvasView(logger=self.logger)
-        pixview.set_desired_size(self._wd, self._ht)
-        bg = colors.lookup_color('#202030')
-        pixview.set_bg(*bg)
-
-        bd = pixview.get_bindings()
-        bd.enable_zoom(True)
-        bd.enable_pan(True)
-
+        # We use a TableView widget to implement the pixtable
+        pixview = Widgets.TableView(show_header=False, selection_mode='none',
+                                    alternate_row_colors=True, show_grid=True,
+                                    show_row_numbers=False, sortable=False,
+                                    allow_text_selection=False, dragable=False)
+        pixview.set_cell_padding(2)
+        pixview.set_row_spacing(2)
+        pixview.set_column_spacing(2)
         self.pixview = pixview
-        self.pix_w = Viewers.GingaViewerWidget(pixview)
-        fr.set_widget(self.pix_w)
-        self.pix_w.resize(self._wd, self._ht)
+        fr.set_widget(pixview)
+        vbox.add_widget(fr, stretch=1)
+
+        fr = Widgets.Frame("Summary")
+
+        # We use a TableView widget to implement the pixtable
+        summary = Widgets.TableView(show_header=True, selection_mode='none',
+                                    alternate_row_colors=True, show_grid=True,
+                                    show_row_numbers=False, sortable=False,
+                                    allow_text_selection=False, dragable=False)
+        summary.set_column_spacing(4)
+        summary.set_columns(self.columns)
+        self.summary = summary
+
+        fr.set_widget(summary)
+        vbox.add_widget(fr, stretch=1)
 
         paned = Widgets.Splitter(orientation=orientation)
         self.w.splitter = paned
-        paned.add_widget(fr)
-
-        self._rebuild_table()
+        paned.add_widget(vbox)
 
         btns = Widgets.HBox()
         btns.set_border_width(4)
@@ -396,8 +412,14 @@ class PixTable(GingaPlugin.LocalPlugin):
 
     def set_font_size_cb(self, w, index):
         self.fontsize = self.fontsizes[index]
-        self._rebuild_table()
+        self.pixview.set_font(self.font, self.fontsize)
         self.redo()
+
+    def _rebuild_table(self):
+        num_cols = self.pixtbl_radius * 2 + 1
+        cols = [dict(label=f'col{i}', type='number')
+                for i in range(num_cols)]
+        self.pixview.set_columns(cols)
 
     def plot(self, data, x1, y1, x2, y2, data_x, data_y, radius,
              maxv=9):
@@ -406,12 +428,19 @@ class PixTable(GingaPlugin.LocalPlugin):
         # bottom
         data = np.flipud(data)
 
-        width, height = self.fitsimage.get_dims(data)
-        if self.txt_arr is None:
-            return
-        if data.shape != self.txt_arr.shape:
-            return
+        # update the pixtable: one displayed row per image column, so the
+        # grid is the transpose of `data` -- set_data() takes the 2D array
+        grid = data.T
+        cols = [dict(label=f'col{i}', type='number')
+                for i in range(grid.shape[1])]
+        self.pixview.set_columns(cols)
+        self.pixview.set_data(grid)
+        i, j = grid.shape[0] // 2, grid.shape[1] // 2
+        # bold the value under the cursor
+        self.pixview.set_cell_color(i, f'col{j}', fg='blue', bold=True)
+        self.pixview.set_optimal_column_widths()
 
+        # Report statistics
         maxval = np.nanmax(data)
         minval = np.nanmin(data)
         avgval = np.mean(data)
@@ -420,22 +449,14 @@ class PixTable(GingaPlugin.LocalPlugin):
         sumval = np.nansum(data)
         fmt_cell = self.fmt_cell
 
-        def _vecfunc(val, out):
-            if not np.isscalar(val):
-                val = np.average(val)
-            out.text = f'{val:{fmt_cell}}'
-
-        func = np.vectorize(_vecfunc)
-        func(data, self.txt_arr)
-
-        ctr_txt = self.txt_arr[width // 2][height // 2]
-
-        # Report statistics
-        self.sum_arr[0].text = f"Min: {minval:{fmt_cell}} Mean: {avgval:{fmt_cell}} Median: {medianval:{fmt_cell}}"
-        self.sum_arr[1].text = f"Max: {maxval:{fmt_cell}}  RMS: {rmsval:{fmt_cell}} Sum: {sumval:{fmt_cell}}"
-
-        # update the pixtable
-        self.pixview.panset_xy(ctr_txt.x, ctr_txt.y)
+        val_d = dict(min=f"{minval:{fmt_cell}}",
+                     mean=f"{avgval:{fmt_cell}}",
+                     median=f"{medianval:{fmt_cell}}",
+                     max=f"{maxval:{fmt_cell}}",
+                     rms=f"{rmsval:{fmt_cell}}",
+                     sum=f"{sumval:{fmt_cell}}")
+        self.summary.set_rows([val_d])
+        self.summary.set_optimal_column_widths()
 
     def close(self):
         self.fv.stop_local_plugin(self.chname, str(self))
@@ -497,65 +518,6 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.fv.error_wrap(self.plot, data, x1, y1, x2, y2,
                            self.lastx, self.lasty,
                            self.pixtbl_radius, maxv=9)
-
-    def _rebuild_table(self):
-        canvas = self.pixview.get_canvas()
-        canvas.delete_all_objects(redraw=False)
-
-        Text = canvas.get_draw_class('text')
-        ex_txt = Text(0, 0, text='5', fontsize=self.fontsize, font=self.font)
-        font_wd, font_ht = self.fitsimage.renderer.get_dimensions(ex_txt)
-        max_wd = self.maxdigits + 2
-        crdmap = self.pixview.get_coordmap('window')
-
-        rows = []
-        objs = []
-        max_cx = 0
-        x_offset = 6
-        y_offset = 4
-        for row in range(self.pixtbl_radius * 2 + 1):
-            cols = []
-            for col in range(self.pixtbl_radius * 2 + 1):
-                col_wd = font_wd * max_wd
-                cx = col_wd * col + x_offset
-                max_cx = max(max_cx, cx + col_wd)
-                cy = font_ht * (row + 1) + y_offset
-
-                color = 'lightgreen'
-                if (row == col) and (row == self.pixtbl_radius):
-                    color = 'pink'
-
-                text_obj = Text(cx, cy, text='', font=self.font,
-                                color=color, fontsize=self.fontsize,
-                                coord='window')
-                objs.append(text_obj)
-                cols.append(text_obj)
-
-            rows.append(cols)
-
-        self.txt_arr = np.array(rows)
-
-        # add summary row(s)
-        cx = (font_wd + 2) + x_offset
-        cy += font_ht + 20
-        s1 = Text(cx, cy, text='', font=self.font,
-                  color='cyan', fontsize=self.fontsize,
-                  coord='window')
-        objs.append(s1)
-        cy += font_ht + y_offset
-        s2 = Text(cx, cy, text='', font=self.font,
-                  color='cyan', fontsize=self.fontsize,
-                  coord='window')
-        objs.append(s2)
-        self.sum_arr = np.array([s1, s2])
-
-        # add all of the text objects to the canvas as one large
-        # compound object
-        CompoundObject = canvas.get_draw_class('compoundobject')
-        canvas.add(CompoundObject(*objs), redraw=False)
-
-        # set limits for scrolling
-        self.pixview.set_limits(((0, 0), (max_cx, cy)), coord='window')
 
     def set_cutout_size_cb(self, w, val):
         index = w.get_index()

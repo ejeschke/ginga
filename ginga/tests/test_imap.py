@@ -7,7 +7,7 @@ import ginga.imap
 from ginga.imap import IntensityMap
 
 
-class TestCmap(object):
+class TestImap:
 
     def test_IntensityMap_init(self):
         test_ilst = tuple(np.linspace(0, 1, ginga.imap.min_imap_len))

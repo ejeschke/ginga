@@ -56,7 +56,7 @@ except ImportError:
 STD_FORMAT = '%(asctime)s | %(levelname)1.1s | %(filename)s:%(lineno)d (%(funcName)s) | %(message)s'
 
 
-class GingaVision(object):
+class GingaVision:
 
     def __init__(self, logger, ev_quit, options):
         super(GingaVision, self).__init__()

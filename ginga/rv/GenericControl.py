@@ -31,7 +31,7 @@ class GenericShell(GwMain.GwMain, Widgets.Application):
     a layout.
     """
     def __init__(self, logger, thread_pool, module_manager, preferences,
-                 ev_quit=None):
+                 ev_quit=None, ws_sock=None):
         GwMain.GwMain.__init__(self, logger=logger, ev_quit=ev_quit,
                                app=self, thread_pool=thread_pool)
 
@@ -44,7 +44,8 @@ class GenericShell(GwMain.GwMain, Widgets.Application):
                               save_layout=False)
         settings.load(onError='silent')
         # this will set self.logger and self.settings
-        Widgets.Application.__init__(self, logger=logger, settings=settings)
+        Widgets.Application.__init__(self, logger=logger, settings=settings,
+                                     ws_sock=ws_sock)
 
         self.mm = module_manager
         # event for controlling termination of threads executing in this
@@ -292,14 +293,16 @@ class GenericShell(GwMain.GwMain, Widgets.Application):
         # Create troubleshooting dialog if downloading cannot be done
         dialog = Widgets.Dialog(title="Show documentation",
                                 parent=self.w.root,
-                                modal=False,
-                                buttons=[("Cancel", 0),
-                                         ("Show RST text", 1),
-                                         ("Use external browser", 2),
-                                         ])
-        dialog.buttons[0].set_tooltip("Skip help")
-        dialog.buttons[1].set_tooltip("Show local docstring for plugin help")
-        dialog.buttons[2].set_tooltip("Show online web documentation in external browser")
+                                modal=False)
+        btn = Widgets.Button("Cancel")
+        btn.set_tooltip("Skip help")
+        dialog.add_button(btn, 0)
+        btn = Widgets.Button("Show RST text")
+        btn.set_tooltip("Show local docstring for plugin help")
+        dialog.add_button(btn, 1)
+        btn = Widgets.Button("Use external browser")
+        btn.set_tooltip("Show online web documentation in external browser")
+        dialog.add_button(btn, 2)
         vbox = dialog.get_content_area()
         dialog_text = Widgets.TextArea(wrap=True, editable=False)
         dialog_text.set_text("How would you like to see help?")
@@ -556,8 +559,8 @@ class GenericShell(GwMain.GwMain, Widgets.Application):
             self.quit()
 
         # confirm close with a dialog here
-        q_quit = Widgets.Dialog(title="Confirm Quit", modal=False,
-                                parent=self.w.root,
+        q_quit = Widgets.Dialog(title="Confirm Quit", modal=True,
+                                parent=self.w.root, autoclose=False,
                                 buttons=[("Cancel", False), ("Confirm", True)])
         # necessary so it doesn't get garbage collected right away
         self.w.quit_dialog = q_quit

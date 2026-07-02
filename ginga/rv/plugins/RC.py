@@ -311,7 +311,7 @@ class RC(GingaPlugin.GlobalPlugin):
         return 'rc'
 
 
-class GingaWrapper(object):
+class GingaWrapper:
 
     def __init__(self, fv, logger):
         self.fv = fv

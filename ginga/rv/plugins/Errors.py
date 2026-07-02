@@ -99,6 +99,7 @@ class Errors(GingaPlugin.GlobalPlugin):
         vbox.add_widget(hbox, stretch=0)
 
         tw = Widgets.TextArea(editable=False, wrap=False)
+        tw.set_expanding(True, True)
         tw.set_font(self.msg_font)
 
         tw.set_text(errmsg)

@@ -135,13 +135,13 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         # a timer that controls how fast we attempt to update a thumbnail
         # after its associated full image has been modified
         self.timer_redo = self.fv.get_backend_timer()
-        self.timer_redo.set_callback('expired', self.timer_redo_cb)
+        self.timer_redo.add_callback('expired', self.timer_redo_cb)
         self.lagtime = self.settings.get('rebuild_wait', 0.5)
 
         # a timer that controls how quickly we attempt to autoload missing
         # thumbnails
         self.timer_autoload = self.fv.get_backend_timer()
-        self.timer_autoload.set_callback('expired', self.timer_autoload_cb)
+        self.timer_autoload.add_callback('expired', self.timer_autoload_cb)
         self.autoload_interval = self.settings.get('autoload_interval',
                                                    0.25)
         self.autoload_visible = self.settings.get('autoload_visible_thumbs',
@@ -151,7 +151,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         # timer that controls how quickly we attempt to rebuild thumbs after
         # a pan/scroll operation
         self.timer_update = self.fv.get_backend_timer()
-        self.timer_update.set_callback('expired', self.timer_update_cb)
+        self.timer_update.add_callback('expired', self.timer_update_cb)
         self.update_interval = 0.25
         self._to_build = set([])
         self._latest_thumb = None
@@ -225,7 +225,6 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         bm.map_event(None, [], 'sc_scroll', 'pan')
 
         iw = Viewers.GingaScrolledViewerWidget(c_v)
-        iw.resize(self._wd, self._ht)
         iw.scroll_bars(horizontal='auto', vertical='auto')
 
         vbox.add_widget(iw, stretch=1)
@@ -272,9 +271,11 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         tg.set_bg(0.7, 0.7, 0.7)
         return tg
 
-    def drag_drop_cb(self, viewer, urls):
+    def drag_drop_cb(self, viewer, drop_event):
         """Punt drag-drops to the ginga shell.
         """
+        # TODO: check type of drop
+        urls = drop_event.contents['body']
         channel = self.fv.get_current_channel()
         if channel is None:
             return

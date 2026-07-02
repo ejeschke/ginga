@@ -159,7 +159,7 @@ class EnhancedCanvasView(BasicCanvasView):
         self.readout.set_text(text)
 
 
-class ViewerFactory(object):
+class ViewerFactory:
     """
     This is a factory class that churns out viewers.
 

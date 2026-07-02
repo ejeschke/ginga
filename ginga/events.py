@@ -229,3 +229,30 @@ class PanEvent(UIEvent):
         self.delta_y = delta_y
         self.data_x = data_x
         self.data_y = data_y
+
+
+class DropEvent(UIEvent):
+
+    def __init__(self, source=None, drag_type=None):
+        self.source = source
+        self.drag_type = None
+        self.contents = dict()
+
+    def set_uris(self, uris):
+        self.drag_type = 'uris'
+        self.contents['body'] = uris
+
+    def set_text(self, text):
+        self.drag_type = 'text'
+        self.contents['body'] = text
+
+    def set_paths(self, paths):
+        self.drag_type = 'paths'
+        self.contents['body'] = paths
+
+    def set_blobs(self, blobs):
+        self.drag_type = 'blobs'
+        self.contents['body'] = blobs
+
+    def set(self, *args, **kwargs):
+        self.contents.update(kwargs)

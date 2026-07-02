@@ -36,6 +36,7 @@ from pathlib import Path
 
 from ginga.misc import Bunch
 from ginga import GingaPlugin
+from ginga.events import DropEvent
 from ginga.util import paths, iohelper
 from ginga.gw import Widgets
 
@@ -77,6 +78,8 @@ class FBrowser(GingaPlugin.LocalPlugin):
                                    scan_limit=100,
                                    keywords=keywords,
                                    columns=columns,
+                                   font_name='fixed',
+                                   font_size=12,
                                    color_alternate_rows=True,
                                    max_rows_for_col_resize=5000)
         self.settings.load(onError='silent')
@@ -108,6 +111,10 @@ class FBrowser(GingaPlugin.LocalPlugin):
         table = Widgets.TreeView(sortable=True, selection='multiple',
                                  use_alt_row_color=color_alternate,
                                  dragable=True)
+        table.set_row_spacing(0)
+        font_name = self.settings.get('font_name', 'fixed')
+        font_size = self.settings.get('font_size', 12)
+        table.set_font(font_name, font_size)
         table.add_callback('activated', self.item_dblclicked_cb)
         table.add_callback('drag-start', self.item_drag_cb)
         table.add_callback('selected', self.item_selected_cb)
@@ -158,14 +165,16 @@ class FBrowser(GingaPlugin.LocalPlugin):
 
     def load_paths(self, paths):
         if self.fitsimage is not None:
-            self.fv.gui_do(self.fitsimage.make_callback, 'drag-drop', paths)
+            # Simulate a drop onto our viewer so the file(s) load into the
+            # associated channel.  Drop handlers now expect a DropEvent
+            # (not a bare list of paths), so build one.
+            drop = DropEvent()
+            drop.set_uris(paths)
+            self.fv.gui_do(self.fitsimage.make_callback, 'drag-drop', drop)
         else:
             channel = self.fv.get_channel_info()
-            if channel is None:
-                chname = None
-            else:
-                chname = channel.name
-            self.fv.gui_do(self.fv.open_uris, paths, chname=channel.name)
+            chname = None if channel is None else channel.name
+            self.fv.gui_do(self.fv.open_uris, paths, chname=chname)
 
     def load_cb(self):
         # Load from text box
@@ -177,7 +186,7 @@ class FBrowser(GingaPlugin.LocalPlugin):
         # Load from tree view
         #curdir, curglob = os.path.split(self.curpath)
         select_dict = self.treeview.get_selected()
-        paths = [info.path for key, info in select_dict.items()]
+        paths = [info['path'] for key, info in select_dict.items()]
         self.logger.debug('Loading {0}'.format(paths))
 
         # Open directory
@@ -199,8 +208,8 @@ class FBrowser(GingaPlugin.LocalPlugin):
         tree_dict = {}
         for bnch in self.jumpinfo:
             icon = self.file_icon(bnch)
-            bnch.setvals(icon=icon)
-            entry_key = bnch.name
+            bnch['icon'] = icon
+            entry_key = bnch['name']
 
             if entry_key is None:
                 raise Exception("No key for tuple")
@@ -216,7 +225,7 @@ class FBrowser(GingaPlugin.LocalPlugin):
             self.logger.debug("Resized columns for {0} row(s)".format(n_rows))
 
     def get_path_from_item(self, res_dict):
-        paths = [info.path for key, info in res_dict.items()]
+        paths = [info['path'] for key, info in res_dict.items()]
         path = paths[0]
         return path
 
@@ -225,11 +234,12 @@ class FBrowser(GingaPlugin.LocalPlugin):
         self.open_file(path)
 
     def item_drag_cb(self, widget, drag_pkg, res_dict):
-        urls = [Path(info.path).as_uri() for info in res_dict.values()]
+        urls = [Path(info['path']).as_uri() for info in res_dict.values()]
         self.logger.info("urls: %s" % (urls))
         # destination can collect selection in two ways
-        drag_pkg.set_urls(urls)
-        drag_pkg.set_text('\n'.join(urls))
+        drag_pkg.set_uris(urls)
+        #
+        #drag_pkg.set_text('\n'.join(urls))
 
     def browse_cb(self, widget):
         path = str(widget.get_text()).strip()
@@ -242,7 +252,7 @@ class FBrowser(GingaPlugin.LocalPlugin):
             self.browse(path)
 
     def item_selected_cb(self, widget, res_dict):
-        paths = [info.path for info in res_dict.values()]
+        paths = [info['path'] for info in res_dict.values()]
         n_paths = len(paths)
         if n_paths <= 0:
             return
@@ -260,9 +270,9 @@ class FBrowser(GingaPlugin.LocalPlugin):
         return True
 
     def file_icon(self, bnch):
-        if bnch.type == 'dir':
+        if bnch['type'] == 'dir':
             pb = self.folderpb
-        elif bnch.type == 'fits':
+        elif bnch['type'] == 'fits':
             pb = self.fitspb
         else:
             pb = self.filepb
@@ -325,7 +335,9 @@ class FBrowser(GingaPlugin.LocalPlugin):
         elif ext.lower() == '.fits':
             ftype = 'fits'
 
-        bnch = Bunch.Bunch(self.na_dict)
+        # NOTE: rows are plain dicts (not Bunch) so they serialize for the
+        # pg/web backend; access the fields with item syntax (bnch['key']).
+        bnch = dict(self.na_dict)
         try:
             filestat = os.stat(path)
             bnch.update(dict(path=path, name=filename, type=ftype,
@@ -386,17 +398,17 @@ class FBrowser(GingaPlugin.LocalPlugin):
         self.logger.info("scanning files for header keywords...")
         start_time = time.time()
         for bnch in self.jumpinfo:
-            if (not bnch.type == 'fits') or (not have_astropy):
+            if (not bnch['type'] == 'fits') or (not have_astropy):
                 continue
             try:
-                with pyfits.open(bnch.path, 'readonly') as in_f:
+                with pyfits.open(bnch['path'], 'readonly') as in_f:
                     kwds = {attrname: in_f[0].header.get(kwd, 'N/A')
                             for attrname, kwd in self.keywords}
                 bnch.update(kwds)
             except Exception as e:
                 self.logger.warning(
                     "Error reading FITS keywords from "
-                    "'%s': %s" % (bnch.path, str(e)))
+                    "'%s': %s" % (bnch['path'], str(e)))
                 continue
         elapsed = time.time() - start_time
         self.logger.info("done scanning--scan time: %.2f sec" % (elapsed))
