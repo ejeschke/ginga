@@ -3028,6 +3028,14 @@ class Frame(ContainerBase):
         lbl = w.get_label_widget()
         lbl.set_text(text)
 
+    def set_font(self, font, size=10):
+        # set the font of the frame's title label, if there is one
+        if isinstance(font, str):
+            font = self.get_font(font, size)
+        lbl = self.widget.get_label_widget()
+        if lbl is not None:
+            lbl.modify_font(font)
+
 
 class Expander(ContainerBase):
     r_arrow = None
@@ -3100,6 +3108,14 @@ class Expander(ContainerBase):
 
     def _toggle_widget(self, w, tf):
         self.expand(tf)
+
+    def set_font(self, font, size=10):
+        # set the font of the expander's toggle (title) button, if any;
+        # modify_font on the button propagates to its label child
+        if self.toggle is not None:
+            if isinstance(font, str):
+                font = self.get_font(font, size)
+            self.toggle.get_widget().modify_font(font)
 
 
 class TabWidget(ContainerBase):

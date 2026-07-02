@@ -3024,6 +3024,12 @@ class Frame(ContainerBase):
         lbl = w.get_label_widget()
         lbl.set_text(text)
 
+    def set_font(self, font, size=10):
+        if isinstance(font, str):
+            font = self.get_font(font, size)
+        # TODO: GTK4 removed modify_font(); title font styling needs CSS
+        # (see Label.set_font)
+
 
 class Expander(ContainerBase):
     def __init__(self, title=None, notoggle=False):
@@ -3053,6 +3059,12 @@ class Expander(ContainerBase):
 
     def expand(self, tf):
         self.widget.set_expanded(tf)
+
+    def set_font(self, font, size=10):
+        if isinstance(font, str):
+            font = self.get_font(font, size)
+        # TODO: GTK4 removed modify_font(); title font styling needs CSS
+        # (see Label.set_font)
 
 
 class TabWidget(ContainerBase):

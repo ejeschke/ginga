@@ -3312,6 +3312,13 @@ class Frame(ContainerBase):
         if self.label is not None:
             self.label.setText(text)
 
+    def set_font(self, font, size=10):
+        # set the font of the frame's title label, if there is one
+        if self.label is not None:
+            if not isinstance(font, QFont):
+                font = self.get_font(font, size)
+            self.label.setFont(font)
+
 
 # Qt custom expander widget
 # See http://stackoverflow.com/questions/10364589/equivalent-of-gtks-expander-in-pyqt4  # noqa
@@ -3320,10 +3327,12 @@ class Expander(ContainerBase):
     r_arrow = None
     d_arrow = None
 
-    # Note: add 'text-align: left;' if you want left adjusted labels
+    # 'text-align: left;' pushes the arrow icon + title flush left, to
+    # match the pg (and gtk4) Expander styling
     widget_style = """
     QPushButton { margin: 1px,1px,1px,1px; padding: 0px;
-                  border-width: 0px; border-style: solid; }
+                  border-width: 0px; border-style: solid;
+                  text-align: left; }
     """
 
     def __init__(self, title='', notoggle=False):
@@ -3388,6 +3397,13 @@ class Expander(ContainerBase):
 
     def _toggle_widget(self, w, tf):
         self.expand(tf)
+
+    def set_font(self, font, size=10):
+        # set the font of the expander's toggle (title) button, if any
+        if self.toggle is not None:
+            if not isinstance(font, QFont):
+                font = self.get_font(font, size)
+            self.toggle.get_widget().setFont(font)
 
 
 class FixedLayout(ContainerBase):
