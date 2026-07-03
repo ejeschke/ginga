@@ -20,7 +20,6 @@ from ginga.doc import download_doc
 # GUI imports
 from ginga.gw import GwHelp, GwMain, PluginManager
 from ginga.gw import Widgets, Desktop
-from ginga.util.paths import icondir as icon_dir
 
 pluginconfpfx = None
 
@@ -559,23 +558,13 @@ class GenericShell(GwMain.GwMain, Widgets.Application):
             self.quit()
 
         # confirm close with a dialog here
-        q_quit = Widgets.Dialog(title="Confirm Quit", modal=True,
-                                parent=self.w.root, autoclose=False,
-                                buttons=[("Cancel", False), ("Confirm", True)])
+        q_quit = Widgets.MessageDialog(title="Confirm Quit", modal=True,
+                                       parent=self.w.root, autoclose=False,
+                                       buttons=[("Cancel", False),
+                                                ("Confirm", True)])
         # necessary so it doesn't get garbage collected right away
         self.w.quit_dialog = q_quit
-        vbox = q_quit.get_content_area()
-        vbox.set_margins(4, 4, 4, 4)
-        hbox = Widgets.HBox()
-        hbox.set_border_width(4)
-        hbox.add_widget(Widgets.Label(""), stretch=1)
-        img = Widgets.Image()
-        iconfile = os.path.join(icon_dir, "warning.svg")
-        img.load_file(iconfile)
-        hbox.add_widget(img, stretch=0)
-        hbox.add_widget(Widgets.Label(""), stretch=1)
-        vbox.add_widget(hbox, stretch=1)
-        vbox.add_widget(Widgets.Label("Do you really want to quit?"))
+        q_quit.set_message('question', "Do you really want to quit?")
         q_quit.add_callback('activated', self._confirm_quit_cb)
         q_quit.add_callback('close', lambda w: self._confirm_quit_cb(w, False))
         q_quit.show()
