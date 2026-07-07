@@ -87,7 +87,7 @@ class WidgetBase(Callback.Callbacks):
             self.widget.setPalette(pal)
 
     def get_enabled(self):
-        self.widget.isEnabled()
+        return self.widget.isEnabled()
 
     def set_enabled(self, tf):
         self.widget.setEnabled(tf)

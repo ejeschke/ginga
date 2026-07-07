@@ -101,7 +101,7 @@ class WidgetBase(Callback.Callbacks):
         GtkHelp.modify_bg(self.widget, color)
 
     def get_enabled(self):
-        self.widget.get_sensitive()
+        return self.widget.get_sensitive()
 
     def set_enabled(self, tf):
         self.widget.set_sensitive(tf)
