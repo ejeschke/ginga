@@ -49,7 +49,7 @@ try:
                             QDrag, QPainterPath, QBrush, QFontDatabase,
                             QCursor, QFontMetrics, QSurfaceFormat,
                             QTextOption, QWheelEvent, QKeySequence,
-                            QPalette, QMovie)
+                            QPalette, QMovie, QFontInfo)
     # QShortcut is in QtGui under PyQt6/PySide6 and in QtWidgets
     # under PyQt5/PySide2; qtpy typically normalises to QtGui, but
     # we try both to stay robust across binding versions.
@@ -506,6 +506,18 @@ def get_color(color, alpha=None):
 qt_fonts = dict()
 
 
+def _qt_has_family(family):
+    """Return True if Qt has the named font family available.
+
+    QFont silently substitutes a fallback for an unknown family (it never
+    raises), so we compare the family Qt actually resolves to (reported by
+    QFontInfo) against the one requested.  Works across all Qt bindings
+    (unlike QFontDatabase.hasFamily, whose static/instance form and even
+    availability vary by binding).
+    """
+    return QFontInfo(QFont(family)).family().lower() == family.lower()
+
+
 def get_font(font_spec, font_size):
     """Function to obtain a native font for the Qt backend.
 
@@ -556,9 +568,14 @@ def get_font(font_spec, font_size):
             except Exception as e:
                 pass
 
-    # try to create the font from the family name directly, plus in any
-    # other substitute fonts
-    families = font_asst.get_substitutes(font_tup.family) + [family]
+    # Honor the requested family if Qt actually has it.  QFont silently
+    # substitutes a fallback for an unknown family (it never raises), so we
+    # must check availability explicitly; otherwise fall back through our
+    # known substitutes / default family.
+    if _qt_has_family(family):
+        families = [family]
+    else:
+        families = font_asst.get_substitutes(font_tup.family) + [family]
     for family in families:
         try:
             font = QFont(family, font_size)

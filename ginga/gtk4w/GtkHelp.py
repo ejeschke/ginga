@@ -1804,6 +1804,21 @@ def get_icon(iconpath, size=None, adjust_width=True):
     return pixbuf
 
 
+def _gtk_has_family(family):
+    """Return True if Pango has the named font family available.
+
+    Pango (like Qt) silently substitutes a fallback for an unknown family,
+    so we ask the font map explicitly whether the family exists.
+    """
+    try:
+        from gi.repository import PangoCairo
+        fontmap = PangoCairo.FontMap.get_default()
+        names = set(fam.get_name().lower() for fam in fontmap.list_families())
+        return family.lower() in names
+    except Exception:
+        return False
+
+
 def get_font(font_spec, font_size):
     """Function to obtain a font for the Pg backend.
 
@@ -1834,7 +1849,16 @@ def get_font(font_spec, font_size):
     else:
         raise ValueError("not a valid font spec: {}".format(str(font_spec)))
 
-    families = font_asst.get_substitutes(font_tup.family) + [font_tup.family]
+    # Honor the requested family if Pango has it and it isn't one of our
+    # registered generic aliases (monospace/sans/...).  Aliases always route
+    # through our substitutes so they resolve consistently (as on Qt);
+    # fontconfig otherwise exposes those generics as real families and would
+    # bypass the substitutes.
+    if (font_tup.family.lower() not in font_asst.aliases and
+            _gtk_has_family(font_tup.family)):
+        families = [font_tup.family]
+    else:
+        families = font_asst.get_substitutes(font_tup.family) + [font_tup.family]
     for family in families:
         try:
             font_str = f'"{family}" {font_tup.style} {font_tup.weight} {font_size}'
