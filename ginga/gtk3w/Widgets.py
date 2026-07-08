@@ -3037,7 +3037,11 @@ class Frame(ContainerBase):
     def set_text(self, text):
         w = self.get_widget()
         lbl = w.get_label_widget()
-        lbl.set_text(text)
+        if lbl is None:
+            # frame built without a title -- create the label from the string
+            w.set_label(text)
+        else:
+            lbl.set_text(text)
 
     def set_font(self, font, size=10):
         # set the font of the frame's title label, if there is one

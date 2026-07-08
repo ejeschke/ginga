@@ -3344,7 +3344,15 @@ class Frame(ContainerBase):
         self.widget.layout().addWidget(child.get_widget(), stretch=stretch)
 
     def set_text(self, text):
-        if self.label is not None:
+        if self.label is None:
+            # No title was supplied at construction.  Create the title label
+            # now (at the top of the frame) so a caller can add/update the
+            # title after the fact, e.g. a filename shown above the content.
+            lbl = QtGui.QLabel(text)
+            lbl.setAlignment(QtCore.Qt.AlignHCenter)
+            self.layout.insertWidget(0, lbl, stretch=0)
+            self.label = lbl
+        else:
             self.label.setText(text)
 
     def set_font(self, font, size=10):
