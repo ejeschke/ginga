@@ -23,8 +23,9 @@ __all__ = ['WidgetError', 'Widget', 'WidgetBase', 'TextEntry', 'TextEntrySet',
            'TextArea', 'Label', 'Button', 'ComboBox', 'Timer',
            'SpinBox', 'Slider', 'Dial', 'ScrollBar', 'CheckBox', 'ToggleButton',
            'RadioButton', 'Image', 'ProgressBar', 'StatusBar', 'TreeView',
-           'TableView', 'ContainerBase', 'Box', 'HBox', 'VBox', 'Frame',
-           'Expander', 'FixedLayout', 'TabWidget', 'StackWidget', 'MDIWidget',
+           'TableView', 'ContainerBase', 'Box', 'HBox', 'VBox',
+           'ButtonBox', 'Frame', 'Expander',
+           'FixedLayout', 'TabWidget', 'StackWidget', 'MDIWidget',
            'ScrollArea', 'Splitter', 'GridBox', 'ToolbarAction', 'Toolbar',
            'MenuAction', 'Menu', 'Menubar', 'TopLevelMixin', 'TopLevel',
            'Application', 'Dialog', 'SaveDialog', 'ColorDialog', 'FileDialog',
@@ -3300,6 +3301,21 @@ class HBox(Box):
 class VBox(Box):
     def __init__(self):
         super(VBox, self).__init__(orientation='vertical')
+
+
+class ButtonBox(HBox):
+    def __init__(self):
+        super().__init__()
+
+        # TODO: automatically recalculate and resize as needed
+        self.btn_width = 30
+        self.set_border_width(4)
+
+    def add_widget(self, child):
+        child.set_min_size(self.btn_width, None)
+        child.cfg_expand(horizontal='minimum')
+
+        super().add_widget(child, stretch=0)
 
 
 class Frame(ContainerBase):
