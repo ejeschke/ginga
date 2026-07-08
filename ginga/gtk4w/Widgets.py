@@ -21,6 +21,7 @@ from ginga.util.syncops import Shelf
 
 from gi.repository import Gtk
 from gi.repository import Gdk
+from gi.repository import GdkPixbuf
 from gi.repository import GLib
 from gi.repository import Gio
 from gi.repository import GObject
@@ -903,6 +904,18 @@ class Image(WidgetBase):
         self.menu = menu
         self.widget = self.image
 
+        # State for animating multi-frame images (e.g. animated GIFs).
+        # GTK4's Gtk.Picture has no set_from_animation, so we drive a
+        # GdkPixbuf.PixbufAnimationIter ourselves on a GLib timeout.
+        self._anim = None
+        self._anim_iter = None
+        self._anim_timer = None
+        # pause/resume the animation with the widget's on-screen lifetime so
+        # the timeout doesn't keep firing (and keep the widget alive) after
+        # it is gone
+        self.image.connect("realize", self._resume_animation)
+        self.image.connect("unrealize", self._pause_animation)
+
         self.enable_callback('activated')
 
     def _cb_redirect1(self, event, n_clicks, x, y):
@@ -931,12 +944,73 @@ class Image(WidgetBase):
         return False
 
     def _set_image(self, native_image):
-        self.image.set_from_pixbuf(native_image.get_pixbuf())
+        # native_image may be a PixbufAnimation (animated) or something with
+        # a get_pixbuf() (static)
+        if isinstance(native_image, GdkPixbuf.PixbufAnimation):
+            if native_image.is_static_image():
+                self._stop_animation()
+                self.image.set_pixbuf(native_image.get_static_image())
+            else:
+                self._start_animation(native_image)
+        else:
+            self._stop_animation()
+            self.image.set_pixbuf(native_image.get_pixbuf())
 
     def load_file(self, img_path, format=None):
-        # format ignored at present
-        pixbuf = GtkHelp.pixbuf_new_from_file(img_path)
-        self.image.set_pixbuf(pixbuf)
+        # format ignored at present.  GTK4's Gtk.Picture has no
+        # set_from_animation, so for a multi-frame (animated) image we drive
+        # the frames ourselves; otherwise fall back to a static pixbuf.
+        anim = GdkPixbuf.PixbufAnimation.new_from_file(img_path)
+        if anim.is_static_image():
+            self._stop_animation()
+            pixbuf = GtkHelp.pixbuf_new_from_file(img_path)
+            self.image.set_pixbuf(pixbuf)
+        else:
+            self._start_animation(anim)
+
+    def _start_animation(self, anim):
+        self._stop_animation()
+        self._anim = anim
+        # None => start from the current time
+        self._anim_iter = anim.get_iter(None)
+        self._schedule_frame()
+
+    def _schedule_frame(self):
+        it = self._anim_iter
+        if it is None:
+            return
+        texture = Gdk.Texture.new_for_pixbuf(it.get_pixbuf())
+        self.image.set_paintable(texture)
+        delay = it.get_delay_time()   # ms until next frame, -1 if none
+        if delay < 0:
+            return
+        # avoid a busy loop on frames that report a zero/tiny delay
+        delay = max(delay, 20)
+        self._anim_timer = GLib.timeout_add(delay, self._advance_anim)
+
+    def _advance_anim(self):
+        self._anim_timer = None
+        if self._anim_iter is None:
+            return False
+        self._anim_iter.advance(None)
+        # shows the next frame and reschedules itself with its delay
+        self._schedule_frame()
+        return False
+
+    def _pause_animation(self, *args):
+        # stop the timeout but keep the animation state so it can resume
+        if self._anim_timer is not None:
+            GLib.source_remove(self._anim_timer)
+            self._anim_timer = None
+
+    def _resume_animation(self, *args):
+        if self._anim_iter is not None and self._anim_timer is None:
+            self._schedule_frame()
+
+    def _stop_animation(self):
+        self._pause_animation()
+        self._anim = None
+        self._anim_iter = None
 
 
 class ProgressBar(WidgetBase):

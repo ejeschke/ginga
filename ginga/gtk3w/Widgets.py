@@ -20,6 +20,7 @@ from ginga.util.syncops import Shelf
 
 from gi.repository import Gtk
 from gi.repository import Gdk
+from gi.repository import GdkPixbuf
 from gi.repository import GLib
 from gi.repository import GObject
 
@@ -906,12 +907,22 @@ class Image(WidgetBase):
                 self.make_callback('activated')
 
     def _set_image(self, native_image):
-        self.image.set_from_pixbuf(native_image.get_pixbuf())
+        # native_image may be a PixbufAnimation (animated) or something with
+        # a get_pixbuf() (static)
+        if isinstance(native_image, GdkPixbuf.PixbufAnimation):
+            self.image.set_from_animation(native_image)
+        else:
+            self.image.set_from_pixbuf(native_image.get_pixbuf())
 
     def load_file(self, img_path, format=None):
-        # format ignored at present
-        pixbuf = GtkHelp.pixbuf_new_from_file(img_path)
-        self.image.set_from_pixbuf(pixbuf)
+        # format ignored at present.  Use an animation for multi-frame
+        # (animated) images so they animate; fall back to a static pixbuf.
+        anim = GdkPixbuf.PixbufAnimation.new_from_file(img_path)
+        if anim.is_static_image():
+            pixbuf = GtkHelp.pixbuf_new_from_file(img_path)
+            self.image.set_from_pixbuf(pixbuf)
+        else:
+            self.image.set_from_animation(anim)
 
 
 class ProgressBar(WidgetBase):

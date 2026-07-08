@@ -49,7 +49,7 @@ try:
                             QDrag, QPainterPath, QBrush, QFontDatabase,
                             QCursor, QFontMetrics, QSurfaceFormat,
                             QTextOption, QWheelEvent, QKeySequence,
-                            QPalette)
+                            QPalette, QMovie)
     # QShortcut is in QtGui under PyQt6/PySide6 and in QtWidgets
     # under PyQt5/PySide2; qtpy typically normalises to QtGui, but
     # we try both to stay robust across binding versions.

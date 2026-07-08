@@ -9,7 +9,7 @@ import pathlib
 from functools import reduce
 
 from ginga.qtw.QtHelp import (QtGui, QtCore, QTextCursor, QIcon, QPixmap,
-                              QTextOption, QCursor, QFont, SaveDialog)
+                              QTextOption, QCursor, QFont, QMovie, SaveDialog)
 from ginga.qtw import QtHelp
 from ginga.qtw.QtHelp import Timer  # noqa
 
@@ -850,6 +850,9 @@ class Image(WidgetBase):
 
         lbl = QtGui.QLabel()
         self.widget = lbl
+        # holds a QMovie while displaying an animated image, so it is not
+        # garbage-collected (which would stop the animation)
+        self._movie = None
         if native_image is not None:
             self._set_image(native_image)
 
@@ -881,10 +884,26 @@ class Image(WidgetBase):
             self.make_callback('activated')
 
     def _set_image(self, native_image):
+        # native_image may be a QMovie (animated) or a QImage (static)
+        if isinstance(native_image, QMovie):
+            self._movie = native_image
+            self.widget.setMovie(native_image)
+            native_image.start()
+            return
+        self._movie = None
         pixmap = QPixmap.fromImage(native_image)
         self.widget.setPixmap(pixmap)
 
     def load_file(self, img_path, format=None):
+        # Use a QMovie for multi-frame (animated) images so they animate;
+        # fall back to a static pixmap otherwise.
+        movie = QMovie(img_path)
+        if movie.isValid() and movie.frameCount() > 1:
+            self._movie = movie
+            self.widget.setMovie(movie)
+            movie.start()
+            return
+        self._movie = None
         pixmap = QPixmap()
         pixmap.load(img_path, format=format)
         self.widget.setPixmap(pixmap)
