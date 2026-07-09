@@ -21,7 +21,7 @@ from ginga.fonts import font_asst
 from ginga.gw.widget_helpers import DIALOG_FLAGS_ONTOP
 
 __all__ = ['WidgetError', 'Widget', 'WidgetBase', 'TextEntry', 'TextEntrySet',
-           'TextArea', 'Label', 'Button', 'ComboBox', 'Timer',
+           'TextArea', 'TextSource', 'Label', 'Button', 'ComboBox', 'Timer',
            'SpinBox', 'Slider', 'Dial', 'ScrollBar', 'CheckBox', 'ToggleButton',
            'RadioButton', 'Image', 'ProgressBar', 'StatusBar', 'TreeView',
            'TableView', 'ContainerBase', 'Box', 'HBox', 'VBox',
@@ -371,6 +371,239 @@ class TextArea(WidgetBase):
             vsb.setValue(vsb.maximum())
         else:
             vsb.setValue(pos)
+
+
+class TextSource(WidgetBase):
+    """Ginga widget wrapping the numbered, tag-aware Qt text editor
+    (``QtHelp.QTextSource``), which realizes the toolkit-neutral
+    ``ginga.gw.text_model.TextModel``."""
+
+    def __init__(self, wrap=False, editable=False):
+        super().__init__()
+
+        self.widget = QtHelp.QTextSource()
+        tw = self.widget.get_internal_text_widget()
+        tw.setReadOnly(not editable)
+        self.widget.set_wrap(wrap)
+        self.tw = tw
+
+        for name in ['tooltip', 'changed', 'cursor_moved', 'key-press',
+                     'line-clicked']:
+            self.enable_callback(name)
+
+        # Relay the inner widget's callbacks out through this wrapper.  The
+        # inner widget calls these with itself as the first argument.
+        self.widget.add_callback('changed',
+                                 lambda w: self.make_callback('changed'))
+        self.widget.add_callback('cursor-moved',
+                                 lambda w: self.make_callback('cursor_moved'))
+        self.widget.add_callback('key-press', self._key_pressed)
+        self.widget.add_callback(
+            'line-clicked',
+            lambda w, lineno: self.make_callback('line-clicked', lineno))
+
+    def _key_pressed(self, w, event):
+        # Point the event at this (ginga) widget and relay it.  The return
+        # value propagates back to QTextSource.eventFilter: truthy means a
+        # page handler consumed the key.
+        event.viewer = self
+        return self.make_callback('key-press', event)
+
+    def append_text(self, text, autoscroll=True, tags=None):
+        end = self.widget.get_ref_end()
+        self.widget.insert_text(end, text, tags=tags)
+        self.widget.remove_ref(end)
+        if autoscroll:
+            self.widget.scroll_to_end()
+
+    def get_text(self):
+        return self.widget.get_text()
+
+    def get_text_range(self, start_ref, end_ref):
+        return self.widget.get_text_range(start_ref, end_ref)
+
+    def can_undo(self):
+        return self.widget.can_undo()
+
+    def can_redo(self):
+        return self.widget.can_redo()
+
+    def undo(self):
+        return self.widget.undo()
+
+    def redo(self):
+        return self.widget.redo()
+
+    def clear(self):
+        self.widget.clear()
+
+    def set_text(self, text):
+        self.widget.set_text(text)
+
+    def set_editable(self, tf):
+        self.widget.set_editable(tf)
+
+    def set_limit(self, numlines):
+        pass
+
+    def set_font(self, font, size=10):
+        if not isinstance(font, QFont):
+            font = self.get_font(font, size)
+        self.widget.set_font(font)
+
+    def set_wrap(self, kind):
+        self.widget.set_wrap(kind)
+
+    def set_scroll_pos(self, pos):
+        self.widget.set_scroll_pos(pos)
+
+    def show_line_numbers(self, tf):
+        return self.widget.show_line_numbers(tf)
+
+    def enable_line_icons(self, tf):
+        self.widget.set_icon_gutter(tf)
+
+    def enable_tooltips(self, tf):
+        self.tw.set_tooltip_callback(self._tt_cb if tf else None)
+
+    def _tt_cb(self, event):
+        cur = self.tw.cursorForPosition(event.pos())
+        pos_in_line = cur.positionInBlock()
+        block = cur.block()
+        line_no = block.firstLineNumber()
+        text = block.text()
+        res = []
+        self.make_callback('tooltip', res, line_no, pos_in_line, text)
+        if len(res) > 0:
+            QtGui.QToolTip.showText(event.globalPos(), res[0])
+        return True
+
+    def set_syntax_highlighter_class(self, klass):
+        return self.widget.set_syntax_highlighter_class(klass)
+
+    def get_syntax_highlighter(self):
+        return self.widget.get_syntax_highlighter()
+
+    def get_modified(self):
+        return self.widget.get_modified()
+
+    def get_end_lineno(self):
+        return self.widget.get_end_lineno()
+
+    def scroll_to_lineno(self, lineno):
+        return self.widget.scroll_to_lineno(lineno)
+
+    def scroll_to_end(self):
+        return self.widget.scroll_to_end()
+
+    def get_length(self):
+        return self.widget.get_length()
+
+    def create_ref(self, offset, gravity='right'):
+        return self.widget.create_ref(offset, gravity=gravity)
+
+    def remove_ref(self, ref):
+        return self.widget.remove_ref(ref)
+
+    def create_named_ref(self, name, offset, gravity='right'):
+        return self.widget.create_named_ref(name, offset, gravity=gravity)
+
+    def get_named_ref(self, name):
+        return self.widget.get_named_ref(name)
+
+    def remove_named_ref(self, name):
+        return self.widget.remove_named_ref(name)
+
+    def get_ref_start(self):
+        return self.widget.get_ref_start()
+
+    def get_ref_end(self):
+        return self.widget.get_ref_end()
+
+    def get_ref_bounds(self):
+        return self.widget.get_ref_bounds()
+
+    def get_ref_line_start(self, lineno):
+        return self.widget.get_ref_line_start(lineno)
+
+    def get_ref_line_end(self, lineno):
+        return self.widget.get_ref_line_end(lineno)
+
+    def insert_text(self, ref, text, tags=None):
+        return self.widget.insert_text(ref, text, tags=tags)
+
+    def delete_range(self, start_ref, end_ref):
+        return self.widget.delete_range(start_ref, end_ref)
+
+    def create_tag(self, name, attrs=None, **kwdargs):
+        return self.widget.create_tag(name, attrs=attrs, **kwdargs)
+
+    def remove_tag_def(self, name):
+        return self.widget.remove_tag_def(name)
+
+    def has_tag(self, name):
+        return self.widget.has_tag(name)
+
+    def apply_tag(self, name, start_ref, end_ref):
+        return self.widget.apply_tag(name, start_ref, end_ref)
+
+    def remove_tag(self, name, start_ref, end_ref):
+        return self.widget.remove_tag(name, start_ref, end_ref)
+
+    def get_tags_at(self, ref):
+        return self.widget.get_tags_at(ref)
+
+    def get_tags_range(self, start_ref, end_ref):
+        return self.widget.get_tags_range(start_ref, end_ref)
+
+    def get_tag_region(self, name):
+        return self.widget.get_tag_region(name)
+
+    def get_tag_regions(self, name):
+        return self.widget.get_tag_regions(name)
+
+    def get_cursor(self):
+        return self.widget.get_cursor()
+
+    def set_cursor(self, ref):
+        return self.widget.set_cursor(ref)
+
+    def has_selection(self):
+        return self.widget.has_selection()
+
+    def get_selection_range(self):
+        return self.widget.get_selection_range()
+
+    def get_selection_bounds(self):
+        return self.widget.get_selection_bounds()
+
+    def set_selection_range(self, start_ref, end_ref):
+        return self.widget.set_selection_range(start_ref, end_ref)
+
+    def find(self, query, start=None, case_insensitive=False):
+        return self.widget.find(query, start=start,
+                                case_insensitive=case_insensitive)
+
+    def find_all(self, query, start=None, case_insensitive=False):
+        return self.widget.find_all(query, start=start,
+                                    case_insensitive=case_insensitive)
+
+    def replace(self, query, replacement, all=False, start=None,
+                case_insensitive=False):
+        return self.widget.replace(query, replacement, all=all, start=start,
+                                   case_insensitive=case_insensitive)
+
+    def set_icon(self, ref, image):
+        return self.widget.set_icon(ref, image)
+
+    def set_icon_gutter(self, tf, pad_px=24):
+        return self.widget.set_icon_gutter(tf, pad_px=pad_px)
+
+    def clear_icons(self):
+        return self.widget.clear_icons()
+
+    def scroll_to_ref(self, ref):
+        return self.widget.scroll_to_ref(ref)
 
 
 class Label(WidgetBase):

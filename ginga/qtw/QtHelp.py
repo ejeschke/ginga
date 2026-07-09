@@ -17,6 +17,8 @@ from ginga.util import iohelper
 from ginga.misc import Callback, Bunch
 from ginga.fonts import font_asst
 from ginga import colors
+from ginga.events import KeyEvent
+from ginga.gw.text_model import TextModel
 
 configured = False
 
@@ -49,7 +51,7 @@ try:
                             QDrag, QPainterPath, QBrush, QFontDatabase,
                             QCursor, QFontMetrics, QSurfaceFormat,
                             QTextOption, QWheelEvent, QKeySequence,
-                            QPalette, QMovie, QFontInfo)
+                            QPalette, QMovie, QFontInfo, QTextCharFormat)
     # QShortcut is in QtGui under PyQt6/PySide6 and in QtWidgets
     # under PyQt5/PySide2; qtpy typically normalises to QtGui, but
     # we try both to stay robust across binding versions.
@@ -58,7 +60,7 @@ try:
     except ImportError:
         from qtpy.QtWidgets import QShortcut  # noqa
     from qtpy.QtWidgets import QOpenGLWidget, QWIDGETSIZE_MAX  # noqa
-    from qtpy.QtCore import QItemSelectionModel  # noqa
+    from qtpy.QtCore import QItemSelectionModel, QEvent  # noqa
     from qtpy.QtWidgets import QApplication, QWidget  # noqa
     from qtpy import QtSvg  # noqa
 
@@ -718,6 +720,618 @@ def set_default_opengl_context():
 def delete_widget(w):
     ## sip.delete(w)
     w.deleteLater()
+
+
+def mkformat(fgcolor=None, bgcolor=None, style=None, baseformat=None):
+    """Return a QTextCharFormat with the given attributes."""
+    style = [] if style is None else list(style)
+    _format = QTextCharFormat()
+    if baseformat is not None:
+        _format.merge(baseformat)
+
+    if fgcolor is not None:
+        _fgcolor = QColor()
+        rgb = colors.resolve_color(fgcolor, format='tuple')
+        _fgcolor.setRgbF(rgb[0], rgb[1], rgb[2], 1.0)
+        _format.setForeground(_fgcolor)
+
+    if bgcolor is not None:
+        _bgcolor = QColor()
+        rgb = colors.resolve_color(bgcolor, format='tuple')
+        _bgcolor.setRgbF(rgb[0], rgb[1], rgb[2], 1.0)
+        _format.setBackground(_bgcolor)
+
+    if 'bold' in style:
+        _format.setFontWeight(QFont.Bold)
+    if 'italic' in style:
+        _format.setFontItalic(True)
+
+    return _format
+
+
+def _resolve_qt_enum(enum_name, attr):
+    """Resolve a scoped Qt enum member across PyQt5/6 and PySide2/6.
+
+    In Qt6 members live under a nested enum (e.g. ``Qt.Key.Key_Up``); in
+    Qt5 they are attributes of ``Qt`` directly.
+    """
+    enum = getattr(QtCore.Qt, enum_name, None)
+    if enum is not None and hasattr(enum, attr):
+        return getattr(enum, attr)
+    return getattr(QtCore.Qt, attr, None)
+
+
+def _resolve_qt_key(attr):
+    return _resolve_qt_enum('Key', attr)
+
+
+def _enum_int(val):
+    """Return the integer value of a Qt enum/flags member.
+
+    PyQt6 scoped enums/flags are not always directly ``int()``-convertible,
+    but expose a ``.value``; PyQt5/PySide return plain ints.
+    """
+    try:
+        return int(val)
+    except (TypeError, ValueError):
+        return int(val.value)
+
+
+# Map Qt key codes to ginga-style (lowercase) key names for keys page code
+# cares about.  Printable keys fall through to the event's text().
+_KEY_NAMES = {}
+for _attr, _name in [
+        ('Key_Up', 'up'), ('Key_Down', 'down'),
+        ('Key_Left', 'left'), ('Key_Right', 'right'),
+        ('Key_Shift', 'shift_l'), ('Key_Control', 'control_l'),
+        ('Key_Alt', 'alt_l'), ('Key_Meta', 'meta_l'),
+        ('Key_Return', 'return'), ('Key_Enter', 'return'),
+        ('Key_Escape', 'escape'), ('Key_Tab', 'tab'),
+        ('Key_Backspace', 'backspace'), ('Key_Delete', 'delete'),
+        ('Key_Home', 'home'), ('Key_End', 'end'),
+        ('Key_PageUp', 'page_up'), ('Key_PageDown', 'page_down'),
+        ('Key_Space', 'space')]:
+    _code = _resolve_qt_key(_attr)
+    if _code is not None:
+        _KEY_NAMES[_enum_int(_code)] = _name
+del _attr, _name, _code
+
+# Qt keyboard-modifier flags -> ginga modifier names (matches Bindings.py).
+_MODIFIERS = []
+for _attr, _name in [('ControlModifier', 'ctrl'), ('ShiftModifier', 'shift'),
+                     ('AltModifier', 'alt'), ('MetaModifier', 'win')]:
+    _flag = _resolve_qt_enum('KeyboardModifier', _attr)
+    if _flag is not None:
+        _MODIFIERS.append((_enum_int(_flag), _name))
+del _attr, _name, _flag
+
+
+def _make_key_event(qt_event, viewer=None):
+    """Build a ginga ``KeyEvent`` from a Qt key event, or return None.
+
+    Key names follow ginga's lowercase convention and modifiers are reported
+    as a set (``ctrl``/``shift``/``alt``/``win``), so page handlers can read
+    ``event.key`` and ``event.modifiers`` the same way ginga viewers do.
+    """
+    key = _enum_int(qt_event.key())
+    mods = _enum_int(qt_event.modifiers())
+    modset = set(name for flag, name in _MODIFIERS if mods & flag)
+
+    name = _KEY_NAMES.get(key)
+    if name is None:
+        if modset & {'ctrl', 'alt', 'win'}:
+            # text() is a control character under these modifiers, so derive
+            # the base key from the key code instead.
+            name = chr(key).lower() if 0x20 <= key <= 0x7e else None
+        else:
+            text = qt_event.text()
+            name = text.lower() if text and text.isprintable() else None
+    if name is None:
+        return None
+    return KeyEvent(key=name, state='down', modifiers=frozenset(modset),
+                    viewer=viewer)
+
+
+class QNumberBar(QWidget):
+    """Specialty class used by QTextSource to provide line numbers
+    and line marking icons.  See QTextSource for use.
+    """
+
+    def __init__(self, *args, **kwargs):
+        QWidget.__init__(self, *args, **kwargs)
+        self.icon_px = 0
+        self.edit = None
+        self.highest_line = 0
+        self.nb_enabled = False
+
+        self.icon_dct = dict()
+
+    def setTextEdit(self, edit):
+        self.edit = edit
+
+    def show_line_numbers(self, tf):
+        self.nb_enabled = tf
+        self.update()
+
+    def set_icon_column_px(self, pad_px):
+        self.icon_px = pad_px
+        self.update()
+
+    def set_icon_for_line(self, line, image):
+        self.icon_dct[line] = image
+        self.update()
+
+    def unset_icon_for_line(self, line):
+        if line in self.icon_dct:
+            del self.icon_dct[line]
+        self.update()
+
+    def clear_icons(self):
+        self.icon_dct = dict()
+        self.update()
+
+    def update(self, *args):
+        if not self.nb_enabled:
+            width = self.icon_px
+        else:
+            width = self.fontMetrics().width(str(self.highest_line)) + 4 + self.icon_px
+        if self.width() != width:
+            self.setFixedWidth(width)
+        QWidget.update(self, *args)
+
+    def paintEvent(self, event):
+        contents_y = self.edit.verticalScrollBar().value()
+        page_bottom = contents_y + self.edit.viewport().height()
+        font_metrics = self.fontMetrics()
+        current_block = self.edit.document().findBlock(self.edit.textCursor().position())
+
+        painter = QPainter(self)
+
+        line_count = 0
+        block = self.edit.document().begin()
+        while block.isValid():
+            line_count += 1
+            position = self.edit.document().documentLayout().blockBoundingRect(block).topLeft()
+            if position.y() > page_bottom:
+                break
+
+            icon_img = self.icon_dct.get(line_count, None)
+            if icon_img is not None:
+                x = self.width() - self.icon_px
+                y = round(position.y()) - contents_y
+                painter.drawImage(x, y, icon_img)
+
+            bold = False
+            if block == current_block:
+                bold = True
+                font = painter.font()
+                font.setBold(True)
+                painter.setFont(font)
+
+            x = self.width() - self.icon_px - font_metrics.width(str(line_count)) - 3
+            y = round(position.y()) - contents_y + font_metrics.ascent()
+            painter.drawText(x, y, str(line_count))
+
+            if bold:
+                font = painter.font()
+                font.setBold(False)
+                painter.setFont(font)
+
+            block = block.next()
+
+        self.highest_line = self.edit.document().blockCount()
+        painter.end()
+
+        QWidget.paintEvent(self, event)
+
+
+class QEnhancedTextEdit(QtGui.QTextEdit):
+    """Speciality class that enhances a QTextEdit to be able to easily color
+    lines and provides some convenience functions for syntax highlighting.
+    See QTextSource for use.
+    """
+    def __init__(self, *args, **kwargs):
+        QtGui.QTextEdit.__init__(self, *args, **kwargs)
+
+        self.syntax_hl = None
+        # When growing is True the widget caps its max height to the document
+        # height (auto-sizing to content).  Default off so the editor instead
+        # fills the space it is given, with text anchored at the top rather
+        # than floating in the vertical center of an oversized cell.
+        self.growing = False
+        self.document().documentLayout().documentSizeChanged.connect(
+            self.sizeChange_cb)
+        self.heightMin = 0
+        self.heightMax = 65000
+        self.tt_cb = None
+        self.tt_args = []
+
+        # Undo/redo is modeled at the TextModel level (see its _undo_stack)
+        # so that refs and tag intervals are restored along with the text.
+        # Qt's native document undo would edit the document directly,
+        # bypassing that model, so we disable it here.
+        self.setUndoRedoEnabled(False)
+
+    def sizeChange_cb(self):
+        if not self.growing:
+            return
+        docHeight = self.document().size().height()
+        docHeight += 20
+        if self.heightMin <= docHeight <= self.heightMax:
+            self.setMaximumHeight(int(docHeight))
+
+    def set_syntax_highlighter_class(self, klass):
+        self.syntax_hl = klass(self.document())
+
+    def get_syntax_highlighter(self):
+        return self.syntax_hl
+
+    def event(self, event):
+        if self.tt_cb is None or event.type() != QEvent.ToolTip:
+            return super().event(event)
+
+        args = [event]
+        if len(self.tt_args) > 0:
+            args.extend(self.tt_args)
+        return self.tt_cb(*args)
+
+    def set_tooltip_callback(self, func, *args):
+        self.tt_cb = func
+        self.tt_args = args
+
+    def color_line(self, line_num, fgcolor=None, bgcolor=None):
+        blk = self.document().findBlockByLineNumber(line_num - 1)
+        cur = QTextCursor(blk)
+        cur.movePosition(QTextCursor.StartOfBlock)
+        cur.setPosition(cur.position() + blk.length(), QTextCursor.KeepAnchor)
+        fmt = mkformat(fgcolor=fgcolor, bgcolor=bgcolor)
+        cur.mergeCharFormat(fmt)
+
+
+class QTextSource(QtGui.QFrame, TextModel):
+    """Qt-native realization of the toolkit-neutral :class:`TextModel`.
+
+    The buffer model (content, refs, tag table, find/replace, undo) lives in
+    ``TextModel``; this class supplies the render hooks that mirror model
+    changes into a ``QTextEdit`` plus a companion line-number/icon gutter.
+    """
+
+    def __init__(self, *args, **kwargs):
+        QtGui.QFrame.__init__(self, *args, **kwargs)
+        TextModel.__init__(self)
+
+        self.setFrameStyle(QtGui.QFrame.StyledPanel | QtGui.QFrame.Sunken)
+
+        self.tw = QEnhancedTextEdit()
+        self.tw.setFrameStyle(QtGui.QFrame.NoFrame)
+        self.tw.setAcceptRichText(False)
+        self.tw.setMouseTracking(True)
+
+        self.nb = QNumberBar()
+        self.nb.setTextEdit(self.tw)
+
+        hbox = QtGui.QHBoxLayout(self)
+        hbox.setSpacing(0)
+        hbox.setContentsMargins(0, 0, 0, 0)
+        hbox.addWidget(self.nb)
+        hbox.addWidget(self.tw)
+
+        self.tw.installEventFilter(self)
+        self.tw.viewport().installEventFilter(self)
+
+        # render-side state
+        self._show_icon_gutter = False
+        self._syncing = False
+        self._applying_formats = False
+
+        for name in ('key-press', 'line-clicked'):
+            self.enable_callback(name)
+
+        self.tw.textChanged.connect(self._on_editor_text_changed)
+        self.tw.cursorPositionChanged.connect(self._on_cursor_position_changed)
+
+    def get_number_bar(self):
+        return self.nb
+
+    def get_internal_text_widget(self):
+        return self.tw
+
+    def eventFilter(self, obj, event):
+        if obj in (self.tw, self.tw.viewport()):
+            etype = event.type()
+            if etype == QEvent.KeyPress:
+                kev = _make_key_event(event)
+                if kev is not None:
+                    # A truthy return from a 'key-press' callback means the
+                    # key was handled, so we consume the event.
+                    if self.make_callback('key-press', kev):
+                        return True
+            elif (etype == QEvent.MouseButtonPress and
+                  obj is self.tw.viewport()):
+                # Report the clicked line (0-based); does not consume the
+                # event, so normal cursor placement still happens.
+                cur = self.tw.cursorForPosition(event.pos())
+                self.make_callback('line-clicked', cur.blockNumber())
+            self.nb.update()
+            return False
+        return QtGui.QFrame.eventFilter(self, obj, event)
+
+    # ------------------------------------------------------------------
+    # Qt widget operations (no model state)
+    # ------------------------------------------------------------------
+    def set_editable(self, tf):
+        self.tw.setReadOnly(not tf)
+
+    def set_wrap(self, kind):
+        if isinstance(kind, bool):
+            kind = 'hard' if kind else 'none'
+        if kind == 'none':
+            self.tw.setLineWrapMode(QtGui.QTextEdit.NoWrap)
+        else:
+            self.tw.setLineWrapMode(QtGui.QTextEdit.WidgetWidth)
+            if kind == 'hard':
+                self.tw.setWordWrapMode(QTextOption.WrapAnywhere)
+            elif kind == 'word':
+                self.tw.setWordWrapMode(QTextOption.WrapAtWordBoundaryOrAnywhere)
+            else:
+                raise ValueError("Invalid wrap mode: %s" % (kind,))
+
+    def set_line_numbers(self, tf):
+        self.nb.show_line_numbers(tf)
+
+    def show_line_numbers(self, tf):
+        self.set_line_numbers(tf)
+
+    def set_icon_gutter(self, tf, pad_px=24):
+        self._show_icon_gutter = bool(tf)
+        self.nb.set_icon_column_px(pad_px if self._show_icon_gutter else 0)
+        self._refresh_icon_gutter()
+
+    def set_icon_column_px(self, pad_px):
+        self._show_icon_gutter = pad_px > 0
+        self.nb.set_icon_column_px(pad_px)
+        self._refresh_icon_gutter()
+
+    def set_icon_for_line(self, line, image):
+        self.nb.set_icon_for_line(line, image)
+
+    def unset_icon_for_line(self, line):
+        self.nb.unset_icon_for_line(line)
+
+    def clear_icons(self):
+        self._icon_refs.clear()
+        self.nb.clear_icons()
+
+    def scroll_to_ref(self, ref):
+        """Ensure the line containing ``ref`` is visible."""
+        cursor = QTextCursor(self.tw.document())
+        cursor.setPosition(self._offset_of(ref))
+        self.tw.setTextCursor(cursor)
+        self.tw.ensureCursorVisible()
+
+    def set_scroll_position(self, h_pct, v_pct):
+        hbar = self.tw.horizontalScrollBar()
+        vbar = self.tw.verticalScrollBar()
+        if hbar.maximum() > 0:
+            hbar.setValue(int(max(0.0, min(1.0, h_pct)) * hbar.maximum()))
+        if vbar.maximum() > 0:
+            vbar.setValue(int(max(0.0, min(1.0, v_pct)) * vbar.maximum()))
+
+    def set_scroll_pos(self, pos):
+        vsb = self.tw.verticalScrollBar()
+        if pos == -1:
+            vsb.setValue(vsb.maximum())
+        else:
+            vsb.setValue(pos)
+
+    def set_font(self, qfont):
+        self.tw.setFont(qfont)
+        self.nb.setFont(qfont)
+        self._apply_all_formats()
+
+    def color_line(self, line_num, fgcolor=None, bgcolor=None):
+        return self.tw.color_line(line_num, fgcolor=fgcolor, bgcolor=bgcolor)
+
+    def set_syntax_highlighter_class(self, klass):
+        return self.tw.set_syntax_highlighter_class(klass)
+
+    def get_syntax_highlighter(self):
+        return self.tw.get_syntax_highlighter()
+
+    def set_tooltip_callback(self, func, *args):
+        self.tw.set_tooltip_callback(func, *args)
+
+    def get_modified(self):
+        return self.tw.document().isModified()
+
+    def get_end_lineno(self):
+        return max(0, self.tw.document().blockCount() - 1)
+
+    def scroll_to_lineno(self, lineno):
+        cursor = QTextCursor(self.tw.document())
+        block = self.tw.document().findBlockByLineNumber(max(0, lineno))
+        if block.isValid():
+            cursor.setPosition(block.position())
+        else:
+            cursor.movePosition(QTextCursor.End)
+        self.tw.setTextCursor(cursor)
+        self.tw.ensureCursorVisible()
+
+    def scroll_to_end(self):
+        cursor = self.tw.textCursor()
+        cursor.movePosition(QTextCursor.End)
+        self.tw.setTextCursor(cursor)
+        self.tw.ensureCursorVisible()
+
+    # ------------------------------------------------------------------
+    # Render hooks (called by TextModel to reflect changes in the widget)
+    # ------------------------------------------------------------------
+    def _merged_format(self, tag_names):
+        attrs = self._merged_attrs(tag_names)
+        return mkformat(fgcolor=attrs.get('foreground'),
+                        bgcolor=attrs.get('background'),
+                        style=self._style_list_from_attrs(attrs))
+
+    def _apply_all_formats(self, region=None):
+        """Rebuild character formatting from the tag interval model.
+
+        Qt stores formatting on the document itself, so before reapplying tag
+        styles we first reset the affected range back to the base widget
+        palette and font.  This keeps stale formatting from surviving after
+        tags move or are removed.
+
+        ``region`` is an ``(start, end)`` offset pair limiting the work to a
+        subrange; when ``None`` the entire document is reformatted.  Callers
+        that only changed a bounded span pass that span so streaming edits
+        stay O(edit) instead of O(buffer).
+        """
+        if self._applying_formats:
+            return
+        self._applying_formats = True
+        # Applying tag colors via setCharFormat dirties the document's
+        # modified flag, but coloring (syntax/execution highlighting) is not a
+        # user edit -- preserve the modified state across the operation so a
+        # freshly loaded/colored buffer is not treated as modified.
+        doc = self.tw.document()
+        was_modified = doc.isModified()
+        try:
+            if region is None:
+                r_start, r_end = 0, len(self._text)
+            else:
+                r_start = max(0, min(region[0], region[1]))
+                r_end = min(len(self._text), max(region[0], region[1]))
+            self._reset_document_format(r_start, r_end)
+            for seg_start, seg_end, tag_names in self._segments_for_range(r_start, r_end):
+                if not tag_names:
+                    continue
+                # Formatting is applied with a QTextCursor selection because
+                # QTextEdit/QTextDocument do not provide a simpler range-style
+                # API for plain-text documents.
+                cursor = QTextCursor(self.tw.document())
+                cursor.setPosition(seg_start)
+                cursor.setPosition(seg_end, QTextCursor.KeepAnchor)
+                cursor.setCharFormat(self._merged_format(tag_names))
+        finally:
+            self._applying_formats = False
+            doc.setModified(was_modified)
+
+    def _reset_document_format(self, start=None, end=None):
+        """Restore a range (default: whole document) to the base text format."""
+        cursor = QTextCursor(self.tw.document())
+        if start is None:
+            cursor.select(QTextCursor.Document)
+        else:
+            cursor.setPosition(start)
+            cursor.setPosition(end, QTextCursor.KeepAnchor)
+        fmt = QTextCharFormat()
+        fmt.setFont(self.tw.font())
+        fmt.setForeground(self.tw.palette().text())
+        fmt.setBackground(self.tw.palette().base())
+        cursor.setCharFormat(fmt)
+
+    def _replace_editor_range(self, start, end, new_text):
+        """Replace ``[start, end)`` in the QTextEdit with ``new_text``.
+
+        Uses a QTextCursor so only the changed span is touched (unlike
+        setPlainText, which rewrites the whole document and drops all
+        existing character formatting).
+        """
+        self._syncing = True
+        try:
+            cursor = QTextCursor(self.tw.document())
+            cursor.setPosition(start)
+            if end > start:
+                cursor.setPosition(end, QTextCursor.KeepAnchor)
+            cursor.insertText(new_text)
+        finally:
+            self._syncing = False
+
+    def _set_editor_text(self, text):
+        """Push model text into ``QTextEdit`` without reentering sync hooks."""
+        self._syncing = True
+        try:
+            self.tw.setPlainText(text)
+        finally:
+            self._syncing = False
+
+    def _apply_selection_to_editor(self):
+        """Mirror model selection state into the QTextEdit cursor.
+
+        ``QTextEdit`` represents selection entirely through ``QTextCursor``, so
+        this method reconstructs the selection each time the model moves the
+        caret or selection endpoints.
+        """
+        cursor = QTextCursor(self.tw.document())
+        cursor.setPosition(self._clamp_offset(self._sel_start))
+        cursor.setPosition(self._clamp_offset(self._sel_end),
+                           QTextCursor.KeepAnchor)
+        self._syncing = True
+        try:
+            self.tw.setTextCursor(cursor)
+        finally:
+            self._syncing = False
+
+    def _mark_clean(self):
+        self.tw.document().setModified(False)
+
+    def _refresh_icon_gutter(self):
+        """Recompute visible gutter icons from ref-anchored registrations."""
+        self.nb.clear_icons()
+        if not self._show_icon_gutter:
+            return
+        line_icons = {}
+        for ref, image in list(self._icon_refs.items()):
+            if not ref.is_valid():
+                self._icon_refs.pop(ref, None)
+                continue
+            line_icons[ref.get_line() + 1] = image
+        for line, image in line_icons.items():
+            self.nb.set_icon_for_line(line, image)
+
+    def _on_editor_text_changed(self):
+        """Pull user edits from QTextEdit back into the buffer model.
+
+        Qt edits the document directly during typing, paste, and deletion.  We
+        diff the previous model text against the new widget text, then replay
+        that edit through ``_replace_range`` so refs and tag intervals are
+        updated with the same logic used by programmatic edits.
+        """
+        # Applying character formats (setCharFormat) also emits textChanged,
+        # but never changes the text.  Ignore those, otherwise every format
+        # pass triggers a full-document toPlainText() diff -- an O(n^2) storm
+        # while streaming appends.
+        if self._syncing or self._applying_formats:
+            return
+        new_text = self.tw.toPlainText()
+        if new_text == self._text:
+            return
+        start = 0
+        old_text = self._text
+        old_len = len(old_text)
+        new_len = len(new_text)
+        while start < old_len and start < new_len and old_text[start] == new_text[start]:
+            start += 1
+        old_end = old_len
+        new_end = new_len
+        while old_end > start and new_end > start and old_text[old_end - 1] == new_text[new_end - 1]:
+            old_end -= 1
+            new_end -= 1
+        cursor = self.tw.textCursor()
+        selection_after = (cursor.position(), cursor.anchor(), cursor.position())
+        self._replace_range(start, old_end, new_text[start:new_end],
+                            selection_after=selection_after,
+                            sync_editor=False)
+
+    def _on_cursor_position_changed(self):
+        """Capture cursor and selection state after user interaction."""
+        if self._syncing:
+            return
+        cursor = self.tw.textCursor()
+        self._cursor = cursor.position()
+        self._sel_start = cursor.anchor()
+        self._sel_end = cursor.position()
+        self._refresh_icon_gutter()
+        self.make_callback('cursor-moved')
 
 
 # END

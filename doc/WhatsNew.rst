@@ -37,6 +37,10 @@ New widgets
 -----------
 - **TableView** -- a flat, single-level, column-oriented table widget,
   available in the Qt, Gtk3, Gtk4 and pg widget sets
+- **TextSource** -- a numbered, tag-aware text widget backed by a new
+  toolkit-neutral buffer model (``ginga.gw.text_model``) with live
+  position refs, a tag table, find/replace and undo; currently
+  implemented in the Qt widget set
 
 New features for existing widgets
 ---------------------------------
