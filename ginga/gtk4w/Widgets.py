@@ -4389,7 +4389,8 @@ class Dialog(WidgetBase):
             self.dialog.add_widget(vbox)
             GtkHelp.modify_bg(self.dialog.get_widget(), "gray85")
 
-        btn_box = HBox()
+        # a ButtonBox gives a tidy, uniform-width button row
+        btn_box = ButtonBox()
         btn_box.set_border_width(5)
         btn_box.set_spacing(4)
         self.buttonbox = btn_box
@@ -4424,7 +4425,7 @@ class Dialog(WidgetBase):
     def add_button(self, btn, val):
         self.buttons.append(btn)
         btn.add_callback('activated', self._cb_redirect, val)
-        self.buttonbox.add_widget(btn, stretch=0)
+        self.buttonbox.add_widget(btn)
 
     def show(self):
         self.popup()

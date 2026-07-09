@@ -4530,8 +4530,8 @@ class Dialog(TopLevelMixin, WidgetBase):
         self.content = VBox()
         vbox.addWidget(self.content.get_widget(), stretch=1)
 
-        # buttons
-        hbox = HBox()
+        # buttons (a ButtonBox gives a tidy, uniform-width button row)
+        hbox = ButtonBox()
         hbox.set_padding(5)
         hbox.set_spacing(4)
         self.buttonbox = hbox
@@ -4559,7 +4559,7 @@ class Dialog(TopLevelMixin, WidgetBase):
         self.buttons.append(btn)
 
         btn.add_callback('activated', self._cb_redirect, val)
-        self.buttonbox.add_widget(btn, stretch=1)
+        self.buttonbox.add_widget(btn)
 
     def popup(self, parent=None):
         if parent is not None:
