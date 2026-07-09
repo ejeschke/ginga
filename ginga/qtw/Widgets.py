@@ -18,6 +18,7 @@ from ginga.util.paths import icondir as ginga_icon_dir
 from ginga.misc import Callback, Bunch, Settings, LineHistory
 from ginga.util.paths import icondir, app_icon_path
 from ginga.fonts import font_asst
+from ginga.gw.widget_helpers import DIALOG_FLAGS_ONTOP
 
 __all__ = ['WidgetError', 'Widget', 'WidgetBase', 'TextEntry', 'TextEntrySet',
            'TextArea', 'Label', 'Button', 'ComboBox', 'Timer',
@@ -3304,18 +3305,63 @@ class VBox(Box):
 
 
 class ButtonBox(HBox):
-    def __init__(self):
+    """A horizontal row of buttons all sized to match the widest button, so
+    they line up as a tidy uniform group.
+
+    Parameters
+    ----------
+    min_button_width : int or None
+        If given, buttons are never sized narrower than this, even when the
+        widest button's natural size is smaller.
+    halign : str
+        Horizontal alignment of the button group within the box: 'left',
+        'center' (default), or 'right'.
+    """
+    def __init__(self, min_button_width=None, halign='center'):
         super().__init__()
 
-        # TODO: automatically recalculate and resize as needed
-        self.btn_width = 30
+        self.buttons = []
+        self.min_button_width = min_button_width
+        self._halign = halign
         self.set_border_width(4)
 
     def add_widget(self, child):
-        child.set_min_size(self.btn_width, None)
-        child.cfg_expand(horizontal='minimum')
-
+        self.buttons.append(child)
+        # fixed width so the buttons stay at the equalized width instead of
+        # stretching to fill the box
+        child.cfg_expand(horizontal='fixed')
         super().add_widget(child, stretch=0)
+
+        # re-equalize every time a button is added, since the widest one
+        # may change
+        self._equalize_widths()
+        self._apply_align()
+
+    def set_halign(self, halign):
+        """Align the button group: 'left', 'center', or 'right'."""
+        self._halign = halign
+        self._apply_align()
+
+    def _equalize_widths(self):
+        """Size all buttons to the widest button's natural width (or the
+        configured minimum, whichever is larger)."""
+        max_wd = self.min_button_width or 0
+        for btn in self.buttons:
+            max_wd = max(max_wd, btn.get_widget().sizeHint().width())
+        for btn in self.buttons:
+            btn.set_min_size(max_wd, None)
+
+    def _apply_align(self):
+        """Position the button group with stretch spacers per self._halign."""
+        layout = self.widget.layout()
+        # drop any stretch spacers we added previously
+        for i in reversed(range(layout.count())):
+            if layout.itemAt(i).spacerItem() is not None:
+                layout.takeAt(i)
+        if self._halign in ('right', 'center'):
+            layout.insertStretch(0, 1)
+        if self._halign in ('left', 'center'):
+            layout.addStretch(1)
 
 
 class Frame(ContainerBase):
@@ -4461,14 +4507,18 @@ class Application(Callback.Callbacks):
 
 class Dialog(TopLevelMixin, WidgetBase):
 
-    def __init__(self, title='', flags=None, buttons=[],
-                 parent=None, modal=False, autoclose=False):
+    def __init__(self, title='', flags=DIALOG_FLAGS_ONTOP,
+                 buttons=[], parent=None, modal=False, autoclose=False):
         WidgetBase.__init__(self)
 
         if parent is not None:
             parent = parent.get_widget()
-        self.widget = QtGui.QDialog(parent)
-        self.widget.setModal(modal)
+        dialog = QtGui.QDialog(parent)
+        if flags is not None and flags & DIALOG_FLAGS_ONTOP:
+            # a Tool window floats above its parent (like gtk's transient-for)
+            dialog.setWindowFlags(QtCore.Qt.WindowType.Tool)
+        dialog.setModal(modal)
+        self.widget = dialog
         self.buttons = []
 
         vbox = QtGui.QVBoxLayout()
@@ -4526,7 +4576,7 @@ class MessageDialog(Dialog):
         native_img = Image.get_native_image_from_file(iconpath, size=size)
         cls.icon_dct[category] = native_img
 
-    def __init__(self, title='', flags=None, buttons=[("Dismiss", 0)],
+    def __init__(self, title='', flags=0, buttons=[("Dismiss", 0)],
                  parent=None, modal=False, autoclose=False):
         Dialog.__init__(self, title=title, flags=flags, buttons=buttons,
                         parent=parent, modal=modal, autoclose=autoclose)

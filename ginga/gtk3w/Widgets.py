@@ -16,6 +16,7 @@ from ginga.util.paths import icondir as ginga_icon_dir
 from ginga.misc import Callback, Bunch, Settings, LineHistory
 from ginga.util.paths import icondir, app_icon_path
 from ginga.fonts import font_asst
+from ginga.gw.widget_helpers import DIALOG_FLAGS_ONTOP
 from ginga.util.syncops import Shelf
 
 from gi.repository import Gtk
@@ -3019,6 +3020,60 @@ class HBox(Box):
         super(HBox, self).__init__(orientation='horizontal')
 
 
+class ButtonBox(HBox):
+    """A horizontal row of buttons all sized to match the widest button, so
+    they line up as a tidy uniform group.
+
+    Parameters
+    ----------
+    min_button_width : int or None
+        If given, buttons are never sized narrower than this, even when the
+        widest button's natural size is smaller.
+    halign : str
+        Horizontal alignment of the button group within the box: 'left',
+        'center' (default), or 'right'.
+    """
+    def __init__(self, min_button_width=None, halign='center'):
+        super(ButtonBox, self).__init__()
+
+        self.min_button_width = min_button_width
+        self._halign = halign
+        self._spacers = []
+        self.set_border_width(4)
+        # a SizeGroup makes all its widgets share the widest natural width
+        self._sizegroup = Gtk.SizeGroup(mode=Gtk.SizeGroupMode.HORIZONTAL)
+
+    def add_widget(self, child):
+        w = child.get_widget()
+        self._sizegroup.add_widget(w)
+        if self.min_button_width is not None:
+            w.set_size_request(self.min_button_width, -1)
+        super(ButtonBox, self).add_widget(child, stretch=0)
+        self._apply_align()
+
+    def set_halign(self, halign):
+        """Align the button group: 'left', 'center', or 'right'."""
+        self._halign = halign
+        self._apply_align()
+
+    def _apply_align(self):
+        """Position the button group with expanding spacers per halign."""
+        box = self.get_widget()
+        for sp in self._spacers:
+            box.remove(sp)
+        self._spacers = []
+        if self._halign in ('right', 'center'):
+            sp = Gtk.Label()
+            box.pack_start(sp, True, True, 0)
+            box.reorder_child(sp, 0)
+            self._spacers.append(sp)
+        if self._halign in ('left', 'center'):
+            sp = Gtk.Label()
+            box.pack_start(sp, True, True, 0)
+            self._spacers.append(sp)
+        box.show_all()
+
+
 class Frame(ContainerBase):
     def __init__(self, title=None):
         super(Frame, self).__init__()
@@ -4241,11 +4296,12 @@ class Application(Callback.Callbacks):
 
 class Dialog(WidgetBase):
 
-    def __init__(self, title='', flags=0, buttons=[],
+    def __init__(self, title='', flags=DIALOG_FLAGS_ONTOP, buttons=[],
                  parent=None, modal=False, autoclose=False):
         super().__init__()
-        flags = Gtk.DialogFlags.DESTROY_WITH_PARENT
-        self.widget = Gtk.Dialog(flags=flags)
+        self.flags = flags if flags is not None else 0
+        dialog_flags = Gtk.DialogFlags.DESTROY_WITH_PARENT
+        self.widget = Gtk.Dialog(flags=dialog_flags)
         self.buttons = []
         self.parent = parent
         self.modal = modal
@@ -4291,10 +4347,13 @@ class Dialog(WidgetBase):
         self.popup()
 
     def popup(self, parent=None):
+        # An explicit parent passed here forces the transient-for
+        # relationship; otherwise it is applied only when the on-top flag
+        # is set (the default).
+        force = parent is not None
         if parent is None:
             parent = self.parent
-        if parent is not None:
-            self.parent.get_widget()
+        if parent is not None and (force or (self.flags & DIALOG_FLAGS_ONTOP)):
             parent_w = parent.get_widget()
             if isinstance(parent_w, Gtk.Window):
                 self.widget.set_transient_for(parent_w)

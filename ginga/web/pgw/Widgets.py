@@ -1571,6 +1571,10 @@ class TopLevel(ContainerWidgetMixin, PGW.TopLevel):
 
 class Dialog(ContainerWidgetMixin, PGW.Dialog):
     def __init__(self, *args, parent=None, flags=None, **kwargs):
+        # `parent` and `flags` are accepted for API parity with the qt/gtk
+        # backends but are not needed here: a browser Dialog is a DOM overlay
+        # that already renders on top of the page content, so there is no
+        # window stacking to manage (cf. DIALOG_FLAGS_ONTOP).
         ContainerWidgetMixin.__init__(self)
         PGW.Dialog.__init__(self, *get_args(args), **kwargs)
 
