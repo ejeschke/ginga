@@ -7,3 +7,21 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools_scm]
 write_to = "ginga/version.py"
 version_scheme = "release-branch-semver"
+
+[tool.ruff]
+target-version = "py311"
+# files not linted: demo notebooks and the pyodide top-level-await examples
+extend-exclude = ["*.ipynb", "ginga/examples/pg/pyscript"]
+
+[tool.ruff.lint]
+# match flake8's coverage: pycodestyle (E/W) + pyflakes (F)
+select = ["E", "F", "W"]
+ignore = [
+    "E265",  # block comment should start with '# '
+    "E266",  # too many leading '#' for block comment
+    "E402",  # module level import not at top of file
+    "E741",  # ambiguous variable name 'l'
+    "E501",  # line too long
+    "F841",  # local variable assigned to but never used
+]
+
