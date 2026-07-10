@@ -121,7 +121,7 @@ class ImageViewJpw(ImageView.ImageViewBase):
                 self.choose_renderer(name)
                 self.logger.info("best renderer available is '{}'".format(name))
                 return
-            except Exception as e:
+            except Exception:
                 continue
 
         raise ImageViewJpwError("No valid renderers available: {}".format(str(self.possible_renderers)))

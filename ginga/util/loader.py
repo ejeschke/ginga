@@ -193,7 +193,7 @@ def discover_loaders():
             opener_class = entry_point.load()
             try:
                 opener_class.check_availability()
-            except Exception as e:
+            except Exception:
                 continue
 
             add_opener(opener_class, opener_class.mimetypes,

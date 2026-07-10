@@ -223,7 +223,7 @@ class ImageViewMpl(ImageView.ImageViewBase):
         # objects to recompute their cached transformed_path
         # Other mpl artists don't seem to have this affliction
         for ax in self.figure.axes:
-            if not (ax in (self.ax_img, self.ax_util)):
+            if ax not in (self.ax_img, self.ax_util):
                 if hasattr(ax, "lines"):
                     for line in ax.lines:
                         try:

@@ -589,7 +589,7 @@ class ConcurrentAndTaskset(Task):
                 try:
                     task.stop()
 
-                except TaskError as e:
+                except TaskError:
                     # Task does not have a way to stop it.
                     # TODO: notify who?
                     pass
@@ -658,7 +658,7 @@ class QueueTaskset(Task):
             if self.task:
                 self.task.stop()
 
-        except TaskError as e:
+        except TaskError:
             #self.logger.error("Error cancelling child task: %s" % (str(e)))
             pass
 
@@ -672,7 +672,7 @@ class QueueTaskset(Task):
             if self.task:
                 self.task.stop()
 
-        except TaskError as e:
+        except TaskError:
             #self.logger.error("Error cancelling child task: %s" % (str(e)))
             pass
 
@@ -852,7 +852,7 @@ class WorkerThread:
 
                     self.execute(task)
 
-                except Queue.Empty as e:
+                except Queue.Empty:
                     # Reach here when we time out waiting for a task
                     if self.tpool is not None and self.time_idle is not None:
                         idle_sec = time.time() - self.time_idle

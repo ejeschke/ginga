@@ -1738,7 +1738,7 @@ class Pick(GingaPlugin.LocalPlugin):
             loval += self.delta_bg
             self.fitsimage.cut_levels(loval, hival)
 
-        except Exception as e:
+        except Exception:
             self.fv.show_status("No valid bg level: '%s'" % (loval))
 
     def sky_cut(self):
@@ -1751,7 +1751,7 @@ class Pick(GingaPlugin.LocalPlugin):
             loval += self.delta_sky
             self.fitsimage.cut_levels(loval, hival)
 
-        except Exception as e:
+        except Exception:
             self.fv.show_status("No valid sky level: '%s'" % (loval))
 
     def bright_cut(self):
@@ -1766,7 +1766,7 @@ class Pick(GingaPlugin.LocalPlugin):
             hival = skyval + hival + self.delta_bright
             self.fitsimage.cut_levels(loval, hival)
 
-        except Exception as e:
+        except Exception:
             self.fv.show_status("No valid brightness level: '%s'" % (hival))
 
     def zoomset(self, setting, zoomlevel, fitsimage):

@@ -132,7 +132,7 @@ class Toolbar(GingaPlugin.GlobalPlugin):
         p_obj = opmon.get_plugin(opname)
         try:
             p_obj.stop()
-        except Exception as e:
+        except Exception:
             pass
         wname = "{}_{}".format(channel.name, opname)
         try:
@@ -140,7 +140,7 @@ class Toolbar(GingaPlugin.GlobalPlugin):
             self.w.nb.remove(vbox)
             self.w[wname] = None
             vbox.delete()
-        except Exception as e:
+        except Exception:
             self.logger.error(f"error stopping plugin '{wname}'")
 
     def __str__(self):

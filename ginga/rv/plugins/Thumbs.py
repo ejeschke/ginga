@@ -628,7 +628,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                            channel.fitsimage, image, bnch,
                            save_thumb=self.save_thumbs)
 
-        except Exception as e:
+        except Exception:
             self.logger.error("autoload missing [%s] failed:" % (path))
             # load errors will be reported in self.fv.load_image()
             # Just ignore autoload errors for now...

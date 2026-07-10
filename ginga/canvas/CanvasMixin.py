@@ -79,7 +79,7 @@ class CanvasMixin:
                 obj = self.tags[tag]
                 del self.tags[tag]
                 super(CanvasMixin, self).delete_object(obj)
-            except Exception as e:
+            except Exception:
                 continue
 
         if redraw:

@@ -48,7 +48,7 @@ def get_font(font_spec, font_size, color='black', alpha=1.0):
             font = agg.Font(color, info.font_path, size=font_size,
                             opacity=alpha)
 
-        except Exception as e:
+        except Exception:
             pass
 
     if font is None:
@@ -64,7 +64,7 @@ def get_font(font_spec, font_size, color='black', alpha=1.0):
                     font = agg.Font(color, info.font_path, size=font_size,
                                     opacity=alpha)
                     break
-                except Exception as e:
+                except Exception:
                     continue
 
     # TODO: return Agg's "default font"

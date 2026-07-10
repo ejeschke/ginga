@@ -686,7 +686,7 @@ def get_ruler_distances(image, p1, p2):
                                             ra_heel, dec_heel)
             res.dy_deg = deltaStarsRaDecDeg(ra_heel, dec_heel,
                                             ra_dst, dec_dst)
-        except Exception as e:
+        except Exception:
             pass
 
     return res

@@ -90,7 +90,7 @@ class ImageViewTk(ImageView.ImageViewBase):
                 self.choose_renderer(name)
                 self.logger.info("best renderer available is '{}'".format(name))
                 return
-            except Exception as e:
+            except Exception:
                 continue
 
         raise ImageViewTkError("No valid renderers available: {}".format(str(self.possible_renderers)))
@@ -264,7 +264,7 @@ class TkEventMixin:
             # MacOS and Windows only
             try:
                 canvas.bind("<MouseWheel>", self.scroll_event)
-            except Exception as e:
+            except Exception:
                 pass
 
         # TODO: Set up widget as a drag and drop destination

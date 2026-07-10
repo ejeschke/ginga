@@ -361,7 +361,7 @@ class PlotViewBase(ViewerBase):
         for artist in artists:
             try:
                 artist.remove()
-            except Exception as e:
+            except Exception:
                 pass
         if redraw:
             self.redraw()

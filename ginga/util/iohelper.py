@@ -69,7 +69,7 @@ def guess_filetype(filepath):
             if isinstance(typ, str) and ';' in typ:
                 typ, enc = typ.split(';')
 
-        except Exception as e:
+        except Exception:
             typ = None
 
     if typ is None:
@@ -77,7 +77,7 @@ def guess_filetype(filepath):
         try:
             typ, enc = mimetypes.guess_type(filepath)
 
-        except Exception as e:
+        except Exception:
             # fail
             pass
 

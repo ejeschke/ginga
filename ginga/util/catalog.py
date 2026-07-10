@@ -132,7 +132,7 @@ class AstroqueryCatalogServer:
 
         self.logger.debug("search params=%s" % (str(params)))
         ra, dec = params['ra'], params['dec']
-        if not (':' in ra):
+        if ':' not in ra:
             # Assume RA and DEC are in degrees
             ra_deg = float(ra)
             dec_deg = float(dec)
@@ -308,7 +308,7 @@ class AstroqueryVizierCatalogServer(AstroqueryCatalogServer):
 
         self.logger.debug("search params=%s" % (str(params)))
         ra, dec = params['ra'], params['dec']
-        if not (':' in ra):
+        if ':' not in ra:
             # Assume RA and DEC are in degrees
             ra_deg = float(ra)
             dec_deg = float(dec)
@@ -460,7 +460,7 @@ class AstroqueryImageServer:
 
         self.logger.debug("search params=%s" % (str(params)))
         ra, dec = params['ra'], params['dec']
-        if not (':' in ra):
+        if ':' not in ra:
             # Assume RA and DEC are in degrees
             ra_deg = float(ra)
             dec_deg = float(dec)
@@ -825,7 +825,7 @@ class CatalogServer(URLServer):
                 dec = elts[self.index['dec']]
                 mag = float(elts[self.index['mag']])
 
-                if (self.format == 'deg') or not (':' in ra):
+                if (self.format == 'deg') or ':' not in ra:
                     # Assume RA and DEC are in degrees
                     ra_deg = float(ra)
                     dec_deg = float(dec)

@@ -234,7 +234,7 @@ class AstroImage(BaseImage):
         kwds = self.get_header(create=create)
         kwd = kwd.upper()
         if not create:
-            prev = kwds[kwd]  # noqa, this raises KeyError
+            prev = kwds[kwd]  # this raises KeyError if kwd is not present
         kwds[kwd] = value
 
     def update_keywords(self, key_dict):

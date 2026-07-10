@@ -117,7 +117,7 @@ class WidgetBase(Callback.Callbacks):
             # x, y = rect.x, rect.y
             wd, ht = rect.width, rect.height
 
-        except Exception as e:
+        except Exception:
             # window maybe isn't realized yet--try other ways
             min_req, nat_req = self.widget.get_preferred_size()
             wd, ht = nat_req.width, nat_req.height
@@ -4020,7 +4020,7 @@ class TopLevelMixin:
             # x, y = rect.x, rect.y
             wd, ht = rect.width, rect.height
 
-        except Exception as e:
+        except Exception:
             # window maybe isn't realized yet--try other ways
             # req = self.widget.get_size_request()
             # wd, ht = req
@@ -4179,7 +4179,7 @@ class Application(Callback.Callbacks):
             self.logger.debug("setting default font_scaling_factor={}".format(scale))
             from ginga.fonts import font_asst
             font_asst.default_scaling_factor = scale
-        except Exception as e:
+        except Exception:
             self.screen_wd = 1600
             self.screen_ht = 1200
             self.screen_res = 96

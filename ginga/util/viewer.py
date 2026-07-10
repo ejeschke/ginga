@@ -131,7 +131,7 @@ def get_viewers(dataobj):
             tf = vclass.viewable(dataobj)
             if tf:
                 res.append(vinfo)
-        except Exception as e:
+        except Exception:
             pass
 
     res.sort(key=lambda v: v.priority)

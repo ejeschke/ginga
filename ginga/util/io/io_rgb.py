@@ -167,7 +167,7 @@ class BaseRGBFileHandler(io_base.BaseIOHandler):
                 info = exifread.process_file(in_f)
             buf = info['JPEGThumbnail']
 
-        except Exception as e:
+        except Exception:
             return None
 
         image = Image.open(BytesIO(buf))

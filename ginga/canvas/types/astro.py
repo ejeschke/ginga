@@ -385,7 +385,7 @@ class CompassP(OnePointOneRadiusMixin, CanvasObjectBase):
                 x, y, xn, yn, xe, ye = wcs.calc_compass_radius(image,
                                                                x, y,
                                                                radius)
-            except Exception as e:
+            except Exception:
                 bad_arms = True
 
         elif self.ctype == 'pixel':

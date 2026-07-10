@@ -174,7 +174,7 @@ class ShaderManager:
 
             return shader_id
 
-        except Exception as e:
+        except Exception:
             gl.glDeleteShader(shader_id)
             raise
 

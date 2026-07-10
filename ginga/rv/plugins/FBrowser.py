@@ -347,7 +347,7 @@ class FBrowser(GingaPlugin.LocalPlugin):
                              st_size_str=str(filestat.st_size),
                              st_mtime=filestat.st_mtime,
                              st_mtime_str=time.ctime(filestat.st_mtime)))
-        except OSError as e:
+        except OSError:
             # TODO: identify some kind of error with this path
             bnch.update(dict(path=path, name=filename, type=ftype,
                              st_mode=0, st_size=0,

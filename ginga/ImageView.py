@@ -2237,7 +2237,7 @@ class ImageViewBase(ViewerBase):
                 if image is not None:
                     try:
                         return image.pixtoradec(pan_x, pan_y)
-                    except Exception as e:
+                    except Exception:
                         pass
             # <-- data already in coordinates form
             return (pan_x, pan_y)
@@ -2249,7 +2249,7 @@ class ImageViewBase(ViewerBase):
         if image is not None:
             try:
                 return image.radectopix(pan_x, pan_y)
-            except Exception as e:
+            except Exception:
                 pass
         return (pan_x, pan_y)
 

@@ -858,7 +858,7 @@ def overlay_image_3d(dstarr, pos, srcarr, dst_order='RGBA', src_order='RGBA',
 
     # reorder srcarr if necessary to match dstarr for alpha merge
     get_order = dst_order
-    if ('A' in dst_order) and not ('A' in src_order):
+    if ('A' in dst_order) and 'A' not in src_order:
         get_order = dst_order.replace('A', '')
     if get_order != src_order:
         srcarr = reorder_image(get_order, srcarr, src_order)

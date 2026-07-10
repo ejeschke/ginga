@@ -47,7 +47,7 @@ def get_font(font_spec, font_size):
         try:
             font = load_font(font_tup, font_size)
 
-        except Exception as e:
+        except Exception:
             pass
 
     if font is None:
@@ -61,14 +61,14 @@ def get_font(font_spec, font_size):
                 try:
                     font = load_font(font_tup2, font_size)
                     break
-                except Exception as e:
+                except Exception:
                     continue
 
     if font is None:
         try:
             # if all is lost, try the Pillow "default font"
             font = ImageFont.load_default(font_size)
-        except Exception as e:
+        except Exception:
             raise ValueError(f"Couldn't create font for family '{font_tup.family}', "
                              f"style={font_tup.style}, weight={font_tup.weight}")
 

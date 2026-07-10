@@ -64,7 +64,7 @@ class TimerFactory:
         for func in funcs:
             try:
                 func()
-            except Exception as e:
+            except Exception:
                 pass
             # self.logger.debug("update should have been called.")
 

@@ -1285,7 +1285,7 @@ class SymmetricGridWidget(Widgets.GridBox):
         children = self.get_children()
         try:
             return children.index(child)
-        except (IndexError, ValueError) as e:
+        except (IndexError, ValueError):
             return -1
 
     def index_to_widget(self, idx):

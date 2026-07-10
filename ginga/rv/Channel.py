@@ -686,7 +686,7 @@ class Channel(Callback.Callbacks):
             self.switch_image(image)
             return
 
-        if not (imname in self.image_index):
+        if imname not in self.image_index:
             errmsg = "No image by the name '%s' found" % (imname)
             self.logger.error("Can't switch to image '%s': %s" % (
                 imname, errmsg))

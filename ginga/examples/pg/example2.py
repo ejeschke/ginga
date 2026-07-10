@@ -229,7 +229,7 @@ class FitsViewer:
 
     def set_mode_cb(self, mode, tf):
         self.logger.info("canvas mode changed (%s) %s" % (mode, tf))
-        if not (tf is False):
+        if tf is not False:
             self.canvas.set_draw_mode(mode)
         return True
 

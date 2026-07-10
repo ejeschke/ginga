@@ -48,7 +48,7 @@ def get_font(font_spec, font_size):
         try:
             font_name = load_font(font_tup)
 
-        except Exception as e:
+        except Exception:
             pass
 
     if font_name is None:
@@ -62,7 +62,7 @@ def get_font(font_spec, font_size):
                 try:
                     font_name = load_font(font_tup2, font_size)
                     break
-                except Exception as e:
+                except Exception:
                     continue
 
     # TODO: is there a default font for matplotlib?

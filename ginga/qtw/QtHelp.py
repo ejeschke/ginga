@@ -122,7 +122,7 @@ class TopLevel(QWidget):
     ##     return super(TopLevel, self).__init__(self, *args, **kwdargs)
 
     def closeEvent(self, event):
-        if not (self.app is None):
+        if self.app is not None:
             self.app.quit()
 
     def setApp(self, app):
@@ -567,7 +567,7 @@ def get_font(font_spec, font_size):
                 qfont_tup = load_font(font_tup)
                 family = qfont_tup.family
 
-            except Exception as e:
+            except Exception:
                 pass
 
     # Honor the requested family if Qt actually has it.  QFont silently
@@ -592,7 +592,7 @@ def get_font(font_spec, font_size):
                 font_asst.add_cache(key2, font)
             return font
 
-        except Exception as e:
+        except Exception:
             continue
 
     raise ValueError(f"Couldn't create font for family '{font_tup.family}', "

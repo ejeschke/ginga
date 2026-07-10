@@ -531,7 +531,7 @@ class TVMark(LocalPlugin):
         """
         try:
             ans = val.to('deg')
-        except Exception as e:
+        except Exception:
             self.logger.error('Cannot convert, assume already in degrees')
             ans = val.data
         else:

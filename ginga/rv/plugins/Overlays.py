@@ -155,7 +155,7 @@ class Overlays(GingaPlugin.LocalPlugin):
             p_canvas.add(self.canvas, tag=self.layertag)
 
         self.resume()
-        if not (self.hi_value is None):
+        if self.hi_value is not None:
             self.redo()
 
     def pause(self):

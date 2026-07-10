@@ -574,7 +574,7 @@ class BaseImage(ViewerObjectBase):
                           int(np.floor(data_y + 0.5)))
             value = self.get_data_xy(_d_x, _d_y)
 
-        except Exception as e:
+        except Exception:
             value = None
 
         info = Bunch.Bunch(itype='base', data_x=data_x, data_y=data_y,
@@ -619,7 +619,7 @@ class Header(dict):
         try:
             bnch = super(Header, self).__getitem__(key)
             bnch.value = value
-            if not (comment is None):
+            if comment is not None:
                 bnch.comment = comment
         except KeyError:
             if comment is None:

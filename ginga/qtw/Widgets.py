@@ -831,7 +831,7 @@ class SpinBox(WidgetBase):
     def __init__(self, dtype=int):
         super(SpinBox, self).__init__()
 
-        if dtype == float:
+        if dtype is float:
             w = QtGui.QDoubleSpinBox()
         else:
             w = QtGui.QSpinBox()
@@ -3206,7 +3206,7 @@ class TableView(TreeView):
             asc = True
             cur_col, cur_asc = (self.widget.header().sortIndicatorSection(),
                                 self.widget.header().sortIndicatorOrder()
-                                == QtCore.Qt.AscendingOrder)  # noqa318
+                                == QtCore.Qt.AscendingOrder)
 
             if cur_col == logical_index:
                 asc = not cur_asc
@@ -3432,7 +3432,7 @@ class ContainerBase(WidgetBase):
         l = self._get_native_children()
         try:
             return l.index(nchild)
-        except (IndexError, ValueError) as e:
+        except (IndexError, ValueError):
             return -1
 
     def _native_to_child(self, nchild):
@@ -3960,7 +3960,7 @@ class MDIWidget(ContainerBase):
         try:
             idx = l.index(nchild)
             subwin = subwins[idx]
-        except (IndexError, ValueError) as e:
+        except (IndexError, ValueError):
             subwin = None
 
         if subwin is not None:

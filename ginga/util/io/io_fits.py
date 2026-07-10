@@ -41,7 +41,7 @@ except ImportError:
 try:
     import fitsio
     have_fitsio = True
-except ImportError as e:
+except ImportError:
     have_fitsio = False
 
 
@@ -413,7 +413,7 @@ class AstropyFitsFileHandler(BaseFitsFileHandler):
             # error bubbling up from astropy
             _hduinfo = fits_f.info(output=False)
 
-        except Exception as e:
+        except Exception:
             # if so, this insures that name will be translated into the
             # HDU index below
             _hduinfo = tuple((None, '') for i in range(len(fits_f)))
@@ -753,7 +753,7 @@ class FitsioFileHandler(BaseFitsFileHandler):
             hdu = self.fits_f[i]
             hduinfo = hdu.get_info()
 
-            if not ('ndims' in hduinfo) or (hduinfo['ndims'] == 0):
+            if 'ndims' not in hduinfo or (hduinfo['ndims'] == 0):
                 # compressed FITS file or non-pixel data hdu?
                 continue
 

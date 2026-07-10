@@ -46,7 +46,7 @@ def get_font(font_spec, font_size):
         try:
             font = load_font(font_tup, font_size)
 
-        except Exception as e:
+        except Exception:
             pass
 
     if font is None:
@@ -60,7 +60,7 @@ def get_font(font_spec, font_size):
                 try:
                     font = load_font(font_tup2, font_size)
                     break
-                except Exception as e:
+                except Exception:
                     continue
 
     # TODO: return OpenCv's "default font"

@@ -1871,7 +1871,7 @@ def get_font(font_spec, font_size):
                 font_asst.add_cache(key2, font_desc)
             return font_desc
 
-        except Exception as e:
+        except Exception:
             continue
 
     font_str = f'"{font_tup.family}" {font_tup.style} {font_tup.weight} {font_size}'
@@ -1943,7 +1943,7 @@ def pixbuf_new_from_file_at_size(file_path, width, height):
                 cancellable=None)
             return pixbuf
 
-        except Exception as e:
+        except Exception:
             pass
 
     return GdkPixbuf.Pixbuf.new_from_file_at_size(file_path, width, height)
@@ -1960,7 +1960,7 @@ def pixbuf_new_from_file(file_path):
                 cancellable=None)
             return pixbuf
 
-        except Exception as e:
+        except Exception:
             pass
 
     pixbuf = GdkPixbuf.Pixbuf.new_from_file(file_path)
