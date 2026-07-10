@@ -714,6 +714,14 @@ class Label(WidgetBase):
 
 
 class Button(WidgetBase):
+
+    # Class-level default hover colors.  A button snapshots these at
+    # construction, so bracketing a region of UI construction with
+    # ``set_hover_color(bg, fg)`` ... ``set_hover_color(None, None)`` gives
+    # just those buttons a hover highlight.  See set_hover_color().
+    _hover_bg = None
+    _hover_fg = None
+
     def __init__(self, text=None, iconpath=None, iconsize=None):
         super(Button, self).__init__()
 
@@ -728,7 +736,32 @@ class Button(WidgetBase):
         self.widget.clicked.connect(self._cb_redirect)
         self._set_name(self.widget)
 
+        # base color (set via set_color) and hover color (snapshotted from
+        # the class-level default in effect when this button was created)
+        self._bg = None
+        self._fg = None
+        self._hover_bg = Button._hover_bg
+        self._hover_fg = Button._hover_fg
+
         self.enable_callback('activated')
+
+        self._apply_style()
+
+    @classmethod
+    def set_hover_color(cls, bg=None, fg=None):
+        """Set the default hover background/foreground for buttons created
+        *after* this call; pass ``(None, None)`` to clear it.
+
+        Because each button snapshots the value in effect when it is
+        constructed, you can bracket the creation of a group of buttons to
+        give just those buttons a hover highlight::
+
+            Button.set_hover_color('forestgreen', 'yellow')
+            ...create the buttons that should highlight...
+            Button.set_hover_color(None, None)
+        """
+        cls._hover_bg = bg
+        cls._hover_fg = fg
 
     def set_text(self, text):
         self.widget.setText(text)
@@ -744,19 +777,54 @@ class Button(WidgetBase):
         self.widget.setIcon(iconw)
 
     def set_color(self, bg=None, fg=None):
-        content = ""
+        """Set this button's base background/foreground."""
+        self._bg = bg
+        self._fg = fg
+        self._apply_style()
+
+    def set_hover(self, bg=None, fg=None):
+        """Override this button's hover background/foreground (independent of
+        the class-level default); pass ``(None, None)`` to clear it."""
+        self._hover_bg = bg
+        self._hover_fg = fg
+        self._apply_style()
+
+    def _shaded_bg(self, color):
+        # A subtle top-lighter / bottom-darker vertical gradient, so the fill
+        # reads as shaded rather than flat.
+        r, g, b = colors.resolve_color(color)[:3]
+        top = colors.get_hex((min(1.0, r + 0.10), min(1.0, g + 0.10),
+                              min(1.0, b + 0.10)))
+        bot = colors.get_hex((max(0.0, r - 0.10), max(0.0, g - 0.10),
+                              max(0.0, b - 0.10)))
+        return ("qlineargradient(x1:0, y1:0, x2:0, y2:1, "
+                "stop:0 {}, stop:1 {})".format(top, bot))
+
+    def _style_rule(self, selector, bg, fg):
+        # background/foreground only (no border or padding) so the styling
+        # never changes the button's geometry (no jitter between the normal
+        # and :hover states).
+        parts = []
         if bg is not None:
-            bg_tup = colors.resolve_color(bg)
-            bg_hex = colors.get_hex(bg_tup)
-            content = f"background-color: {bg_hex};"
+            parts.append("background: {};".format(self._shaded_bg(bg)))
         if fg is not None:
-            fg_tup = colors.resolve_color(fg)
-            fg_hex = colors.get_hex(fg_tup)
-            content = f"{content} color: {fg_hex};"
-        if len(content) > 0:
-            myname = self._get_name()
-            self.widget.setStyleSheet(
-                "#%s { %s }" % (myname, content))
+            parts.append("color: {};".format(
+                colors.get_hex(colors.resolve_color(fg))))
+        if len(parts) == 0:
+            return None
+        return "%s { %s }" % (selector, " ".join(parts))
+
+    def _apply_style(self):
+        name = self._get_name()
+        rules = []
+        base = self._style_rule("#%s" % name, self._bg, self._fg)
+        if base is not None:
+            rules.append(base)
+        hover = self._style_rule("#%s:hover" % name,
+                                 self._hover_bg, self._hover_fg)
+        if hover is not None:
+            rules.append(hover)
+        self.widget.setStyleSheet("\n".join(rules))
 
     def _cb_redirect(self, *args):
         self.make_callback('activated')

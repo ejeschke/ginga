@@ -56,6 +56,10 @@ New features for existing widgets
   icon
 - ``Application``: ``register_font`` / ``set_default_font`` for shipped
   loadable fonts
+- ``Button``: ``set_hover_color(bg, fg)`` classmethod sets a hover highlight
+  (via the native ``:hover`` state) for buttons created afterward -- bracket
+  a region of UI construction to scope it; plus a per-button ``set_hover()``
+  override (Qt, Gtk3, Gtk4)
 
 Breaking API changes
 --------------------

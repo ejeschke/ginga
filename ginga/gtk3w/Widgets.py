@@ -522,6 +522,14 @@ class Label(WidgetBase):
 
 
 class Button(WidgetBase):
+
+    # Class-level default hover colors; a button snapshots these at
+    # construction, so bracketing UI creation with set_hover_color(bg, fg)
+    # ... set_hover_color(None, None) gives just those buttons a hover
+    # highlight.  See set_hover_color().
+    _hover_bg = None
+    _hover_fg = None
+
     def __init__(self, text=None, iconpath=None, iconsize=None):
         super(Button, self).__init__()
 
@@ -537,7 +545,24 @@ class Button(WidgetBase):
         self._set_name(w)
         w.connect('clicked', self._cb_redirect)
 
+        self._bg = None
+        self._fg = None
+        self._hover_bg = Button._hover_bg
+        self._hover_fg = Button._hover_fg
+        self._css_provider = None
+
         self.enable_callback('activated')
+
+        self._apply_style()
+
+    @classmethod
+    def set_hover_color(cls, bg=None, fg=None):
+        """Set the default hover background/foreground for buttons created
+        *after* this call; pass ``(None, None)`` to clear it.  Bracket the
+        creation of a group of buttons to give just those buttons a hover
+        highlight."""
+        cls._hover_bg = bg
+        cls._hover_fg = fg
 
     def set_text(self, text):
         self.widget.set_label(text)
@@ -553,25 +578,56 @@ class Button(WidgetBase):
         self.widget.set_image(iconw)
 
     def set_color(self, bg=None, fg=None):
-        content = ""
+        """Set this button's base background/foreground."""
+        self._bg = bg
+        self._fg = fg
+        self._apply_style()
+
+    def set_hover(self, bg=None, fg=None):
+        """Override this button's hover background/foreground (independent of
+        the class-level default); pass ``(None, None)`` to clear it."""
+        self._hover_bg = bg
+        self._hover_fg = fg
+        self._apply_style()
+
+    def _shaded_bg(self, color):
+        # A subtle top-lighter / bottom-darker vertical gradient, so the fill
+        # reads as shaded rather than flat.
+        r, g, b = colors.resolve_color(color)[:3]
+        top = colors.get_hex((min(1.0, r + 0.10), min(1.0, g + 0.10),
+                              min(1.0, b + 0.10)))
+        bot = colors.get_hex((max(0.0, r - 0.10), max(0.0, g - 0.10),
+                              max(0.0, b - 0.10)))
+        return "linear-gradient(to bottom, {} 0%, {} 100%)".format(top, bot)
+
+    def _style_props(self, bg, fg):
+        parts = []
         if bg is not None:
-            bg_tup = colors.resolve_color(bg)
-            bg_hex = colors.get_hex(bg_tup)
-            # NOTE: background-image must be none
-            content = f"background-image: none; background-color: {bg_hex};"
+            parts.append("background-image: {};".format(self._shaded_bg(bg)))
         if fg is not None:
-            fg_tup = colors.resolve_color(fg)
-            fg_hex = colors.get_hex(fg_tup)
-            content = f"{content} color: {fg_hex};"
-        if len(content) == 0:
-            return
-        context = self.widget.get_style_context()
+            parts.append("color: {};".format(
+                colors.get_hex(colors.resolve_color(fg))))
+        return " ".join(parts)
+
+    def _apply_style(self):
         myname = self._get_name()
-        context.add_class(myname)
-        css_data = "*.%s { %s }" % (myname, content)
-        css_provider = Gtk.CssProvider()
-        css_provider.load_from_data(css_data.encode())
-        context.add_provider(css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
+        rules = []
+        base = self._style_props(self._bg, self._fg)
+        if len(base) > 0:
+            rules.append("*.%s { %s }" % (myname, base))
+        hover = self._style_props(self._hover_bg, self._hover_fg)
+        if len(hover) > 0:
+            rules.append("*.%s:hover { %s }" % (myname, hover))
+        if self._css_provider is None:
+            if len(rules) == 0:
+                return
+            context = self.widget.get_style_context()
+            context.add_class(myname)
+            self._css_provider = Gtk.CssProvider()
+            context.add_provider(self._css_provider,
+                                 Gtk.STYLE_PROVIDER_PRIORITY_USER)
+        css_data = "\n".join(rules) if len(rules) > 0 else "*.%s {}" % myname
+        self._css_provider.load_from_data(css_data.encode())
 
     def _cb_redirect(self, *args):
         self.make_callback('activated')
