@@ -67,7 +67,15 @@ def get_substitutes(family):
 
 
 def resolve_alias(family, subst_name):
-    return get_substitutes(family)[0]
+    # If the family has a registered alias/substitute, use the preferred one.
+    # Otherwise keep ``subst_name`` (the caller's original) rather than
+    # collapsing to the default family -- ``family`` may be a full
+    # 'family;style;weight' spec, and dropping it to the default loses the
+    # requested family, style and weight.
+    lst = aliases.get(family.lower())
+    if lst is None:
+        return subst_name
+    return lst[0]
 
 
 def get_css_family_list(family):
