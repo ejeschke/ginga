@@ -41,6 +41,7 @@ import glob
 from ginga.gw import Widgets
 from ginga import GingaPlugin
 from ginga.util import grc
+from ginga.locale.localize import _tr
 
 __all__ = ['Command']
 
@@ -63,7 +64,7 @@ class Command(GingaPlugin.GlobalPlugin):
 
         self.msg_font = self.fv.get_font('fixed', 12)
 
-        vbox.add_widget(Widgets.Label("Output:"))
+        vbox.add_widget(Widgets.Label(_tr("Output:")))
         tw = Widgets.TextArea(wrap=True, editable=False)
         tw.set_font(self.msg_font)
         tw.set_limit(self.histlimit)
@@ -76,7 +77,7 @@ class Command(GingaPlugin.GlobalPlugin):
         vbox.add_widget(vbox2, stretch=1)
 
         vbox2 = Widgets.VBox()
-        vbox2.add_widget(Widgets.Label("Type command here:"))
+        vbox2.add_widget(Widgets.Label(_tr("Type command here:")))
         self.cmd_w = Widgets.TextEntry()
         self.cmd_w.set_font(self.msg_font)
         vbox2.add_widget(self.cmd_w, stretch=0)
@@ -87,10 +88,10 @@ class Command(GingaPlugin.GlobalPlugin):
         btns.set_spacing(4)
         btns.set_border_width(4)
 
-        btn = Widgets.Button("Close")
+        btn = Widgets.Button(_tr("Close"))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn)
-        btn = Widgets.Button("Help")
+        btn = Widgets.Button(_tr("Help"))
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)

@@ -21,6 +21,7 @@ from collections import deque
 
 from ginga import GingaPlugin
 from ginga.gw import Widgets
+from ginga.locale.localize import _tr
 
 __all__ = ['Errors']
 
@@ -62,14 +63,14 @@ class Errors(GingaPlugin.GlobalPlugin):
         btns.set_spacing(4)
 
         if self.settings.get('closeable', False):
-            btn = Widgets.Button("Close")
+            btn = Widgets.Button(_tr("Close"))
             btn.add_callback('activated', lambda w: self.close())
             btns.add_widget(btn)
-            btn = Widgets.Button("Help")
+            btn = Widgets.Button(_tr("Help"))
             btn.add_callback('activated', lambda w: self.help())
             btns.add_widget(btn, stretch=0)
 
-        btn = Widgets.Button("Remove All")
+        btn = Widgets.Button(_tr("Remove All"))
         btn.add_callback('activated', lambda w: self.remove_all())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
@@ -106,7 +107,7 @@ class Errors(GingaPlugin.GlobalPlugin):
         vbox.add_widget(tw, stretch=1)
 
         hbox = Widgets.HBox()
-        btn = Widgets.Button("Remove")
+        btn = Widgets.Button(_tr("Remove"))
         btn.add_callback('activated', lambda w: self.remove_error(vbox))
         hbox.add_widget(btn)
         hbox.add_widget(Widgets.Label(''), stretch=1)

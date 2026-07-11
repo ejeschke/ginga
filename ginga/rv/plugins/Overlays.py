@@ -30,6 +30,7 @@ import numpy as np
 
 from ginga import GingaPlugin, RGBImage, colors
 from ginga.gw import Widgets
+from ginga.locale.localize import _tr
 
 __all__ = ['Overlays']
 
@@ -76,7 +77,7 @@ class Overlays(GingaPlugin.LocalPlugin):
         vbox.set_border_width(4)
         vbox.set_spacing(2)
 
-        fr = Widgets.Frame("Limits")
+        fr = Widgets.Frame(_tr("Limits"))
 
         captions = (('Opacity:', 'label', 'Opacity', 'spinfloat'),
                     ('Hi color:', 'label', 'Hi color', 'combobox'),
@@ -129,10 +130,10 @@ class Overlays(GingaPlugin.LocalPlugin):
         btns = Widgets.HBox()
         btns.set_spacing(3)
 
-        btn = Widgets.Button("Close")
+        btn = Widgets.Button(_tr("Close"))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
-        btn = Widgets.Button("Help")
+        btn = Widgets.Button(_tr("Help"))
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)

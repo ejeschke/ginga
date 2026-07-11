@@ -58,21 +58,21 @@ class Pipeline(GingaPlugin.LocalPlugin):
 
         tbar = Widgets.Toolbar(orientation='horizontal')
         menu = tbar.add_menu('Pipe', mtype='menu')
-        menu.set_tooltip("Operation on pipeline")
+        menu.set_tooltip(_tr("Operation on pipeline"))
         item = menu.add_name('Load')
-        item.set_tooltip("Load a new pipeline")
+        item.set_tooltip(_tr("Load a new pipeline"))
         item.add_callback('activated', self.load_pipeline_cb)
         item = menu.add_name('Save')
-        item.set_tooltip("Save this pipeline")
+        item.set_tooltip(_tr("Save this pipeline"))
         item.add_callback('activated', self.save_pipeline_cb)
 
         menu = tbar.add_menu('Edit', mtype='menu')
-        menu.set_tooltip("Edit on pipeline")
+        menu.set_tooltip(_tr("Edit on pipeline"))
         item = menu.add_name('Undo')
-        item.set_tooltip("Undo last action")
+        item.set_tooltip(_tr("Undo last action"))
         item.add_callback('activated', self.undo_pipeline_cb)
         item = menu.add_name('Redo')
-        item.set_tooltip("Redo last action")
+        item.set_tooltip(_tr("Redo last action"))
         item.add_callback('activated', self.redo_pipeline_cb)
 
         name = Widgets.TextEntry(editable=True)
@@ -110,22 +110,22 @@ class Pipeline(GingaPlugin.LocalPlugin):
         tbar = Widgets.Toolbar(orientation='horizontal')
         btn = tbar.add_action('Del')
         btn.add_callback('activated', self.delete_stage_cb)
-        btn.set_tooltip("Delete selected stages")
+        btn.set_tooltip(_tr("Delete selected stages"))
         self.w.delete = btn
         btn = tbar.add_action('Ins')
-        btn.set_tooltip("Insert above selected stage")
+        btn.set_tooltip(_tr("Insert above selected stage"))
         btn.add_callback('activated', self.insert_stage_cb)
         self.w.insert = btn
         btn = tbar.add_action('Up')
-        btn.set_tooltip("Move selected stage up")
+        btn.set_tooltip(_tr("Move selected stage up"))
         btn.add_callback('activated', self.move_stage_cb, 'up')
         self.w.move_up = btn
         btn = tbar.add_action('Dn')
-        btn.set_tooltip("Move selected stage down")
+        btn.set_tooltip(_tr("Move selected stage down"))
         btn.add_callback('activated', self.move_stage_cb, 'down')
         self.w.move_dn = btn
         btn = tbar.add_action('Clr')
-        btn.set_tooltip("Clear selection")
+        btn.set_tooltip(_tr("Clear selection"))
         btn.add_callback('activated', lambda w: self.clear_selected())
         self.w.clear = btn
         self.insert_menu = Widgets.Menu()
@@ -133,11 +133,11 @@ class Pipeline(GingaPlugin.LocalPlugin):
             item = self.insert_menu.add_name(name)
             item.add_callback('activated', self._insert_stage_cb, name)
         btn = tbar.add_action('Run')
-        btn.set_tooltip("Run entire pipeline")
+        btn.set_tooltip(_tr("Run entire pipeline"))
         btn.add_callback('activated', self.run_pipeline_cb)
         self.w.run = btn
         btn = tbar.add_action('En', toggle=True)
-        btn.set_tooltip("Enable pipeline")
+        btn.set_tooltip(_tr("Enable pipeline"))
         btn.set_state(self.pipeline.enabled)
         btn.add_callback('activated', self.enable_pipeline_cb)
         self.w.enable = btn
@@ -150,10 +150,10 @@ class Pipeline(GingaPlugin.LocalPlugin):
         btns = Widgets.HBox()
         btns.set_spacing(3)
 
-        btn = Widgets.Button("Close")
+        btn = Widgets.Button(_tr("Close"))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
-        btn = Widgets.Button("Help")
+        btn = Widgets.Button(_tr("Help"))
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
@@ -172,18 +172,18 @@ class Pipeline(GingaPlugin.LocalPlugin):
         chk = tbar.add_action('B', toggle=True)
         chk.set_state(stage._bypass)
         chk.add_callback('activated', self.bypass_stage_cb, stage)
-        chk.set_tooltip("Bypass this stage")
+        chk.set_tooltip(_tr("Bypass this stage"))
         chk = tbar.add_action('S', toggle=True)
         chk.add_callback('activated', self.select_stage_cb)
-        chk.set_tooltip("Select this stage")
+        chk.set_tooltip(_tr("Select this stage"))
         stage.w.select = chk
         chk = tbar.add_action('C', toggle=True)
         chk.add_callback('activated', self.configure_stage_cb, xpd)
-        chk.set_tooltip("Configure this stage")
+        chk.set_tooltip(_tr("Configure this stage"))
         hbox.add_widget(tbar, stretch=0)
         ent = Widgets.TextEntry(str(stage))
         ent.add_callback('activated', self.rename_stage_cb, stage)
-        ent.set_tooltip("Rename this stage")
+        ent.set_tooltip(_tr("Rename this stage"))
         hbox.add_widget(ent, stretch=1)
         _vbox.add_widget(hbox, stretch=0)
         stage.build_gui(xpd)
@@ -429,6 +429,7 @@ class Pipeline(GingaPlugin.LocalPlugin):
 
 # Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
+from ginga.locale.localize import _tr
 if __doc__ is not None:
     __doc__ += generate_cfg_example('plugin_Pipeline', package='ginga')
 

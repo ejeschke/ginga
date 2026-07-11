@@ -19,6 +19,7 @@ from ginga.misc import Callback, Bunch, Settings, LineHistory
 from ginga.util.paths import icondir, app_icon_path
 from ginga.fonts import font_asst
 from ginga.gw.widget_helpers import DIALOG_FLAGS_ONTOP
+from ginga.locale.localize import translate_caption, _tr
 
 __all__ = ['WidgetError', 'Widget', 'WidgetBase', 'TextEntry', 'TextEntrySet',
            'TextArea', 'TextSource', 'Label', 'Button', 'ComboBox', 'Timer',
@@ -269,7 +270,7 @@ class TextEntrySet(WidgetBase):
         self.entry.setReadOnly(not editable)
         layout = self.widget.layout()
         layout.addWidget(self.entry, stretch=1)
-        self.btn = QtGui.QPushButton('Set')
+        self.btn = QtGui.QPushButton(_tr('Set'))
         self.entry.returnPressed.connect(self._cb_redirect)
         self.btn.clicked.connect(self._cb_redirect)
         layout.addWidget(self.btn, stretch=0)
@@ -3273,8 +3274,8 @@ class TableView(TreeView):
         if self.sortable and not (ctrl or shift):
             asc = True
             cur_col, cur_asc = (self.widget.header().sortIndicatorSection(),
-                                self.widget.header().sortIndicatorOrder()
-                                == QtCore.Qt.AscendingOrder)
+                                self.widget.header().sortIndicatorOrder() ==
+                                QtCore.Qt.AscendingOrder)
 
             if cur_col == logical_index:
                 asc = not cur_asc
@@ -5159,11 +5160,12 @@ def build_info(captions, orientation='vertical'):
             idx = col * 2
             if idx < len(tup):
                 title, wtype = tup[idx:idx + 2]
+                title, disp = translate_caption(title, wtype)
                 if not title.endswith(':'):
                     name = name_mangle(title)
                 else:
                     name = name_mangle('lbl_' + title[:-1])
-                w = make_widget(title, wtype)
+                w = make_widget(disp, wtype)
                 table.addWidget(w.widget, row, col)
                 wb[name] = w
             col += 1

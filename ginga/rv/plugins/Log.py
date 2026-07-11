@@ -33,6 +33,7 @@ from collections import deque
 
 from ginga import GingaPlugin
 from ginga.gw import Widgets
+from ginga.locale.localize import _tr
 
 __all__ = ['Log']
 
@@ -76,32 +77,32 @@ class Log(GingaPlugin.GlobalPlugin):
             combobox.append_text(name)
         combobox.set_index(1)
         combobox.add_callback('activated', self.set_loglevel_cb)
-        combobox.set_tooltip("Set the logging level")
+        combobox.set_tooltip(_tr("Set the logging level"))
 
         spinbox = b.history
         spinbox.set_limits(100, self.histmax, incr_value=10)
         spinbox.set_value(self.histlimit)
         spinbox.add_callback('value-changed', self.set_history_cb)
-        spinbox.set_tooltip("Set the logging history line limit")
+        spinbox.set_tooltip(_tr("Set the logging history line limit"))
 
         btn = b.auto_scroll
         btn.set_state(self.autoscroll)
-        btn.set_tooltip("Scroll the log window automatically")
+        btn.set_tooltip(_tr("Scroll the log window automatically"))
         btn.add_callback('activated', self.set_autoscroll_cb)
 
         btn = b.clear
         btn.add_callback('activated', lambda w: self.clear())
-        btn.set_tooltip("Clear the log history")
+        btn.set_tooltip(_tr("Clear the log history"))
         vbox.add_widget(w, stretch=0)
 
         btns = Widgets.HBox()
         btns.set_border_width(4)
         btns.set_spacing(4)
 
-        btn = Widgets.Button("Close")
+        btn = Widgets.Button(_tr("Close"))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn)
-        btn = Widgets.Button("Help")
+        btn = Widgets.Button(_tr("Help"))
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)

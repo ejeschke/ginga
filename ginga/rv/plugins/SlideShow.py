@@ -66,6 +66,7 @@ from ginga.gw import Widgets
 from ginga.pilw.ImageViewPil import CanvasView
 from ginga.util import loader
 from ginga.util.paths import icondir
+from ginga.locale.localize import _tr
 
 __all__ = ['SlideShow']
 
@@ -116,23 +117,23 @@ class SlideShow(LocalPlugin):
                      'Reload', 'button'),
                     ('Save As', 'button', 'save_path', 'textentry'),
                     ('Default duration:', 'llabel', 'default_duration', 'textentryset'),
-                    ('Duration:', 'llabel', 'duration', 'label',
-                     'Total:', 'llabel', 'total', 'label'),
+                    ('Duration:', 'llabel', '^duration', 'label',
+                     'Total:', 'llabel', '^total', 'label'),
                     )
         w, b = Widgets.build_info(captions, orientation='vertical')
         self.w.update(b)
 
-        b.load.set_tooltip('Load a slideshow file')
+        b.load.set_tooltip(_tr('Load a slideshow file'))
         b.load.add_callback('activated', self._popup_load_dialog_cb)
-        b.path.set_tooltip('Path for slideshow file')
+        b.path.set_tooltip(_tr('Path for slideshow file'))
         b.path.add_callback('activated', self.load_slideshow_cb)
-        b.reload.set_tooltip('Reload slideshow file')
+        b.reload.set_tooltip(_tr('Reload slideshow file'))
         b.reload.add_callback('activated', self.load_slideshow_cb)
         b.save_as.add_callback('activated', self.save_slideshow_cb)
 
         b.default_duration.add_callback('activated', self.set_duration_cb)
         b.default_duration.set_text(str(self.def_duration))
-        b.default_duration.set_tooltip("Set the default duration if none found for a slide")
+        b.default_duration.set_tooltip(_tr("Set the default duration if none found for a slide"))
 
         self.w.fs = Widgets.FileDialog(parent=b.load, title='Load slide show')
         self.w.fs.set_mode('file')
@@ -143,7 +144,7 @@ class SlideShow(LocalPlugin):
         self.w.load_progress = Widgets.ProgressBar()
         vbox2.add_widget(self.w.load_progress, stretch=0)
 
-        fr = Widgets.Frame("Load")
+        fr = Widgets.Frame(_tr("Load"))
         fr.set_widget(vbox2)
         vbox.add_widget(fr, stretch=0)
 
@@ -161,7 +162,7 @@ class SlideShow(LocalPlugin):
         b.stop.add_callback('activated', self.stop_slideshow_cb)
         b.filename.set_editable(False)
 
-        fr = Widgets.Frame("Play")
+        fr = Widgets.Frame(_tr("Play"))
         fr.set_widget(w)
         vbox.add_widget(fr, stretch=0)
 
@@ -179,7 +180,7 @@ class SlideShow(LocalPlugin):
         b.unhide.add_callback('activated', self.edit_unhide_cb)
         b.delete.add_callback('activated', self.edit_delete_cb)
 
-        fr = Widgets.Frame("Edit")
+        fr = Widgets.Frame(_tr("Edit"))
         fr.set_widget(w)
         vbox.add_widget(fr, stretch=0)
 
@@ -198,10 +199,10 @@ class SlideShow(LocalPlugin):
         btns.set_border_width(4)
         btns.set_spacing(3)
 
-        btn = Widgets.Button('Close')
+        btn = Widgets.Button(_tr('Close'))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
-        btn = Widgets.Button("Help")
+        btn = Widgets.Button(_tr("Help"))
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)

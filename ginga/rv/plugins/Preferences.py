@@ -512,6 +512,7 @@ from ginga import cmap, imap, trcalc
 from ginga import GingaPlugin
 from ginga import AutoCuts, ColorDist
 from ginga.util import wcs, wcsmod, rgb_cms
+from ginga.locale.localize import _tr, get_message
 
 __all_ = ['Preferences']
 
@@ -610,7 +611,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         vbox.set_spacing(2)
 
         # COLOR DISTRIBUTION OPTIONS
-        fr = Widgets.Frame("Color Distribution")
+        fr = Widgets.Frame(_tr("Color Distribution"))
 
         captions = (('Algorithm:', 'label', 'Algorithm', 'combobox'),
                     #('Table Size:', 'label', 'Table Size', 'entryset'),
@@ -620,9 +621,9 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.update(b)
         self.w.calg_choice = b.algorithm
         #self.w.table_size = b.table_size
-        b.algorithm.set_tooltip("Choose a color distribution algorithm")
-        #b.table_size.set_tooltip("Set size of the distribution hash table")
-        b.dist_defaults.set_tooltip("Restore color distribution defaults")
+        b.algorithm.set_tooltip(_tr("Choose a color distribution algorithm"))
+        #b.table_size.set_tooltip(_tr("Set size of the distribution hash table"))
+        b.dist_defaults.set_tooltip(_tr("Restore color distribution defaults"))
         b.dist_defaults.add_callback('activated',
                                      lambda w: self.set_default_distmaps())
 
@@ -645,7 +646,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         vbox.add_widget(fr)
 
         # COLOR MAPPING OPTIONS
-        fr = Widgets.Frame("Color Mapping")
+        fr = Widgets.Frame(_tr("Color Mapping"))
 
         captions = (('Colormap:', 'label', 'Colormap', 'combobox'),
                     ('Intensity:', 'label', 'Intensity', 'combobox'),
@@ -657,7 +658,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.cmap_choice = b.colormap
         self.w.imap_choice = b.intensity
 
-        b.invert_cmap.set_tooltip("Invert color map")
+        b.invert_cmap.set_tooltip(_tr("Invert color map"))
         b.invert_cmap.set_state(False)
         b.invert_cmap.add_callback('activated', self.invert_cmap_cb)
 
@@ -665,13 +666,13 @@ class Preferences(GingaPlugin.LocalPlugin):
         b.rotate_cmap.set_limits(0, 100, incr_value=1)
         b.rotate_cmap.set_value(0)
         b.rotate_cmap.add_callback('value-changed', self.rotate_cmap_cb)
-        b.rotate_cmap.set_tooltip("Rotate the colormap")
+        b.rotate_cmap.set_tooltip(_tr("Rotate the colormap"))
 
-        b.colormap.set_tooltip("Choose a color map for this image")
-        b.intensity.set_tooltip("Choose an intensity map for this image")
-        b.unrotate_cmap.set_tooltip("Undo cmap rotation")
+        b.colormap.set_tooltip(_tr("Choose a color map for this image"))
+        b.intensity.set_tooltip(_tr("Choose an intensity map for this image"))
+        b.unrotate_cmap.set_tooltip(_tr("Undo cmap rotation"))
         b.unrotate_cmap.add_callback('activated', lambda w: self.unrotate_cmap())
-        b.color_defaults.set_tooltip("Restore all color map settings to defaults")
+        b.color_defaults.set_tooltip(_tr("Restore all color map settings to defaults"))
         b.color_defaults.add_callback('activated',
                                       lambda w: self.set_default_cmaps())
         fr.set_widget(w)
@@ -708,7 +709,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         combobox.add_callback('activated', self.set_imap_cb)
 
         # CONTRAST MANIPULATIONS
-        fr = Widgets.Frame("Contrast and Brightness (Bias)")
+        fr = Widgets.Frame(_tr("Contrast and Brightness (Bias)"))
 
         captions = (('Contrast:', 'label', 'contrast', 'hscale'),
                     ('Brightness:', 'label', 'brightness', 'hscale'),
@@ -720,20 +721,20 @@ class Preferences(GingaPlugin.LocalPlugin):
         b.contrast.set_limits(0, 100, incr_value=1)
         b.contrast.set_value(50)
         b.contrast.add_callback('value-changed', self.contrast_cb)
-        b.contrast.set_tooltip("Set contrast for the viewer")
+        b.contrast.set_tooltip(_tr("Set contrast for the viewer"))
 
         b.brightness.set_tracking(True)
         b.brightness.set_limits(0, 100, incr_value=1)
         b.brightness.set_value(50)
         b.brightness.add_callback('value-changed', self.brightness_cb)
-        b.brightness.set_tooltip("Set brightness/bias for the viewer")
+        b.brightness.set_tooltip(_tr("Set brightness/bias for the viewer"))
 
-        btn = Widgets.Button('Default Contrast')
-        btn.set_tooltip("Reset contrast to default")
+        btn = Widgets.Button(_tr('Default Contrast'))
+        btn.set_tooltip(_tr("Reset contrast to default"))
         btn.add_callback('activated', self.restore_contrast_cb)
         b._hbox_cb.add_widget(btn, stretch=0)
-        btn = Widgets.Button('Default Brightness')
-        btn.set_tooltip("Reset brightness to default")
+        btn = Widgets.Button(_tr('Default Brightness'))
+        btn.set_tooltip(_tr("Reset brightness to default"))
         btn.add_callback('activated', self.restore_brightness_cb)
         b._hbox_cb.add_widget(btn, stretch=0)
 
@@ -741,7 +742,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         vbox.add_widget(fr)
 
         # AUTOCUTS OPTIONS
-        fr = Widgets.Frame("Auto Cuts")
+        fr = Widgets.Frame(_tr("Auto Cuts"))
         vbox2 = Widgets.VBox()
         fr.set_widget(vbox2)
 
@@ -757,12 +758,12 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.update(b)
 
         loval, hival = self.t_['cuts']
-        b.cut_levels.set_tooltip("Set cut levels manually")
-        b.auto_levels.set_tooltip("Set cut levels by algorithm")
-        b.cut_low.set_tooltip("Set low cut level (press Enter)")
+        b.cut_levels.set_tooltip(_tr("Set cut levels manually"))
+        b.auto_levels.set_tooltip(_tr("Set cut levels by algorithm"))
+        b.cut_low.set_tooltip(_tr("Set low cut level (press Enter)"))
         b.cut_low.set_length(9)
         b.cut_low_value.set_text('%.4g' % (loval))
-        b.cut_high.set_tooltip("Set high cut level (press Enter)")
+        b.cut_high.set_tooltip(_tr("Set high cut level (press Enter)"))
         b.cut_high.set_length(9)
         b.cut_high_value.set_text('%.4g' % (hival))
 
@@ -784,7 +785,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         except Exception:
             pass
         combobox.add_callback('activated', self.set_autocut_method_cb)
-        b.auto_method.set_tooltip("Choose algorithm for auto levels")
+        b.auto_method.set_tooltip(_tr("Choose algorithm for auto levels"))
         vbox2.add_widget(w, stretch=0)
 
         self.w.acvbox = Widgets.VBox()
@@ -793,7 +794,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         vbox.add_widget(fr, stretch=0)
 
         # TRANSFORM OPTIONS
-        fr = Widgets.Frame("Transform")
+        fr = Widgets.Frame(_tr("Transform"))
 
         captions = (('Flip X', 'checkbutton', 'Flip Y', 'checkbutton',
                     'Swap XY', 'checkbutton'),
@@ -806,11 +807,11 @@ class Preferences(GingaPlugin.LocalPlugin):
             btn = b[name]
             btn.set_state(self.t_.get(name, False))
             btn.add_callback('activated', self.set_transforms_cb)
-        b.flip_x.set_tooltip("Flip the image around the X axis")
-        b.flip_y.set_tooltip("Flip the image around the Y axis")
-        b.swap_xy.set_tooltip("Swap the X and Y axes in the image")
-        b.rotate.set_tooltip("Rotate the image around the pan position")
-        b.restore.set_tooltip("Clear any transforms and center image")
+        b.flip_x.set_tooltip(_tr("Flip the image around the X axis"))
+        b.flip_y.set_tooltip(_tr("Flip the image around the Y axis"))
+        b.swap_xy.set_tooltip(_tr("Swap the X and Y axes in the image"))
+        b.rotate.set_tooltip(_tr("Rotate the image around the pan position"))
+        b.restore.set_tooltip(_tr("Clear any transforms and center image"))
         b.restore.add_callback('activated', self.restore_cb)
 
         b.rotate.set_limits(-359.99999999, 359.99999999, incr_value=10.0)
@@ -822,7 +823,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         vbox.add_widget(fr, stretch=0)
 
         # WCS OPTIONS
-        fr = Widgets.Frame("WCS")
+        fr = Widgets.Frame(_tr("WCS"))
 
         captions = (('WCS Coords:', 'label', 'WCS Coords', 'combobox'),
                     ('WCS Display:', 'label', 'WCS Display', 'combobox'),
@@ -830,8 +831,8 @@ class Preferences(GingaPlugin.LocalPlugin):
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
-        b.wcs_coords.set_tooltip("Set WCS coordinate system")
-        b.wcs_display.set_tooltip("Set WCS display format")
+        b.wcs_coords.set_tooltip(_tr("Set WCS coordinate system"))
+        b.wcs_display.set_tooltip(_tr("Set WCS display format"))
 
         # Setup WCS coords method choice
         combobox = b.wcs_coords
@@ -865,7 +866,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         vbox.add_widget(fr, stretch=0)
 
         # ZOOM OPTIONS
-        fr = Widgets.Frame("Zoom")
+        fr = Widgets.Frame(_tr("Zoom"))
 
         captions = (('Zoom Alg:', 'label', 'Zoom Alg', 'combobox'),
                     ('Zoom Rate:', 'label', 'Zoom Rate', 'spinfloat'),
@@ -890,7 +891,7 @@ class Preferences(GingaPlugin.LocalPlugin):
             b.zoom_alg.set_index(index)
         except Exception:
             pass
-        b.zoom_alg.set_tooltip("Choose Zoom algorithm")
+        b.zoom_alg.set_tooltip(_tr("Choose Zoom algorithm"))
         b.zoom_alg.add_callback('activated', self.set_zoomalg_cb)
 
         index = 0
@@ -898,14 +899,14 @@ class Preferences(GingaPlugin.LocalPlugin):
             b.stretch_xy.append_text(name)
             index += 1
         b.stretch_xy.set_index(0)
-        b.stretch_xy.set_tooltip("Stretch pixels in X or Y")
+        b.stretch_xy.set_tooltip(_tr("Stretch pixels in X or Y"))
         b.stretch_xy.add_callback('activated', self.set_stretch_cb)
 
         b.stretch_factor.set_limits(1.0, 10.0, incr_value=0.10)
         b.stretch_factor.set_value(1.0)
         b.stretch_factor.set_decimals(8)
         b.stretch_factor.add_callback('value-changed', self.set_stretch_cb)
-        b.stretch_factor.set_tooltip("Length of pixel relative to 1 on other side")
+        b.stretch_factor.set_tooltip(_tr("Length of pixel relative to 1 on other side"))
         b.stretch_factor.set_enabled(zoomalg != 'step')
 
         zoomrate = self.t_.get('zoom_rate', math.sqrt(2.0))
@@ -913,27 +914,27 @@ class Preferences(GingaPlugin.LocalPlugin):
         b.zoom_rate.set_value(zoomrate)
         b.zoom_rate.set_decimals(8)
         b.zoom_rate.set_enabled(zoomalg != 'step')
-        b.zoom_rate.set_tooltip("Step rate of increase/decrease per zoom level")
+        b.zoom_rate.set_tooltip(_tr("Step rate of increase/decrease per zoom level"))
         b.zoom_rate.add_callback('value-changed', self.set_zoomrate_cb)
 
         b.zoom_defaults.add_callback('activated', self.set_zoom_defaults_cb)
 
         scale_x, scale_y = self.fitsimage.get_scale_xy()
-        b.scale_x.set_tooltip("Set the scale in X axis")
+        b.scale_x.set_tooltip(_tr("Set the scale in X axis"))
         b.scale_x.set_text(str(scale_x))
         b.scale_x.add_callback('activated', self.set_scale_cb)
-        b.scale_y.set_tooltip("Set the scale in Y axis")
+        b.scale_y.set_tooltip(_tr("Set the scale in Y axis"))
         b.scale_y.set_text(str(scale_y))
         b.scale_y.add_callback('activated', self.set_scale_cb)
 
         scale_min, scale_max = self.t_['scale_min'], self.t_['scale_max']
         b.scale_min.set_text(str(scale_min))
         b.scale_min.add_callback('activated', self.set_scale_limit_cb)
-        b.scale_min.set_tooltip("Set the minimum allowed scale in any axis")
+        b.scale_min.set_tooltip(_tr("Set the minimum allowed scale in any axis"))
 
         b.scale_max.set_text(str(scale_max))
         b.scale_max.add_callback('activated', self.set_scale_limit_cb)
-        b.scale_min.set_tooltip("Set the maximum allowed scale in any axis")
+        b.scale_min.set_tooltip(_tr("Set the maximum allowed scale in any axis"))
 
         index = 0
         for name in trcalc.interpolation_methods:
@@ -948,14 +949,14 @@ class Preferences(GingaPlugin.LocalPlugin):
             # to "basic"
             index = trcalc.interpolation_methods.index('basic')
         b.interpolation.set_index(index)
-        b.interpolation.set_tooltip("Choose interpolation method")
+        b.interpolation.set_tooltip(_tr("Choose interpolation method"))
         b.interpolation.add_callback('activated', self.set_interp_cb)
 
         fr.set_widget(w)
         vbox.add_widget(fr, stretch=0)
 
         # PAN OPTIONS
-        fr = Widgets.Frame("Panning")
+        fr = Widgets.Frame(_tr("Panning"))
 
         captions = (('Pan X:', 'label', 'Pan X', 'entry',
                      'WCS sexagesimal', 'checkbutton'),
@@ -972,15 +973,15 @@ class Preferences(GingaPlugin.LocalPlugin):
         pan_coord = self.t_.get('pan_coord', "data")
         if pan_coord == 'data':
             pan_x, pan_y = pan_x + coord_offset, pan_y + coord_offset
-        b.pan_x.set_tooltip("Coordinate for the pan position in X axis")
+        b.pan_x.set_tooltip(_tr("Coordinate for the pan position in X axis"))
         b.pan_x.set_text(str(pan_x))
         #b.pan_x.add_callback('activated', self.set_pan_cb)
-        b.pan_y.set_tooltip("Coordinate for the pan position in Y axis")
+        b.pan_y.set_tooltip(_tr("Coordinate for the pan position in Y axis"))
         b.pan_y.set_text(str(pan_y))
         #b.pan_y.add_callback('activated', self.set_pan_cb)
         b.apply_pan.add_callback('activated', self.set_pan_cb)
-        b.apply_pan.set_tooltip("Set the pan position")
-        b.wcs_sexagesimal.set_tooltip("Display pan position in sexagesimal")
+        b.apply_pan.set_tooltip(_tr("Set the pan position"))
+        b.wcs_sexagesimal.set_tooltip(_tr("Display pan position in sexagesimal"))
         b.wcs_sexagesimal.add_callback('activated',
                                        lambda w, tf: self._update_pan_coords())
 
@@ -990,18 +991,18 @@ class Preferences(GingaPlugin.LocalPlugin):
             index += 1
         index = self.pancoord_options.index(pan_coord)
         b.pan_coord.set_index(index)
-        b.pan_coord.set_tooltip("Pan coordinates type")
+        b.pan_coord.set_tooltip(_tr("Pan coordinates type"))
         b.pan_coord.add_callback('activated', self.set_pan_coord_cb)
 
-        b.center_image.set_tooltip("Set the pan position to center of the image")
+        b.center_image.set_tooltip(_tr("Set the pan position to center of the image"))
         b.center_image.add_callback('activated', self.center_image_cb)
-        b.mark_center.set_tooltip("Mark the center (pan locator)")
+        b.mark_center.set_tooltip(_tr("Mark the center (pan locator)"))
         b.mark_center.add_callback('activated', self.set_misc_cb)
 
         fr.set_widget(w)
         vbox.add_widget(fr, stretch=0)
 
-        exp = Widgets.Expander("General")
+        exp = Widgets.Expander(_tr("General"))
 
         captions = (('Num Images:', 'label', 'Num Images', 'entryset'),
                     ('Sort Order:', 'label', 'Sort Order', 'combobox'),
@@ -1010,8 +1011,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
-        b.num_images.set_tooltip(
-            "Maximum number of in memory images in channel (0==unlimited)")
+        b.num_images.set_tooltip(_tr("Maximum number of in memory images in channel (0==unlimited)"))
         num_images = self.t_.get('numImages', 0)
         self.w.num_images.set_text(str(num_images))
         self.w.num_images.add_callback('activated', self.set_buffer_cb)
@@ -1025,19 +1025,19 @@ class Preferences(GingaPlugin.LocalPlugin):
         index = self.sort_options.index(option)
         combobox.set_index(index)
         combobox.add_callback('activated', self.set_sort_cb)
-        b.sort_order.set_tooltip("Sort order for images in channel")
+        b.sort_order.set_tooltip(_tr("Sort order for images in channel"))
 
         scrollbars = self.t_.get('scrollbars', 'off')
         self.w.use_scrollbars.set_state(scrollbars in ['on', 'auto'])
         self.w.use_scrollbars.add_callback('activated', self.set_scrollbars_cb)
-        b.use_scrollbars.set_tooltip("Use scrollbars around viewer")
+        b.use_scrollbars.set_tooltip(_tr("Use scrollbars around viewer"))
 
         fr = Widgets.Frame()
         fr.set_widget(w)
         exp.set_widget(fr)
         vbox.add_widget(exp, stretch=0)
 
-        exp = Widgets.Expander("Reset (Viewer)")
+        exp = Widgets.Expander(_tr("Reset (Viewer)"))
 
         captions = (('Reset Scale', 'checkbutton',
                      'Reset Pan', 'checkbutton'),
@@ -1053,45 +1053,47 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         self.w.reset_scale.set_state(self.t_.get('viewer_restore_scale', False))
         self.w.reset_scale.add_callback('activated', self.reset_viewer_cb)
-        self.w.reset_scale.set_tooltip("Reset scale between images")
+        self.w.reset_scale.set_tooltip(_tr("Reset scale between images"))
         self.w.reset_pan.set_state(self.t_.get('viewer_restore_pan', False))
         self.w.reset_pan.add_callback('activated', self.reset_viewer_cb)
-        self.w.reset_pan.set_tooltip("Reset pan position between images")
+        self.w.reset_pan.set_tooltip(_tr("Reset pan position between images"))
         self.w.reset_transform.set_state(
             self.t_.get('viewer_restore_transform', False))
         self.w.reset_transform.add_callback('activated', self.reset_viewer_cb)
-        self.w.reset_transform.set_tooltip("Reset transform between images")
+        self.w.reset_transform.set_tooltip(_tr("Reset transform between images"))
         self.w.reset_rotation.set_state(
             self.t_.get('viewer_restore_rotation', False))
         self.w.reset_rotation.add_callback('activated', self.reset_viewer_cb)
-        self.w.reset_rotation.set_tooltip("Reset rotation between images")
+        self.w.reset_rotation.set_tooltip(_tr("Reset rotation between images"))
         self.w.reset_cuts.set_state(self.t_.get('viewer_restore_cuts', False))
         self.w.reset_cuts.add_callback('activated', self.reset_viewer_cb)
-        self.w.reset_cuts.set_tooltip("Reset cut levels between images")
+        self.w.reset_cuts.set_tooltip(_tr("Reset cut levels between images"))
         self.w.reset_distribution.set_state(
             self.t_.get('viewer_restore_distribution', False))
         self.w.reset_distribution.add_callback('activated', self.reset_viewer_cb)
-        self.w.reset_distribution.set_tooltip("Reset color distribution between images")
+        self.w.reset_distribution.set_tooltip(_tr("Reset color distribution between images"))
         self.w.reset_contrast.set_state(
             self.t_.get('viewer_restore_contrast', False))
         self.w.reset_contrast.add_callback('activated', self.reset_viewer_cb)
-        self.w.reset_contrast.set_tooltip("Reset contrast/bias between images")
+        self.w.reset_contrast.set_tooltip(_tr("Reset contrast/bias between images"))
         self.w.reset_color_map.set_state(
             self.t_.get('viewer_restore_color_map', False))
         self.w.reset_color_map.add_callback('activated', self.reset_viewer_cb)
-        self.w.reset_color_map.set_tooltip("Reset color map between images")
+        self.w.reset_color_map.set_tooltip(_tr("Reset color map between images"))
 
         fr = Widgets.Frame()
         vb2 = Widgets.VBox()
         txt_w = Widgets.TextArea(wrap=True, editable=False)
-        txt_w.set_text("Check items you want to be reset from the default viewer profile when switching between images. This happens BEFORE any items remembered with image are set.")
+        txt_w.set_text(get_message(
+            'preferences_reset_new',
+            "Check items you want to be reset from the default viewer profile when switching between images. This happens BEFORE any items remembered with image are set."))
         vb2.add_widget(txt_w, stretch=0)
         vb2.add_widget(w, stretch=1)
         fr.set_widget(vb2)
         exp.set_widget(fr)
         vbox.add_widget(exp, stretch=0)
 
-        exp = Widgets.Expander("Remember (Image)")
+        exp = Widgets.Expander(_tr("Remember (Image)"))
 
         captions = (('Remember Scale', 'checkbutton',
                      'Remember Pan', 'checkbutton'),
@@ -1107,45 +1109,47 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         self.w.remember_scale.set_state(self.t_.get('profile_use_scale', False))
         self.w.remember_scale.add_callback('activated', self.set_profile_cb)
-        self.w.remember_scale.set_tooltip("Remember scale with image")
+        self.w.remember_scale.set_tooltip(_tr("Remember scale with image"))
         self.w.remember_pan.set_state(self.t_.get('profile_use_pan', False))
         self.w.remember_pan.add_callback('activated', self.set_profile_cb)
-        self.w.remember_pan.set_tooltip("Remember pan position with image")
+        self.w.remember_pan.set_tooltip(_tr("Remember pan position with image"))
         self.w.remember_transform.set_state(
             self.t_.get('profile_use_transform', False))
         self.w.remember_transform.add_callback('activated', self.set_profile_cb)
-        self.w.remember_transform.set_tooltip("Remember transform with image")
+        self.w.remember_transform.set_tooltip(_tr("Remember transform with image"))
         self.w.remember_rotation.set_state(
             self.t_.get('profile_use_rotation', False))
         self.w.remember_rotation.add_callback('activated', self.set_profile_cb)
-        self.w.remember_rotation.set_tooltip("Remember rotation with image")
+        self.w.remember_rotation.set_tooltip(_tr("Remember rotation with image"))
         self.w.remember_cuts.set_state(self.t_.get('profile_use_cuts', False))
         self.w.remember_cuts.add_callback('activated', self.set_profile_cb)
-        self.w.remember_cuts.set_tooltip("Remember cut levels with image")
+        self.w.remember_cuts.set_tooltip(_tr("Remember cut levels with image"))
         self.w.remember_distribution.set_state(
             self.t_.get('profile_use_distribution', False))
         self.w.remember_distribution.add_callback('activated', self.set_profile_cb)
-        self.w.remember_distribution.set_tooltip("Remember color distribution algorithm with image")
+        self.w.remember_distribution.set_tooltip(_tr("Remember color distribution algorithm with image"))
         self.w.remember_contrast.set_state(
             self.t_.get('profile_use_contrast', False))
         self.w.remember_contrast.add_callback('activated', self.set_profile_cb)
-        self.w.remember_contrast.set_tooltip("Remember contrast/bias with image")
+        self.w.remember_contrast.set_tooltip(_tr("Remember contrast/bias with image"))
         self.w.remember_color_map.set_state(
             self.t_.get('profile_use_color_map', False))
         self.w.remember_color_map.add_callback('activated', self.set_profile_cb)
-        self.w.remember_color_map.set_tooltip("Remember color map with image")
+        self.w.remember_color_map.set_tooltip(_tr("Remember color map with image"))
 
         fr = Widgets.Frame()
         vb2 = Widgets.VBox()
         txt_w = Widgets.TextArea(wrap=True, editable=False)
-        txt_w.set_text("Check items you want remembered with each image and restored to the viewer when each image is viewed again. Note that these override auto cut/zoom/center new settings.")
+        txt_w.set_text(get_message(
+            'preferences_remember_image',
+            "Check items you want remembered with each image and restored to the viewer when each image is viewed again. Note that these override auto cut/zoom/center new settings."))
         vb2.add_widget(txt_w, stretch=0)
         vb2.add_widget(w, stretch=1)
         fr.set_widget(vb2)
         exp.set_widget(fr)
         vbox.add_widget(exp, stretch=0)
 
-        exp = Widgets.Expander("New Images")
+        exp = Widgets.Expander(_tr("New Images"))
 
         captions = (('Cut New:', 'label', 'Cut New', 'combobox'),
                     ('Zoom New:', 'label', 'Zoom New', 'combobox'),
@@ -1166,7 +1170,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         index = self.autocut_options.index(option)
         combobox.set_index(index)
         combobox.add_callback('activated', self.set_autocuts_cb)
-        b.cut_new.set_tooltip("Automatically set cut levels when switching images")
+        b.cut_new.set_tooltip(_tr("Automatically set cut levels when switching images"))
 
         combobox = b.zoom_new
         index = 0
@@ -1177,7 +1181,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         index = self.autozoom_options.index(option)
         combobox.set_index(index)
         combobox.add_callback('activated', self.set_autozoom_cb)
-        b.zoom_new.set_tooltip("Automatically fit image to window when switching images")
+        b.zoom_new.set_tooltip(_tr("Automatically fit image to window when switching images"))
 
         combobox = b.center_new
         index = 0
@@ -1192,12 +1196,12 @@ class Preferences(GingaPlugin.LocalPlugin):
         index = self.autocenter_options.index(option)
         combobox.set_index(index)
         combobox.add_callback('activated', self.set_autocenter_cb)
-        b.center_new.set_tooltip("Automatically center image in window when switching images")
+        b.center_new.set_tooltip(_tr("Automatically center image in window when switching images"))
 
-        b.follow_new.set_tooltip("View new images as they arrive")
-        b.raise_new.set_tooltip("Raise and focus tab for new images")
-        b.create_thumbnail.set_tooltip("Create thumbnail for new images")
-        b.auto_orient.set_tooltip("Auto orient new (RGB) images")
+        b.follow_new.set_tooltip(_tr("View new images as they arrive"))
+        b.raise_new.set_tooltip(_tr("Raise and focus tab for new images"))
+        b.create_thumbnail.set_tooltip(_tr("Create thumbnail for new images"))
+        b.auto_orient.set_tooltip(_tr("Auto orient new (RGB) images"))
 
         self.w.follow_new.set_state(True)
         self.w.follow_new.add_callback('activated', self.set_chprefs_cb)
@@ -1213,7 +1217,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         exp.set_widget(fr)
         vbox.add_widget(exp, stretch=0)
 
-        exp = Widgets.Expander("ICC Profiles")
+        exp = Widgets.Expander(_tr("ICC Profiles"))
 
         captions = (('Output ICC profile:', 'label', 'Output ICC profile',
                      'combobox'),
@@ -1239,7 +1243,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         except Exception:
             pass
         combobox.add_callback('activated', self.set_icc_profile_cb)
-        combobox.set_tooltip("ICC profile for the viewer display")
+        combobox.set_tooltip(_tr("ICC profile for the viewer display"))
 
         value = self.t_.get('icc_output_intent', 'perceptual')
         combobox = b.rendering_intent
@@ -1253,7 +1257,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         except Exception:
             pass
         combobox.add_callback('activated', self.set_icc_profile_cb)
-        combobox.set_tooltip("Rendering intent for the viewer display")
+        combobox.set_tooltip(_tr("Rendering intent for the viewer display"))
 
         value = self.t_.get('icc_proof_profile', None)
         combobox = b.proof_icc_profile
@@ -1267,7 +1271,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         except Exception:
             pass
         combobox.add_callback('activated', self.set_icc_profile_cb)
-        combobox.set_tooltip("ICC profile for soft proofing")
+        combobox.set_tooltip(_tr("ICC profile for soft proofing"))
 
         value = self.t_.get('icc_proof_intent', None)
         combobox = b.proof_intent
@@ -1281,13 +1285,13 @@ class Preferences(GingaPlugin.LocalPlugin):
         except Exception:
             pass
         combobox.add_callback('activated', self.set_icc_profile_cb)
-        combobox.set_tooltip("Rendering intent for soft proofing")
+        combobox.set_tooltip(_tr("Rendering intent for soft proofing"))
 
         value = self.t_.get('icc_black_point_compensation', False)
         b.black_point_compensation.set_state(value)
         b.black_point_compensation.add_callback(
             'activated', self.set_icc_profile_cb)
-        b.black_point_compensation.set_tooltip("Use black point compensation")
+        b.black_point_compensation.set_tooltip(_tr("Use black point compensation"))
 
         fr = Widgets.Frame()
         fr.set_widget(w)
@@ -1300,19 +1304,19 @@ class Preferences(GingaPlugin.LocalPlugin):
         btns.set_spacing(4)
         btns.set_border_width(4)
 
-        btn = Widgets.Button("Close")
+        btn = Widgets.Button(_tr("Close"))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn)
-        btn = Widgets.Button("Help")
+        btn = Widgets.Button(_tr("Help"))
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
-        btn = Widgets.Button("Save Settings")
+        btn = Widgets.Button(_tr("Save Settings"))
         btn.add_callback('activated', lambda w: self.save_preferences())
-        btn.set_tooltip("Save current settings for channel (across restarts)")
+        btn.set_tooltip(_tr("Save current settings for channel (across restarts)"))
         btns.add_widget(btn)
-        btn = Widgets.Button("Update Viewer Profile")
+        btn = Widgets.Button(_tr("Update Viewer Profile"))
         btn.add_callback('activated', self.update_viewer_profile_cb)
-        btn.set_tooltip("Update viewer profile from current settings (click 'Save Settings' to make persistent)")
+        btn.set_tooltip(_tr("Update viewer profile from current settings (click 'Save Settings' to make persistent)"))
         btns.add_widget(btn)
         btns.add_widget(Widgets.Label(''), stretch=1)
         top.add_widget(btns, stretch=0)

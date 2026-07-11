@@ -54,12 +54,18 @@ class BasePlugin:
 
     def _get_docstring(self):
         import inspect
+        from ginga.locale import localize
+
+        plg_name = self.__class__.__name__
+        # prefer a whole-document translation for the active language, if any;
+        # otherwise fall back to the module's English docstring
+        plg_doc = localize.get_localized_doc(plg_name, category='plugins')
+        if plg_doc is None:
+            plg_mod = inspect.getmodule(self)
+            plg_doc = plg_mod.__doc__
 
         # Insert section title at the beginning
-        plg_name = self.__class__.__name__
-        plg_mod = inspect.getmodule(self)
-        plg_doc = ('{}\n{}\n'.format(plg_name, '=' * len(plg_name)) +
-                   plg_mod.__doc__)
+        plg_doc = '{}\n{}\n'.format(plg_name, '=' * len(plg_name)) + plg_doc
         return plg_name, plg_doc
 
     def _help_docstring(self):

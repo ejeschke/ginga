@@ -11,6 +11,8 @@ reference viewer.
 """
 from ginga import GingaPlugin
 from ginga.gw import Widgets
+from ginga.locale import localize
+from ginga.locale.localize import _tr
 
 __all__ = ['Menubar', 'GingaMenubar']
 
@@ -82,53 +84,64 @@ class GingaMenubar(Menubar):
 
         menubar = self.w.menubar
         # create a File pulldown menu, and add it to the menu bar
-        filemenu = menubar.add_name("File")
+        filemenu = menubar.add_name(_tr("File"))
 
-        item = filemenu.add_name("Load Image")
+        item = filemenu.add_name(_tr("Load Image"))
         item.add_callback('activated', lambda *args: self.fv.gui_load_file())
 
-        item = filemenu.add_name("Remove Image")
+        item = filemenu.add_name(_tr("Remove Image"))
         item.add_callback("activated",
                           lambda *args: self.fv.remove_current_image())
 
         filemenu.add_separator()
 
-        item = filemenu.add_name("Quit")
+        item = filemenu.add_name(_tr("Quit"))
         item.add_callback('activated', self.fv.window_close)
 
         # create a Channel pulldown menu, and add it to the menu bar
-        chmenu = menubar.add_name("Channel")
+        chmenu = menubar.add_name(_tr("Channel"))
 
-        item = chmenu.add_name("Add Channel")
+        item = chmenu.add_name(_tr("Add Channel"))
         item.add_callback('activated', lambda *args: self.fv.gui_add_channel())
 
-        item = chmenu.add_name("Add Channels")
+        item = chmenu.add_name(_tr("Add Channels"))
         item.add_callback('activated', lambda *args: self.fv.gui_add_channels())
 
-        item = chmenu.add_name("Delete Channel")
+        item = chmenu.add_name(_tr("Delete Channel"))
         item.add_callback('activated', lambda *args: self.fv.gui_delete_channel())
 
         # create a Window pulldown menu, and add it to the menu bar
-        wsmenu = menubar.add_name("Workspace")
+        wsmenu = menubar.add_name(_tr("Workspace"))
 
-        item = wsmenu.add_name("Add Workspace")
+        item = wsmenu.add_name(_tr("Add Workspace"))
         item.add_callback('activated', lambda *args: self.fv.gui_add_ws())
 
         # # create a Option pulldown menu, and add it to the menu bar
         # optionmenu = menubar.add_name("Option")
 
         # create a Plugins pulldown menu, and add it to the menu bar
-        plugmenu = menubar.add_name("Plugins")
+        plugmenu = menubar.add_name(_tr("Plugins"))
         self.w.menu_plug = plugmenu
 
-        # create a Help pulldown menu, and add it to the menu bar
-        helpmenu = menubar.add_name("Help")
+        # create a Language pulldown menu, and add it to the menu bar.  The
+        # menu name is kept in English so it stays findable regardless of the
+        # currently-selected language (it will get a flag icon later).  The
+        # items are each language's name in its own script.
+        langmenu = menubar.add_name("Language")
+        for code in localize.get_available_languages():
+            item = langmenu.add_name(localize.get_language_name(code))
+            item.add_callback('activated',
+                              lambda *args, code=code:
+                              self.fv.set_language_pref(code))
 
-        item = helpmenu.add_name("About")
+        # create a Help pulldown menu, and add it to the menu bar
+        helpmenu = menubar.add_name(_tr("Help"))
+
+        item = helpmenu.add_name(_tr("About"))
         item.add_callback('activated',
                           lambda *args: self.fv.banner())
 
-        item = helpmenu.add_name("Documentation")
+        item = helpmenu.add_name(_tr("Documentation"))
         item.add_callback('activated', lambda *args: self.fv.help())
 
     def add_plugin_menu(self, name, spec):

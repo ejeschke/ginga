@@ -118,7 +118,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         vbox.set_border_width(4)
         vbox.set_spacing(2)
 
-        fr = Widgets.Frame("Mosaic")
+        fr = Widgets.Frame(_tr("Mosaic"))
 
         captions = [
             ("FOV (deg):", 'label', 'Fov', 'llabel', 'set_fov', 'entry'),
@@ -145,24 +145,23 @@ class Mosaic(GingaPlugin.LocalPlugin):
         b.fov.set_text(fov_str)
         b.set_fov.set_text(fov_str)
         b.set_fov.add_callback('activated', self.set_fov_cb)
-        b.set_fov.set_tooltip("Set size of mosaic FOV (deg)")
-        b.allow_expansion.set_tooltip("Allow image to expand the FOV")
+        b.set_fov.set_tooltip(_tr("Set size of mosaic FOV (deg)"))
+        b.allow_expansion.set_tooltip(_tr("Allow image to expand the FOV"))
         allow_expand = self.settings.get('allow_expand', True)
         b.allow_expansion.set_state(allow_expand)
         b.allow_expansion.add_callback('activated', self.allow_expand_cb)
         b.new_mosaic.add_callback('activated', lambda w: self.new_mosaic_cb())
         labelem = self.settings.get('annotate_images', False)
         b.label_images.set_state(labelem)
-        b.label_images.set_tooltip(
-            "Label tiles with their names (only if allow_expand=False)")
+        b.label_images.set_tooltip(_tr("Label tiles with their names (only if allow_expand=False)"))
         b.label_images.add_callback('activated', self.annotate_cb)
 
         trim_px = self.settings.get('trim_px', 0)
         match_bg = self.settings.get('match_bg', False)
-        b.match_bg.set_tooltip("Try to match background levels")
+        b.match_bg.set_tooltip(_tr("Try to match background levels"))
         b.match_bg.set_state(match_bg)
         b.match_bg.add_callback('activated', self.match_bg_cb)
-        b.trim_pixels.set_tooltip("Set number of pixels to trim from each edge")
+        b.trim_pixels.set_tooltip(_tr("Set number of pixels to trim from each edge"))
         b.trim_px.set_text(str(trim_px))
         b.trim_pixels.add_callback('activated', self.trim_pixels_cb)
         #b.trim_pixels.set_length(8)
@@ -172,18 +171,18 @@ class Mosaic(GingaPlugin.LocalPlugin):
         b.num_threads.set_text(str(num_threads))
         #b.set_num_threads.set_length(8)
         b.set_num_threads.set_text(str(num_threads))
-        b.set_num_threads.set_tooltip("Number of threads to use for mosaicing")
+        b.set_num_threads.set_tooltip(_tr("Number of threads to use for mosaicing"))
         b.set_num_threads.add_callback('activated', self.set_num_threads_cb)
         merge = self.settings.get('merge', False)
-        b.merge_data.set_tooltip("Merge data instead of overlay")
+        b.merge_data.set_tooltip(_tr("Merge data instead of overlay"))
         b.merge_data.set_state(merge)
         b.merge_data.add_callback('activated', self.merge_cb)
         drop_new = self.settings.get('drop_creates_new_mosaic', False)
-        b.drop_new.set_tooltip("Dropping files on image starts a new mosaic")
+        b.drop_new.set_tooltip(_tr("Dropping files on image starts a new mosaic"))
         b.drop_new.set_state(drop_new)
         b.drop_new.add_callback('activated', self.drop_new_cb)
         mosaic_hdus = self.settings.get('mosaic_hdus', False)
-        b.mosaic_hdus.set_tooltip("Mosaic data HDUs in each file")
+        b.mosaic_hdus.set_tooltip(_tr("Mosaic data HDUs in each file"))
         b.mosaic_hdus.set_state(mosaic_hdus)
         b.mosaic_hdus.add_callback('activated', self.mosaic_hdus_cb)
 
@@ -205,7 +204,7 @@ class Mosaic(GingaPlugin.LocalPlugin):
         hbox = Widgets.HBox()
         hbox.set_spacing(4)
         hbox.set_border_width(4)
-        btn = Widgets.Button("Stop")
+        btn = Widgets.Button(_tr("Stop"))
         btn.add_callback('activated', lambda w: self.eval_intr())
         btn.set_enabled(False)
         self.w.btn_intr_eval = btn
@@ -229,10 +228,10 @@ class Mosaic(GingaPlugin.LocalPlugin):
         btns = Widgets.HBox()
         btns.set_spacing(3)
 
-        btn = Widgets.Button("Close")
+        btn = Widgets.Button(_tr("Close"))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
-        btn = Widgets.Button("Help")
+        btn = Widgets.Button(_tr("Help"))
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
@@ -659,5 +658,6 @@ class Mosaic(GingaPlugin.LocalPlugin):
 
 # Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
+from ginga.locale.localize import _tr
 if __doc__ is not None:
     __doc__ += generate_cfg_example('plugin_Mosaic', package='ginga')

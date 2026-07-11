@@ -32,6 +32,12 @@ Ver 7.0.0 (unreleased)
   banner under the ``pg`` backend
 - Many backend fixes (Qt/Gtk3/Gtk4/pg): font resolution, cell padding,
   label colors, Gtk4 menu styling and Info-panel label alignment
+- Added internationalization (i18n) support to the reference viewer: most
+  UI strings, ``build_info`` captions, and plugin/mode help are now
+  translatable through ``ginga.locale``, with a ``Language`` menu to switch
+  and translations provided for German, Japanese, French, Italian, Chinese
+  and Korean; the machinery is reusable by downstream applications via
+  ``localize.register()``
 
 New widgets
 -----------

@@ -20,6 +20,7 @@ from ginga.doc import download_doc
 # GUI imports
 from ginga.gw import GwHelp, GwMain, PluginManager
 from ginga.gw import Widgets, Desktop
+from ginga.locale.localize import _tr
 
 pluginconfpfx = None
 
@@ -290,23 +291,23 @@ class GenericShell(GwMain.GwMain, Widgets.Application):
             return _do_help(self._help.choice, url=url)
 
         # Create troubleshooting dialog if downloading cannot be done
-        dialog = Widgets.Dialog(title="Show documentation",
+        dialog = Widgets.Dialog(title=_tr("Show documentation"),
                                 parent=self.w.root,
                                 modal=False)
-        btn = Widgets.Button("Cancel")
-        btn.set_tooltip("Skip help")
+        btn = Widgets.Button(_tr("Cancel"))
+        btn.set_tooltip(_tr("Skip help"))
         dialog.add_button(btn, 0)
-        btn = Widgets.Button("Show RST text")
-        btn.set_tooltip("Show local docstring for plugin help")
+        btn = Widgets.Button(_tr("Show RST text"))
+        btn.set_tooltip(_tr("Show local docstring for plugin help"))
         dialog.add_button(btn, 1)
-        btn = Widgets.Button("Use external browser")
-        btn.set_tooltip("Show online web documentation in external browser")
+        btn = Widgets.Button(_tr("Use external browser"))
+        btn.set_tooltip(_tr("Show online web documentation in external browser"))
         dialog.add_button(btn, 2)
         vbox = dialog.get_content_area()
         dialog_text = Widgets.TextArea(wrap=True, editable=False)
-        dialog_text.set_text("How would you like to see help?")
+        dialog_text.set_text(_tr("How would you like to see help?"))
         vbox.add_widget(dialog_text, stretch=1)
-        cb = Widgets.CheckBox("Remember my choice for session")
+        cb = Widgets.CheckBox(_tr("Remember my choice for session"))
         cb.set_state(False)
         vbox.add_widget(cb, stretch=0)
 
@@ -352,7 +353,7 @@ class GenericShell(GwMain.GwMain, Widgets.Application):
         def _close_cb(w):
             self.ds.remove_tab(tabname)
 
-        btn = Widgets.Button("Close")
+        btn = Widgets.Button(_tr("Close"))
         btn.add_callback('activated', _close_cb)
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
@@ -558,13 +559,13 @@ class GenericShell(GwMain.GwMain, Widgets.Application):
             self.quit()
 
         # confirm close with a dialog here
-        q_quit = Widgets.MessageDialog(title="Confirm Quit", modal=True,
+        q_quit = Widgets.MessageDialog(title=_tr("Confirm Quit"), modal=True,
                                        parent=self.w.root, autoclose=False,
-                                       buttons=[("Cancel", False),
-                                                ("Confirm", True)])
+                                       buttons=[(_tr("Cancel"), False),
+                                                (_tr("Confirm"), True)])
         # necessary so it doesn't get garbage collected right away
         self.w.quit_dialog = q_quit
-        q_quit.set_message('question', "Do you really want to quit?")
+        q_quit.set_message('question', _tr("Do you really want to quit?"))
         q_quit.add_callback('activated', self._confirm_quit_cb)
         q_quit.add_callback('close', lambda w: self._confirm_quit_cb(w, False))
         q_quit.show()
@@ -578,6 +579,33 @@ class GenericShell(GwMain.GwMain, Widgets.Application):
             return
 
         self.quit()
+
+    def set_language_pref(self, code):
+        """Record the chosen UI language in the general preferences (saved
+        across restarts) and prompt the user to restart to apply it.
+        """
+        self.settings.set(language=code)
+        try:
+            self.settings.save()
+        except Exception as e:
+            self.logger.error("Could not save language preference: %s" % (e))
+
+        dialog = Widgets.MessageDialog(title=_tr("Language"), modal=True,
+                                       parent=self.w.root, autoclose=False,
+                                       buttons=[(_tr("Ok"), 0)])
+        self.w.language_dialog = dialog
+        dialog.set_message(
+            'info',
+            _tr("Please restart Ginga for the new language to take effect."))
+        dialog.add_callback('activated', self._language_dialog_cb)
+        dialog.add_callback('close', lambda w: self._language_dialog_cb(w, 0))
+        dialog.show()
+
+    def _language_dialog_cb(self, w, val):
+        dialog = self.w.language_dialog
+        self.w.language_dialog = None
+        if dialog is not None:
+            dialog.delete()
 
     def shutdown_cb(self, app):
         """Quit the application.

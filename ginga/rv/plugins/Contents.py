@@ -129,24 +129,24 @@ class Contents(GingaPlugin.GlobalPlugin):
 
         btns = Widgets.HBox()
         btns.set_spacing(4)
-        b1 = Widgets.Button('Display')
+        b1 = Widgets.Button(_tr('Display'))
         b1.add_callback('activated', self.display_cb)
-        b1.set_tooltip("Display the selected object in its channel viewer")
+        b1.set_tooltip(_tr("Display the selected object in its channel viewer"))
         b1.set_enabled(False)
         btns.add_widget(b1)
-        b2 = Widgets.Button('Move')
+        b2 = Widgets.Button(_tr('Move'))
         b2.add_callback('activated', lambda w: self.ask_action_images('move'))
-        b2.set_tooltip("Move the selected objects to a channel")
+        b2.set_tooltip(_tr("Move the selected objects to a channel"))
         b2.set_enabled(False)
         btns.add_widget(b2)
-        b3 = Widgets.Button('Copy')
+        b3 = Widgets.Button(_tr('Copy'))
         b3.add_callback('activated', lambda w: self.ask_action_images('copy'))
-        b3.set_tooltip("Copy the selected objects to a channel")
+        b3.set_tooltip(_tr("Copy the selected objects to a channel"))
         b3.set_enabled(False)
         btns.add_widget(b3)
-        b4 = Widgets.Button('Remove')
+        b4 = Widgets.Button(_tr('Remove'))
         b4.add_callback('activated', lambda w: self.ask_action_images('remove'))
-        b4.set_tooltip("Remove the selected objects from a channel")
+        b4.set_tooltip(_tr("Remove the selected objects from a channel"))
         b4.set_enabled(False)
         btns.add_widget(b4)
         btns.add_widget(Widgets.Label(''), stretch=1)
@@ -161,10 +161,10 @@ class Contents(GingaPlugin.GlobalPlugin):
             btns.set_border_width(4)
             btns.set_spacing(4)
 
-            btn = Widgets.Button("Close")
+            btn = Widgets.Button(_tr("Close"))
             btn.add_callback('activated', lambda w: self.close())
             btns.add_widget(btn)
-            btn = Widgets.Button("Help")
+            btn = Widgets.Button(_tr("Help"))
             btn.add_callback('activated', lambda w: self.help())
             btns.add_widget(btn, stretch=0)
             btns.add_widget(Widgets.Label(''), stretch=1)
@@ -557,7 +557,7 @@ class Contents(GingaPlugin.GlobalPlugin):
 
         if action != 'remove':
             hbox = Widgets.HBox()
-            hbox.add_widget(Widgets.Label("To channel: "))
+            hbox.add_widget(Widgets.Label(_tr("To channel: ")))
             chnl = Widgets.ComboBox()
             for chname in self.chnames:
                 chnl.append_text(chname)
@@ -613,6 +613,7 @@ class Contents(GingaPlugin.GlobalPlugin):
 
 # Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
+from ginga.locale.localize import _tr
 if __doc__ is not None:
     __doc__ += generate_cfg_example('plugin_Contents', package='ginga')
 

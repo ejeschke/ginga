@@ -98,7 +98,7 @@ class ChangeHistory(GingaPlugin.GlobalPlugin):
         treeview.add_callback('selected', self.show_more)
         vbox.add_widget(treeview, stretch=1)
 
-        fr = Widgets.Frame('Selected History')
+        fr = Widgets.Frame(_tr('Selected History'))
 
         captions = (('Channel:', 'label', 'chname', 'llabel'),
                     ('Image:', 'label', 'imname', 'llabel'),
@@ -107,13 +107,13 @@ class ChangeHistory(GingaPlugin.GlobalPlugin):
         self.w.update(b)
 
         b.chname.set_text('')
-        b.chname.set_tooltip('Channel name')
+        b.chname.set_tooltip(_tr('Channel name'))
 
         b.imname.set_text('')
-        b.imname.set_tooltip('Image name')
+        b.imname.set_tooltip(_tr('Image name'))
 
         b.modified.set_text('')
-        b.modified.set_tooltip('Timestamp (UTC)')
+        b.modified.set_tooltip(_tr('Timestamp (UTC)'))
 
         captions = (('Description:-', 'llabel'), ('descrip', 'textarea'))
         w2, b = Widgets.build_info(captions)
@@ -122,7 +122,7 @@ class ChangeHistory(GingaPlugin.GlobalPlugin):
         b.descrip.set_editable(False)
         b.descrip.set_wrap(True)
         b.descrip.set_text('')
-        b.descrip.set_tooltip('Displays selected history entry')
+        b.descrip.set_tooltip(_tr('Displays selected history entry'))
 
         vbox2 = Widgets.VBox()
         vbox2.set_border_width(4)
@@ -137,10 +137,10 @@ class ChangeHistory(GingaPlugin.GlobalPlugin):
         btns = Widgets.HBox()
         btns.set_spacing(3)
 
-        btn = Widgets.Button('Close')
+        btn = Widgets.Button(_tr('Close'))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
-        btn = Widgets.Button("Help")
+        btn = Widgets.Button(_tr("Help"))
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
@@ -306,5 +306,6 @@ class ChangeHistory(GingaPlugin.GlobalPlugin):
 
 # Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
+from ginga.locale.localize import _tr
 if __doc__ is not None:
     __doc__ += generate_cfg_example('plugin_ChangeHistory', package='ginga')

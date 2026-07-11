@@ -44,6 +44,7 @@ from ginga import GingaPlugin
 from ginga.util.paths import ginga_home
 from ginga.util import loader
 from ginga.gw import Widgets
+from ginga.locale.localize import _tr
 
 __all__ = ['LoaderConfig']
 
@@ -77,9 +78,9 @@ class LoaderConfig(GingaPlugin.GlobalPlugin):
         tbar.set_border_width(4)
         tbar.set_spacing(4)
 
-        tbar.add_widget(Widgets.Label('Priority:'))
+        tbar.add_widget(Widgets.Label(_tr('Priority:')))
         pri = Widgets.TextEntrySet(editable=True)
-        pri.set_tooltip("Edit priority of loader (lower=better, negative numbers ok)")
+        pri.set_tooltip(_tr("Edit priority of loader (lower=better, negative numbers ok)"))
         pri.set_enabled(False)
         pri.add_callback('activated', self.set_priority_cb)
         self.w.pri_edit = pri
@@ -92,15 +93,15 @@ class LoaderConfig(GingaPlugin.GlobalPlugin):
         btns.set_border_width(4)
         btns.set_spacing(4)
 
-        btn = Widgets.Button("Close")
+        btn = Widgets.Button(_tr("Close"))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn)
-        btn = Widgets.Button("Help")
+        btn = Widgets.Button(_tr("Help"))
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
-        btn = Widgets.Button("Save")
+        btn = Widgets.Button(_tr("Save"))
         btn.add_callback('activated', lambda w: self.save_loaders_cb())
-        btn.set_tooltip("Save configuration of loaders")
+        btn.set_tooltip(_tr("Save configuration of loaders"))
         btns.add_widget(btn, stretch=0)
 
         btns.add_widget(Widgets.Label(''), stretch=1)

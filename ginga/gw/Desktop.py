@@ -12,6 +12,7 @@ import uuid
 from ginga.misc import Bunch, Callback
 from ginga.gw import Widgets, Viewers
 from ginga.util import json
+from ginga.locale.localize import _tr, N_
 
 
 class Desktop(Callback.Callbacks):
@@ -858,7 +859,9 @@ class Workspace(Widgets.VBox):
         self.group = group
         self.detachable = detachable
         self.mdi_menu = None
-        self.wstypes_c = ['Tabs', 'Grid', 'MDI', 'Stack']
+        # display labels (marked for translation, rendered with _tr() below);
+        # wstypes_l holds the canonical values used by index in callbacks
+        self.wstypes_c = [N_('Tabs'), N_('Grid'), N_('MDI'), N_('Stack')]
         self.wstypes_l = ['tabs', 'grid', 'mdi', 'stack']
         self.extdata = Bunch.Bunch(toolbar=None)
         self.toolbar = None
@@ -872,8 +875,8 @@ class Workspace(Widgets.VBox):
             self.toolbar = toolbar
             self.extdata.toolbar = toolbar
 
-            ws_menu = toolbar.add_menu("Workspace")
-            item = ws_menu.add_name("Close")
+            ws_menu = toolbar.add_menu(_tr("Workspace"))
+            item = ws_menu.add_name(_tr("Close"))
             item.add_callback('activated', self._close_menuitem_cb)
 
         self._set_wstype(wstype)
@@ -882,20 +885,20 @@ class Workspace(Widgets.VBox):
         if use_toolbar:
             cbox = Widgets.ComboBox()
             for _wstype in self.wstypes_c:
-                cbox.append_text(_wstype)
+                cbox.append_text(_tr(_wstype))
             idx = self.wstypes_l.index(wstype)
             cbox.set_index(idx)
             cbox.add_callback('activated', self.config_wstype_cb)
-            cbox.set_tooltip("Set workspace type")
+            cbox.set_tooltip(_tr("Set workspace type"))
             self.toolbar.add_widget(cbox)
 
-            mdi_menu = self.toolbar.add_menu("MDI")
+            mdi_menu = self.toolbar.add_menu(_tr("MDI"))
 
-            item = mdi_menu.add_name("Tile Panes")
+            item = mdi_menu.add_name(_tr("Tile Panes"))
             item.add_callback('activated',
                               lambda *args: self.tile_panes_cb())
 
-            item = mdi_menu.add_name("Cascade Panes")
+            item = mdi_menu.add_name(_tr("Cascade Panes"))
             item.add_callback('activated',
                               lambda *args: self.cascade_panes_cb())
             self.mdi_menu = mdi_menu

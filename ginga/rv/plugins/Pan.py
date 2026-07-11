@@ -72,10 +72,10 @@ class Pan(GingaPlugin.ParentPlugin):
             btns.set_border_width(4)
             btns.set_spacing(4)
 
-            btn = Widgets.Button("Close")
+            btn = Widgets.Button(_tr("Close"))
             btn.add_callback('activated', lambda w: self.close())
             btns.add_widget(btn)
-            btn = Widgets.Button("Help")
+            btn = Widgets.Button(_tr("Help"))
             btn.add_callback('activated', lambda w: self.help())
             btns.add_widget(btn, stretch=0)
             btns.add_widget(Widgets.Label(''), stretch=1)
@@ -393,6 +393,7 @@ class PanChild(GingaPlugin.ChildPlugin):
 
 # Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
+from ginga.locale.localize import _tr
 if __doc__ is not None:
     __doc__ += generate_cfg_example('plugin_Pan', package='ginga')
 

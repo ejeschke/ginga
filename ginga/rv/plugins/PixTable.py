@@ -188,7 +188,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         box.set_spacing(2)
 
         vbox = Widgets.VBox()
-        fr = Widgets.Frame("Pixel Values")
+        fr = Widgets.Frame(_tr("Pixel Values"))
 
         # We use a TableView widget to implement the pixtable
         pixview = Widgets.TableView(show_header=False, selection_mode='none',
@@ -202,7 +202,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         fr.set_widget(pixview)
         vbox.add_widget(fr, stretch=1)
 
-        fr = Widgets.Frame("Summary")
+        fr = Widgets.Frame(_tr("Summary"))
 
         # We use a TableView widget to implement the pixtable
         summary = Widgets.TableView(show_header=True, selection_mode='none',
@@ -234,7 +234,7 @@ class PixTable(GingaPlugin.LocalPlugin):
         index = self.sizes.index(self.pixtbl_radius)
         cbox1.set_index(index)
         cbox1.add_callback('activated', self.set_cutout_size_cb)
-        cbox1.set_tooltip("Select size of pixel table")
+        cbox1.set_tooltip(_tr("Select size of pixel table"))
         btns.add_widget(cbox1, stretch=0)
 
         # control for selecting a mark
@@ -247,19 +247,19 @@ class PixTable(GingaPlugin.LocalPlugin):
             cbox2.show_text(self.mark_selected)
         cbox2.add_callback('activated', self.mark_select_cb)
         self.w.marks = cbox2
-        cbox2.set_tooltip("Select a mark")
+        cbox2.set_tooltip(_tr("Select a mark"))
         btns.add_widget(cbox2, stretch=0)
 
-        btn1 = Widgets.Button("Delete")
+        btn1 = Widgets.Button(_tr("Delete"))
         btn1.add_callback('activated', lambda w: self.clear_mark_cb())
-        btn1.set_tooltip("Delete selected mark")
+        btn1.set_tooltip(_tr("Delete selected mark"))
         btn1.set_enabled(len(self.marks) > 1)
         self.w.btn_delete = btn1
         btns.add_widget(btn1, stretch=0)
 
-        btn2 = Widgets.Button("Delete All")
+        btn2 = Widgets.Button(_tr("Delete All"))
         btn2.add_callback('activated', lambda w: self.clear_all())
-        btn2.set_tooltip("Clear all marks")
+        btn2.set_tooltip(_tr("Clear all marks"))
         btns.add_widget(btn2, stretch=0)
         btn2.set_enabled(len(self.marks) > 1)
         self.w.btn_delete_all = btn2
@@ -272,10 +272,10 @@ class PixTable(GingaPlugin.LocalPlugin):
         btns.set_border_width(4)
         btns.set_spacing(4)
 
-        btn3 = Widgets.CheckBox("Pan to mark")
+        btn3 = Widgets.CheckBox(_tr("Pan to mark"))
         btn3.set_state(self.pan2mark)
         btn3.add_callback('activated', self.pan2mark_cb)
-        btn3.set_tooltip("Pan follows selected mark")
+        btn3.set_tooltip(_tr("Pan follows selected mark"))
         btns.add_widget(btn3)
         btns.add_widget(Widgets.Label(''), stretch=1)
 
@@ -289,13 +289,13 @@ class PixTable(GingaPlugin.LocalPlugin):
         self.w.update(b)
         vbox2.add_widget(w, stretch=0)
 
-        b.font_size.set_tooltip("Set font size for pixel display")
+        b.font_size.set_tooltip(_tr("Set font size for pixel display"))
         for size in self.fontsizes:
             b.font_size.append_text(str(size))
         b.font_size.show_text(str(self.fontsize))
         b.font_size.add_callback('activated', self.set_font_size_cb)
 
-        b.caption.set_tooltip("Text to append to the marker")
+        b.caption.set_tooltip(_tr("Text to append to the marker"))
 
         vbox2.add_widget(Widgets.Label(''), stretch=1)
         box.add_widget(vbox2, stretch=1)
@@ -307,27 +307,27 @@ class PixTable(GingaPlugin.LocalPlugin):
 
         mode = self.canvas.get_draw_mode()
         hbox = Widgets.HBox()
-        btn1 = Widgets.RadioButton("Move")
+        btn1 = Widgets.RadioButton(_tr("Move"))
         btn1.set_state(mode == 'move')
         btn1.add_callback('activated',
                           lambda w, val: self.set_mode_cb('move', val))
-        btn1.set_tooltip("Choose this to add or move a mark")
+        btn1.set_tooltip(_tr("Choose this to add or move a mark"))
         self.w.btn_move = btn1
         hbox.add_widget(btn1)
 
-        btn2 = Widgets.RadioButton("Draw", group=btn1)
+        btn2 = Widgets.RadioButton(_tr("Draw"), group=btn1)
         btn2.set_state(mode == 'draw')
         btn2.add_callback('activated',
                           lambda w, val: self.set_mode_cb('draw', val))
-        btn2.set_tooltip("Choose this to draw a new or replacement mark")
+        btn2.set_tooltip(_tr("Choose this to draw a new or replacement mark"))
         self.w.btn_draw = btn2
         hbox.add_widget(btn2)
 
-        btn3 = Widgets.RadioButton("Edit", group=btn1)
+        btn3 = Widgets.RadioButton(_tr("Edit"), group=btn1)
         btn3.set_state(mode == 'edit')
         btn3.add_callback('activated',
                           lambda w, val: self.set_mode_cb('edit', val))
-        btn3.set_tooltip("Choose this to edit a mark")
+        btn3.set_tooltip(_tr("Choose this to edit a mark"))
         self.w.btn_edit = btn3
         hbox.add_widget(btn3)
 
@@ -338,10 +338,10 @@ class PixTable(GingaPlugin.LocalPlugin):
         btns.set_border_width(4)
         btns.set_spacing(4)
 
-        btn = Widgets.Button("Close")
+        btn = Widgets.Button(_tr("Close"))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn)
-        btn = Widgets.Button("Help")
+        btn = Widgets.Button(_tr("Help"))
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
@@ -711,6 +711,7 @@ class PixTable(GingaPlugin.LocalPlugin):
 
 # Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
+from ginga.locale.localize import _tr
 if __doc__ is not None:
     __doc__ += generate_cfg_example('plugin_PixTable', package='ginga')
 

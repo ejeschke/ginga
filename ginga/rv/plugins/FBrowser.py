@@ -138,25 +138,25 @@ class FBrowser(GingaPlugin.LocalPlugin):
         btns = Widgets.HBox()
         btns.set_spacing(3)
 
-        btn = Widgets.Button("Close")
+        btn = Widgets.Button(_tr("Close"))
         btn.add_callback('activated', lambda w: self.close())
-        btn.set_tooltip("Close this plugin")
+        btn.set_tooltip(_tr("Close this plugin"))
         btns.add_widget(btn, stretch=0)
-        btn = Widgets.Button("Help")
+        btn = Widgets.Button(_tr("Help"))
         btn.add_callback('activated', lambda w: self.help())
-        btn.set_tooltip("Show documentation for this plugin")
+        btn.set_tooltip(_tr("Show documentation for this plugin"))
         btns.add_widget(btn, stretch=0)
-        btn = Widgets.Button("Refresh")
+        btn = Widgets.Button(_tr("Refresh"))
         btn.add_callback('activated', lambda w: self.refresh())
-        btn.set_tooltip("Refresh the file list from the directory")
+        btn.set_tooltip(_tr("Refresh the file list from the directory"))
         btns.add_widget(btn, stretch=0)
-        btn = Widgets.Button("Load")
+        btn = Widgets.Button(_tr("Load"))
         btn.add_callback('activated', lambda w: self.load_cb())
-        btn.set_tooltip("Load files selected in file pane")
+        btn.set_tooltip(_tr("Load files selected in file pane"))
         btns.add_widget(btn, stretch=0)
-        btn = Widgets.Button("Make Thumbs")
+        btn = Widgets.Button(_tr("Make Thumbs"))
         btn.add_callback('activated', lambda w: self.make_thumbs())
-        btn.set_tooltip("Make thumbnails for files in directory")
+        btn.set_tooltip(_tr("Make thumbnails for files in directory"))
         btns.add_widget(btn, stretch=0)
 
         vbox.add_widget(btns, stretch=0)
@@ -465,6 +465,7 @@ class FBrowser(GingaPlugin.LocalPlugin):
 
 # Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
+from ginga.locale.localize import _tr
 if __doc__ is not None:
     __doc__ += generate_cfg_example('plugin_FBrowser', package='ginga')
 

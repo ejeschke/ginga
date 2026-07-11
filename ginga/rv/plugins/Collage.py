@@ -135,7 +135,7 @@ class Collage(GingaPlugin.LocalPlugin):
         vbox.set_border_width(4)
         vbox.set_spacing(2)
 
-        fr = Widgets.Frame("Collage")
+        fr = Widgets.Frame(_tr("Collage"))
 
         captions = [
             ("New Collage", 'button', "Method:", 'label', 'method', 'combobox'),
@@ -159,17 +159,17 @@ class Collage(GingaPlugin.LocalPlugin):
         combobox.set_tooltip("Choose collage method: %s" % ','.join(options))
 
         collage_hdus = self.settings.get('collage_hdus', False)
-        b.collage_hdus.set_tooltip("Collage data HDUs in each file")
+        b.collage_hdus.set_tooltip(_tr("Collage data HDUs in each file"))
         b.collage_hdus.set_state(collage_hdus)
         b.collage_hdus.add_callback('activated', self.collage_hdus_cb)
 
         labelem = self.settings.get('annotate_images', False)
         b.label_images.set_state(labelem)
-        b.label_images.set_tooltip("Label tiles with their names")
+        b.label_images.set_tooltip(_tr("Label tiles with their names"))
         b.label_images.add_callback('activated', self.annotate_cb)
 
         match_bg = self.settings.get('match_bg', False)
-        b.match_bg.set_tooltip("Try to match background levels")
+        b.match_bg.set_tooltip(_tr("Try to match background levels"))
         b.match_bg.set_state(match_bg)
         b.match_bg.add_callback('activated', self.match_bg_cb)
 
@@ -177,7 +177,7 @@ class Collage(GingaPlugin.LocalPlugin):
         b.num_threads.set_text(str(num_threads))
         #b.set_num_threads.set_length(8)
         b.set_num_threads.set_text(str(num_threads))
-        b.set_num_threads.set_tooltip("Number of threads to use for mosaicing")
+        b.set_num_threads.set_tooltip(_tr("Number of threads to use for mosaicing"))
         b.set_num_threads.add_callback('activated', self.set_num_threads_cb)
 
         fr.set_widget(w)
@@ -198,7 +198,7 @@ class Collage(GingaPlugin.LocalPlugin):
         hbox = Widgets.HBox()
         hbox.set_spacing(4)
         hbox.set_border_width(4)
-        btn = Widgets.Button("Stop")
+        btn = Widgets.Button(_tr("Stop"))
         btn.add_callback('activated', lambda w: self.stop_cb())
         btn.set_enabled(False)
         self.w.btn_intr_eval = btn
@@ -222,10 +222,10 @@ class Collage(GingaPlugin.LocalPlugin):
         btns = Widgets.HBox()
         btns.set_spacing(3)
 
-        btn = Widgets.Button("Close")
+        btn = Widgets.Button(_tr("Close"))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
-        btn = Widgets.Button("Help")
+        btn = Widgets.Button(_tr("Help"))
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
@@ -492,5 +492,6 @@ class Collage(GingaPlugin.LocalPlugin):
 
 # Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
+from ginga.locale.localize import _tr
 if __doc__ is not None:
     __doc__ += generate_cfg_example('plugin_Collage', package='ginga')

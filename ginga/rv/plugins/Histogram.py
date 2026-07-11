@@ -189,15 +189,15 @@ class Histogram(GingaPlugin.LocalPlugin):
 
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
-        b.cut_levels.set_tooltip("Set cut levels manually")
-        b.auto_levels.set_tooltip("Set cut levels by algorithm")
-        b.cut_low.set_tooltip("Set low cut level (press Enter)")
-        b.cut_high.set_tooltip("Set high cut level (press Enter)")
+        b.cut_levels.set_tooltip(_tr("Set cut levels manually"))
+        b.auto_levels.set_tooltip(_tr("Set cut levels by algorithm"))
+        b.cut_low.set_tooltip(_tr("Set low cut level (press Enter)"))
+        b.cut_high.set_tooltip(_tr("Set high cut level (press Enter)"))
         b.log_histogram.set_tooltip("Use the log of the pixel values for the "
                                     "histogram (empty bins map to 10^-1)")
         b.plot_by_cuts.set_tooltip("Only show the part of the histogram "
                                    "between the cuts")
-        b.numbins.set_tooltip("Number of bins for the histogram")
+        b.numbins.set_tooltip(_tr("Number of bins for the histogram"))
         b.full_image.set_tooltip("Use the full image for calculating the "
                                  "histogram")
         b.numbins.set_text(str(self.numbins))
@@ -222,27 +222,27 @@ class Histogram(GingaPlugin.LocalPlugin):
 
         mode = self.canvas.get_draw_mode()
         hbox = Widgets.HBox()
-        btn1 = Widgets.RadioButton("Move")
+        btn1 = Widgets.RadioButton(_tr("Move"))
         btn1.set_state(mode == 'move')
         btn1.add_callback('activated',
                           lambda w, val: self.set_mode_cb('move', val))
-        btn1.set_tooltip("Choose this to position box")
+        btn1.set_tooltip(_tr("Choose this to position box"))
         self.w.btn_move = btn1
         hbox.add_widget(btn1)
 
-        btn2 = Widgets.RadioButton("Draw", group=btn1)
+        btn2 = Widgets.RadioButton(_tr("Draw"), group=btn1)
         btn2.set_state(mode == 'draw')
         btn2.add_callback('activated',
                           lambda w, val: self.set_mode_cb('draw', val))
-        btn2.set_tooltip("Choose this to draw a replacement box")
+        btn2.set_tooltip(_tr("Choose this to draw a replacement box"))
         self.w.btn_draw = btn2
         hbox.add_widget(btn2)
 
-        btn3 = Widgets.RadioButton("Edit", group=btn1)
+        btn3 = Widgets.RadioButton(_tr("Edit"), group=btn1)
         btn3.set_state(mode == 'edit')
         btn3.add_callback('activated',
                           lambda w, val: self.set_mode_cb('edit', val))
-        btn3.set_tooltip("Choose this to edit a box")
+        btn3.set_tooltip(_tr("Choose this to edit a box"))
         self.w.btn_edit = btn3
         hbox.add_widget(btn3)
 
@@ -259,10 +259,10 @@ class Histogram(GingaPlugin.LocalPlugin):
         btns.set_border_width(4)
         btns.set_spacing(3)
 
-        btn = Widgets.Button("Close")
+        btn = Widgets.Button(_tr("Close"))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
-        btn = Widgets.Button("Help")
+        btn = Widgets.Button(_tr("Help"))
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
@@ -374,8 +374,8 @@ class Histogram(GingaPlugin.LocalPlugin):
             ymax = y.max()
             if self.plot.logy:
                 y = np.choose(y > 0, (.1, y))
-            self.plot.plot(x, y, xtitle="Pixel value", ytitle="Number",
-                           title="Pixel Value Distribution",
+            self.plot.plot(x, y, xtitle=_tr("Pixel value"), ytitle=_tr("Number"),
+                           title=_tr("Pixel Value Distribution"),
                            color='blue', alpha=1.0, drawstyle='steps-post')
         else:
             colors = ('red', 'green', 'blue')
@@ -391,8 +391,8 @@ class Histogram(GingaPlugin.LocalPlugin):
                 ymax = max(ymax, y.max())
                 if self.plot.logy:
                     y = np.choose(y > 0, (.1, y))
-                self.plot.plot(x, y, xtitle="Pixel value", ytitle="Number",
-                               title="Pixel Value Distribution",
+                self.plot.plot(x, y, xtitle=_tr("Pixel value"), ytitle=_tr("Number"),
+                               title=_tr("Pixel Value Distribution"),
                                color=colors[z], alpha=0.33,
                                drawstyle='steps-post')
 
@@ -676,6 +676,7 @@ class Histogram(GingaPlugin.LocalPlugin):
 
 # Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
+from ginga.locale.localize import _tr
 if __doc__ is not None:
     __doc__ += generate_cfg_example('plugin_Histogram', package='ginga')
 

@@ -162,9 +162,9 @@ class Crosshair(GingaPlugin.LocalPlugin):
 
         # prepare this viewer as a plot viewer
         self.cuts_view = PlotAide(ci)
-        self.cuts_view.setup_standard_frame(title="Cuts",
-                                            x_title="Line index",
-                                            y_title="Pixel value",
+        self.cuts_view.setup_standard_frame(title=_tr("Cuts"),
+                                            x_title=_tr("Line index"),
+                                            y_title=_tr("Pixel value"),
                                             warn_y=None, alert_y=None)
         title = self.cuts_view.get_plot_decor('plot_title')
         title.format_label = self._format_cuts_label
@@ -189,9 +189,9 @@ class Crosshair(GingaPlugin.LocalPlugin):
         ciw = Viewers.GingaScrolledViewerWidget(viewer=ci)
         self.cuts_view.configure_scrollbars(ciw)
 
-        nb.add_widget(ciw, title="Cuts")
+        nb.add_widget(ciw, title=_tr("Cuts"))
 
-        fr = Widgets.Frame("Crosshair")
+        fr = Widgets.Frame(_tr("Crosshair"))
 
         captions = (('Format:', 'label', 'format', 'combobox'),
                     ('Drag only', 'checkbutton'),
@@ -206,14 +206,14 @@ class Crosshair(GingaPlugin.LocalPlugin):
         combobox.set_index(index)
         combobox.add_callback('activated', lambda w, idx: self.set_format())
 
-        b.drag_only.set_tooltip("Must click and drag to update")
+        b.drag_only.set_tooltip(_tr("Must click and drag to update"))
         b.drag_only.add_callback('activated', self.drag_only_cb)
         b.drag_only.set_state(self.drag_only)
 
         fr.set_widget(w)
         box.add_widget(fr, stretch=0)
 
-        fr = Widgets.Frame("Quick Cuts")
+        fr = Widgets.Frame(_tr("Quick Cuts"))
 
         captions = (('Quick Cuts', 'checkbutton'),
                     ('Radius:', 'label', 'radius', 'entryset'),
@@ -223,16 +223,16 @@ class Crosshair(GingaPlugin.LocalPlugin):
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
-        b.quick_cuts.set_tooltip("Do quick cuts plots")
+        b.quick_cuts.set_tooltip(_tr("Do quick cuts plots"))
         b.quick_cuts.add_callback('activated', self.quick_cuts_cb)
         b.quick_cuts.set_state(self.quick_cuts)
 
         b.radius.set_text(str(self.cuts_radius))
-        b.radius.set_tooltip("Pixel radius for quick mode cuts")
+        b.radius.set_tooltip(_tr("Pixel radius for quick mode cuts"))
         b.radius.add_callback('activated', self.set_radius_cb)
 
-        b.warn_y.set_tooltip("Warning level for quick mode cuts")
-        b.alert_y.set_tooltip("Alert level for quick mode cuts")
+        b.warn_y.set_tooltip(_tr("Warning level for quick mode cuts"))
+        b.alert_y.set_tooltip(_tr("Alert level for quick mode cuts"))
         b.warn_y.set_text('' if warn_y is None else str(warn_y))
         b.alert_y.set_text('' if alert_y is None else str(alert_y))
         b.warn_y.add_callback('activated', self.set_quick_warn_cb)
@@ -252,10 +252,10 @@ class Crosshair(GingaPlugin.LocalPlugin):
         btns = Widgets.HBox()
         btns.set_spacing(3)
 
-        btn = Widgets.Button("Close")
+        btn = Widgets.Button(_tr("Close"))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
-        btn = Widgets.Button("Help")
+        btn = Widgets.Button(_tr("Help"))
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
@@ -419,5 +419,6 @@ class Crosshair(GingaPlugin.LocalPlugin):
 
 # Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
+from ginga.locale.localize import _tr
 if __doc__ is not None:
     __doc__ += generate_cfg_example('plugin_Crosshair', package='ginga')

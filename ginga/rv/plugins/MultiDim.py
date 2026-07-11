@@ -109,7 +109,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
         vbox.set_border_width(4)
         vbox.set_spacing(2)
 
-        fr = Widgets.Frame("HDU")
+        fr = Widgets.Frame(_tr("HDU"))
 
         vb1 = Widgets.VBox()
         captions = [("Num HDUs:", 'label', "Num HDUs", 'llabel'),
@@ -125,13 +125,13 @@ class MultiDim(GingaPlugin.LocalPlugin):
         vb1.add_widget(w)
 
         self.w.hdu = b.choose_hdu
-        self.w.hdu.set_tooltip("Choose which HDU to view")
+        self.w.hdu.set_tooltip(_tr("Choose which HDU to view"))
         self.w.hdu.add_callback('activated', self.set_hdu_cb)
 
         fr.set_widget(vb1)
         vbox.add_widget(fr, stretch=0)
 
-        fr = Widgets.Frame("NAXIS (data cubes)")
+        fr = Widgets.Frame(_tr("NAXIS (data cubes)"))
         self.naxisfr = fr
         vbox.add_widget(fr, stretch=0)
 
@@ -174,18 +174,18 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
         b.save_slice.add_callback('activated', lambda w: self.save_slice_cb())
         b.save_slice.set_enabled(False)
-        b.save_slice.set_tooltip("Save current slice as RGB image")
+        b.save_slice.set_tooltip(_tr("Save current slice as RGB image"))
         vbox.add_widget(w, stretch=0)
 
-        fr = Widgets.Frame("Movie")
+        fr = Widgets.Frame(_tr("Movie"))
         if have_mencoder:
             captions = [("Start:", 'label', "Start Slice", 'entry',
                          "End:", 'label', "End Slice", 'entry',
                          'Save Movie', 'button')]
             w, b = Widgets.build_info(captions, orientation=orientation)
             self.w.update(b)
-            b.start_slice.set_tooltip("Starting slice")
-            b.end_slice.set_tooltip("Ending slice")
+            b.start_slice.set_tooltip(_tr("Starting slice"))
+            b.end_slice.set_tooltip(_tr("Ending slice"))
             b.start_slice.set_length(6)
             b.end_slice.set_length(6)
             b.save_movie.add_callback(
@@ -206,10 +206,10 @@ class MultiDim(GingaPlugin.LocalPlugin):
         btns = Widgets.HBox()
         btns.set_spacing(4)
 
-        btn = Widgets.Button("Close")
+        btn = Widgets.Button(_tr("Close"))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn)
-        btn = Widgets.Button("Help")
+        btn = Widgets.Button(_tr("Help"))
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
@@ -751,6 +751,7 @@ class MultiDim(GingaPlugin.LocalPlugin):
 
 # Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
+from ginga.locale.localize import _tr
 if __doc__ is not None:
     __doc__ += generate_cfg_example('plugin_MultiDim', package='ginga')
 

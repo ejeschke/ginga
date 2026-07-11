@@ -1,0 +1,3532 @@
+# Chinese translations for ginga.
+# Copyright (C) 2026 ORGANIZATION
+# This file is distributed under the same license as the ginga project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: ginga 6.1.0.dev23+gce10e1afd.d20260710\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-07-10 15:07-1000\n"
+"PO-Revision-Date: 2026-07-10 09:33-1000\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh\n"
+"Language-Team: zh <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.17.0\n"
+
+#: ginga/examples/gtk3/example2.py:111 ginga/examples/gtk4/example2.py:129
+#: ginga/examples/qt/example2.py:102
+msgid "Fill"
+msgstr "填充"
+
+#: ginga/examples/gtk3/example2.py:123 ginga/examples/gtk4/example2.py:141
+#: ginga/examples/gw/example2.py:156 ginga/examples/qt/example2.py:113
+msgid "Clear Canvas"
+msgstr "清除画布"
+
+#: ginga/examples/gtk3/example2.py:126 ginga/examples/gtk4/example2.py:144
+#: ginga/examples/gw/example2.py:158 ginga/examples/qt/example2.py:115
+msgid "Open File"
+msgstr "打开文件"
+
+#: ginga/examples/gtk3/example2.py:128 ginga/examples/gtk4/example2.py:146
+#: ginga/examples/gw/example2.py:160 ginga/examples/qt/example2.py:117
+#: ginga/rv/plugins/Menubar.py:98
+msgid "Quit"
+msgstr "退出"
+
+#: ginga/examples/gtk3/example2.py:131 ginga/examples/gtk4/example2.py:149
+#: ginga/examples/gw/example2.py:168 ginga/examples/qt/example2.py:122
+msgid "Alpha"
+msgstr "透明度"
+
+#: ginga/examples/gtk3/example2.py:170 ginga/examples/gtk4/example2.py:197
+#: ginga/examples/qt/example2.py:188
+msgid "Open FITS file"
+msgstr "打开 FITS 文件"
+
+#: ginga/examples/gtk3/example2.py:201 ginga/examples/gtk4/example2.py:228
+#: ginga/examples/gw/example2.py:282
+msgid "Bad coordinate conversion"
+msgstr "坐标转换错误"
+
+#: ginga/examples/gtk3/example2.py:203 ginga/examples/gtk3/example2.py:204
+#: ginga/examples/gtk4/example2.py:230 ginga/examples/gtk4/example2.py:231
+#: ginga/examples/gw/example2.py:284 ginga/examples/gw/example2.py:285
+#: ginga/examples/qt/example2.py:228 ginga/examples/qt/example2.py:229
+msgid "BAD WCS"
+msgstr "WCS 错误"
+
+#: ginga/examples/gw/example2.py:34
+msgid "Ginga example2"
+msgstr "Ginga 示例2"
+
+#: ginga/examples/gw/example2.py:186 ginga/examples/qt/example2.py:133
+#: ginga/rv/plugins/Catalogs.py:373 ginga/rv/plugins/Cuts.py:315
+#: ginga/rv/plugins/Drawing.py:129 ginga/rv/plugins/Histogram.py:233
+#: ginga/rv/plugins/LineProfile.py:179 ginga/rv/plugins/Pick.py:1084
+#: ginga/rv/plugins/PixTable.py:318 ginga/rv/plugins/Ruler.py:202
+msgid "Draw"
+msgstr "绘制"
+
+#: ginga/examples/gw/example2.py:189 ginga/examples/qt/example2.py:136
+msgid "Choose this to draw on the canvas"
+msgstr "选择此项以在画布上绘制"
+
+#: ginga/examples/gw/example2.py:192 ginga/examples/qt/example2.py:139
+#: ginga/rv/plugins/Catalogs.py:381 ginga/rv/plugins/Cuts.py:323
+#: ginga/rv/plugins/Drawing.py:137 ginga/rv/plugins/Histogram.py:241
+#: ginga/rv/plugins/LineProfile.py:180 ginga/rv/plugins/Pick.py:1092
+#: ginga/rv/plugins/PixTable.py:326 ginga/rv/plugins/PluginConfig.py:102
+#: ginga/rv/plugins/Ruler.py:210 ginga/rv/plugins/SlideShow.py:183
+msgid "Edit"
+msgstr "编辑"
+
+#: ginga/examples/gw/example2.py:195 ginga/examples/qt/example2.py:142
+msgid "Choose this to edit things on the canvas"
+msgstr "选择此项以编辑画布上的对象"
+
+#: ginga/examples/gw/example2.py:198 ginga/examples/qt/example2.py:145
+msgid "Pick"
+msgstr "拾取"
+
+#: ginga/examples/gw/example2.py:201 ginga/examples/qt/example2.py:148
+msgid "Choose this to pick things on the canvas"
+msgstr "选择此项以拾取画布上的对象"
+
+#: ginga/examples/gw/example2.py:211
+msgid "Open FITS File"
+msgstr "打开 FITS 文件"
+
+#: ginga/gtk3w/Widgets.py:285 ginga/gtk4w/Widgets.py:291
+#: ginga/qtw/Widgets.py:273 ginga/web/pgw/Widgets.py:408
+msgid "Set"
+msgstr "设置"
+
+#: ginga/gw/Desktop.py:864 ginga/gw/Desktop.py:895 ginga/rv/Control.py:50
+msgid "MDI"
+msgstr "MDI"
+
+#: ginga/gw/Desktop.py:864 ginga/rv/Control.py:50
+msgid "Grid"
+msgstr "网格"
+
+#: ginga/gw/Desktop.py:864 ginga/rv/Control.py:50
+msgid "Stack"
+msgstr "堆叠"
+
+#: ginga/gw/Desktop.py:864 ginga/rv/Control.py:50
+msgid "Tabs"
+msgstr "选项卡"
+
+#: ginga/gw/Desktop.py:878 ginga/rv/plugins/Menubar.py:114
+msgid "Workspace"
+msgstr "工作区"
+
+#: ginga/gw/Desktop.py:879 ginga/rv/GenericControl.py:356
+#: ginga/rv/plugins/AutoLoad.py:115 ginga/rv/plugins/Blink.py:124
+#: ginga/rv/plugins/Catalogs.py:428 ginga/rv/plugins/ChangeHistory.py:140
+#: ginga/rv/plugins/Collage.py:225 ginga/rv/plugins/ColorMapPicker.py:115
+#: ginga/rv/plugins/Command.py:91 ginga/rv/plugins/Compose.py:215
+#: ginga/rv/plugins/Contents.py:164 ginga/rv/plugins/Crosshair.py:255
+#: ginga/rv/plugins/Cuts.py:383 ginga/rv/plugins/Downloads.py:85
+#: ginga/rv/plugins/Drawing.py:235 ginga/rv/plugins/Errors.py:66
+#: ginga/rv/plugins/FBrowser.py:141 ginga/rv/plugins/Header.py:63
+#: ginga/rv/plugins/Histogram.py:262 ginga/rv/plugins/LineProfile.py:220
+#: ginga/rv/plugins/LoaderConfig.py:96 ginga/rv/plugins/Log.py:102
+#: ginga/rv/plugins/Mosaic.py:231 ginga/rv/plugins/MultiDim.py:209
+#: ginga/rv/plugins/Overlays.py:133 ginga/rv/plugins/Pan.py:75
+#: ginga/rv/plugins/Pick.py:1106 ginga/rv/plugins/Pipeline.py:153
+#: ginga/rv/plugins/PixTable.py:341 ginga/rv/plugins/PlotTable.py:178
+#: ginga/rv/plugins/PluginConfig.py:96 ginga/rv/plugins/Preferences.py:1307
+#: ginga/rv/plugins/RC.py:257 ginga/rv/plugins/Ruler.py:229
+#: ginga/rv/plugins/SAMP.py:117 ginga/rv/plugins/SaveImage.py:158
+#: ginga/rv/plugins/ScreenShot.py:237 ginga/rv/plugins/SlideShow.py:202
+#: ginga/rv/plugins/TVMark.py:273 ginga/rv/plugins/TVMask.py:189
+#: ginga/rv/plugins/Thumbs.py:249 ginga/rv/plugins/WCSAxes.py:166
+#: ginga/rv/plugins/WCSMatch.py:116 ginga/rv/plugins/Zoom.py:191
+msgid "Close"
+msgstr "关闭"
+
+#: ginga/gw/Desktop.py:892
+msgid "Set workspace type"
+msgstr "设置工作区类型"
+
+#: ginga/gw/Desktop.py:897
+msgid "Tile Panes"
+msgstr "平铺窗格"
+
+#: ginga/gw/Desktop.py:901
+msgid "Cascade Panes"
+msgstr "层叠窗格"
+
+#: ginga/rv/Control.py:1584 ginga/rv/Control.py:1588
+msgid "Load File"
+msgstr "加载文件"
+
+#: ginga/rv/Control.py:1811
+msgid "New channel name:"
+msgstr "新通道名称:"
+
+#: ginga/rv/Control.py:1812 ginga/rv/Control.py:1848 ginga/rv/Control.py:1953
+msgid "In workspace:"
+msgstr "在工作区:"
+
+#: ginga/rv/Control.py:1829 ginga/rv/plugins/Menubar.py:104
+msgid "Add Channel"
+msgstr "添加通道"
+
+#: ginga/rv/Control.py:1831 ginga/rv/Control.py:1866 ginga/rv/Control.py:1888
+#: ginga/rv/Control.py:1911 ginga/rv/Control.py:1991 ginga/rv/Control.py:2030
+#: ginga/rv/Control.py:2089 ginga/rv/Control.py:2422
+#: ginga/rv/GenericControl.py:297 ginga/rv/GenericControl.py:564
+#: ginga/rv/plugins/Catalogs.py:436
+msgid "Cancel"
+msgstr "取消"
+
+#: ginga/rv/Control.py:1831 ginga/rv/Control.py:1866 ginga/rv/Control.py:1888
+#: ginga/rv/Control.py:1911 ginga/rv/Control.py:1991 ginga/rv/Control.py:2030
+#: ginga/rv/Control.py:2089 ginga/rv/Control.py:2422
+#: ginga/rv/GenericControl.py:595 ginga/rv/plugins/Catalogs.py:433
+msgid "Ok"
+msgstr "确定"
+
+#: ginga/rv/Control.py:1846
+msgid "Prefix:"
+msgstr "前缀:"
+
+#: ginga/rv/Control.py:1847
+msgid "Number:"
+msgstr "数量:"
+
+#: ginga/rv/Control.py:1864 ginga/rv/plugins/Menubar.py:107
+msgid "Add Channels"
+msgstr "添加通道"
+
+#: ginga/rv/Control.py:1885
+#, python-format
+msgid "Really delete channel '%s' ?"
+msgstr "确实要删除通道 '%s' 吗？"
+
+#: ginga/rv/Control.py:1886 ginga/rv/plugins/Menubar.py:110
+msgid "Delete Channel"
+msgstr "删除通道"
+
+#: ginga/rv/Control.py:1908
+#, python-format
+msgid "Really delete window '%s' ?"
+msgstr "确实要删除窗口 '%s' 吗？"
+
+#: ginga/rv/Control.py:1909
+msgid "Delete Window"
+msgstr "删除窗口"
+
+#: ginga/rv/Control.py:1951
+msgid "Workspace name:"
+msgstr "工作区名称:"
+
+#: ginga/rv/Control.py:1952
+msgid "Workspace type:"
+msgstr "工作区类型:"
+
+#: ginga/rv/Control.py:1954
+msgid "Channel prefix:"
+msgstr "通道前缀:"
+
+#: ginga/rv/Control.py:1955
+msgid "Number of channels:"
+msgstr "通道数量:"
+
+#: ginga/rv/Control.py:1957
+msgid "Share settings:"
+msgstr "共享设置:"
+
+#: ginga/rv/Control.py:1989 ginga/rv/plugins/Menubar.py:116
+msgid "Add Workspace"
+msgstr "添加工作区"
+
+#: ginga/rv/Control.py:2011 ginga/rv/Control.py:2058
+msgid "Name"
+msgstr "名称"
+
+#: ginga/rv/Control.py:2012
+msgid "Note"
+msgstr "备注"
+
+#: ginga/rv/Control.py:2027
+msgid "Choose File Opener"
+msgstr "选择文件打开器"
+
+#: ginga/rv/Control.py:2045 ginga/rv/Control.py:2104
+msgid "Remember choice for session"
+msgstr "记住本次会话的选择"
+
+#: ginga/rv/Control.py:2086
+msgid "Choose viewer"
+msgstr "选择查看器"
+
+#: ginga/rv/Control.py:2417
+#, python-format
+msgid ""
+"Really delete workspace '%s' ?\n"
+"\n"
+"This will close all open channels in that workspace."
+msgstr ""
+"确实要删除工作区 '%s' 吗？\n"
+"\n"
+"这将关闭该工作区中所有已打开的通道。"
+
+#: ginga/rv/Control.py:2420
+msgid "Delete Workspace"
+msgstr "删除工作区"
+
+#: ginga/rv/GenericControl.py:294
+msgid "Show documentation"
+msgstr "显示文档"
+
+#: ginga/rv/GenericControl.py:298
+msgid "Skip help"
+msgstr "跳过帮助"
+
+#: ginga/rv/GenericControl.py:300
+msgid "Show RST text"
+msgstr "显示 RST 文本"
+
+#: ginga/rv/GenericControl.py:301
+msgid "Show local docstring for plugin help"
+msgstr "显示插件帮助的本地文档字符串"
+
+#: ginga/rv/GenericControl.py:303
+msgid "Use external browser"
+msgstr "使用外部浏览器"
+
+#: ginga/rv/GenericControl.py:304
+msgid "Show online web documentation in external browser"
+msgstr "在外部浏览器中显示在线网页文档"
+
+#: ginga/rv/GenericControl.py:308
+msgid "How would you like to see help?"
+msgstr "您希望如何查看帮助？"
+
+#: ginga/rv/GenericControl.py:310
+msgid "Remember my choice for session"
+msgstr "记住我在本次会话的选择"
+
+#: ginga/rv/GenericControl.py:562
+msgid "Confirm Quit"
+msgstr "确认退出"
+
+#: ginga/rv/GenericControl.py:565
+msgid "Confirm"
+msgstr "确认"
+
+#: ginga/rv/GenericControl.py:568
+msgid "Do you really want to quit?"
+msgstr "确实要退出吗？"
+
+#: ginga/rv/GenericControl.py:593
+msgid "Language"
+msgstr "语言"
+
+#: ginga/rv/GenericControl.py:599
+msgid "Please restart Ginga for the new language to take effect."
+msgstr "请重启 Ginga 以使新语言生效。"
+
+#: ginga/rv/plugins/AutoLoad.py:85
+msgid "Watched folder:"
+msgstr "监视文件夹:"
+
+#: ginga/rv/plugins/AutoLoad.py:86
+msgid "Match regex:"
+msgstr "匹配正则表达式:"
+
+#: ginga/rv/plugins/AutoLoad.py:87
+msgid "Pause"
+msgstr "暂停"
+
+#: ginga/rv/plugins/AutoLoad.py:92
+msgid "Folder to monitor for new files"
+msgstr "监视新文件的文件夹"
+
+#: ginga/rv/plugins/AutoLoad.py:96
+msgid "Regular expression to match file name"
+msgstr "匹配文件名的正则表达式"
+
+#: ginga/rv/plugins/AutoLoad.py:100
+msgid "Pause auto loading"
+msgstr "暂停自动加载"
+
+#: ginga/rv/plugins/AutoLoad.py:118 ginga/rv/plugins/Blink.py:127
+#: ginga/rv/plugins/Catalogs.py:440 ginga/rv/plugins/ChangeHistory.py:143
+#: ginga/rv/plugins/Collage.py:228 ginga/rv/plugins/ColorMapPicker.py:118
+#: ginga/rv/plugins/Command.py:94 ginga/rv/plugins/Compose.py:218
+#: ginga/rv/plugins/Contents.py:167 ginga/rv/plugins/Crosshair.py:258
+#: ginga/rv/plugins/Cuts.py:386 ginga/rv/plugins/Drawing.py:238
+#: ginga/rv/plugins/Errors.py:69 ginga/rv/plugins/FBrowser.py:145
+#: ginga/rv/plugins/Header.py:66 ginga/rv/plugins/Histogram.py:265
+#: ginga/rv/plugins/LineProfile.py:223 ginga/rv/plugins/LoaderConfig.py:99
+#: ginga/rv/plugins/Log.py:105 ginga/rv/plugins/Menubar.py:138
+#: ginga/rv/plugins/Mosaic.py:234 ginga/rv/plugins/MultiDim.py:212
+#: ginga/rv/plugins/Overlays.py:136 ginga/rv/plugins/Pan.py:78
+#: ginga/rv/plugins/Pick.py:1109 ginga/rv/plugins/Pipeline.py:156
+#: ginga/rv/plugins/PixTable.py:344 ginga/rv/plugins/PlotTable.py:181
+#: ginga/rv/plugins/PluginConfig.py:99 ginga/rv/plugins/Preferences.py:1310
+#: ginga/rv/plugins/RC.py:260 ginga/rv/plugins/Ruler.py:232
+#: ginga/rv/plugins/SAMP.py:120 ginga/rv/plugins/SaveImage.py:161
+#: ginga/rv/plugins/ScreenShot.py:240 ginga/rv/plugins/SlideShow.py:205
+#: ginga/rv/plugins/TVMark.py:276 ginga/rv/plugins/TVMask.py:192
+#: ginga/rv/plugins/Thumbs.py:252 ginga/rv/plugins/WCSAxes.py:169
+#: ginga/rv/plugins/WCSMatch.py:119 ginga/rv/plugins/Zoom.py:194
+msgid "Help"
+msgstr "帮助"
+
+#: ginga/rv/plugins/Blink.py:73
+msgid "Blink"
+msgstr "闪烁"
+
+#: ginga/rv/plugins/Blink.py:76 ginga/rv/plugins/MultiDim.py:154
+msgid "Interval:"
+msgstr "间隔:"
+
+#: ginga/rv/plugins/Blink.py:83
+msgid "Interval in seconds between changing images"
+msgstr "切换图像之间的间隔（秒）"
+
+#: ginga/rv/plugins/Blink.py:86
+msgid "Start Blink"
+msgstr "开始闪烁"
+
+#: ginga/rv/plugins/Blink.py:86
+msgid "Stop Blink"
+msgstr "停止闪烁"
+
+#: ginga/rv/plugins/Blink.py:87 ginga/rv/plugins/Info.py:131
+msgid "Max:"
+msgstr "最大:"
+
+#: ginga/rv/plugins/Blink.py:88 ginga/rv/plugins/Info.py:130
+msgid "Min:"
+msgstr "最小:"
+
+#: ginga/rv/plugins/Blink.py:101
+msgid "Mode:"
+msgstr "模式:"
+
+#: ginga/rv/plugins/Catalogs.py:234
+msgid " Image Server "
+msgstr " 图像服务器 "
+
+#: ginga/rv/plugins/Catalogs.py:242
+msgid "Get Image"
+msgstr "获取图像"
+
+#: ginga/rv/plugins/Catalogs.py:249
+msgid "Optional channel for result"
+msgstr "结果的可选通道"
+
+#: ginga/rv/plugins/Catalogs.py:268
+msgid "Choose the image source"
+msgstr "选择图像源"
+
+#: ginga/rv/plugins/Catalogs.py:273
+msgid " Catalog Server "
+msgstr " 星表服务器 "
+
+#: ginga/rv/plugins/Catalogs.py:279
+msgid "Limit stars to area"
+msgstr "将恒星限制在区域内"
+
+#: ginga/rv/plugins/Catalogs.py:280
+msgid "Search catalog"
+msgstr "搜索星表"
+
+#: ginga/rv/plugins/Catalogs.py:287
+msgid "Filter out objects objects outside the shape"
+msgstr "滤除形状之外的对象"
+
+#: ginga/rv/plugins/Catalogs.py:306
+msgid "Choose the catalog source"
+msgstr "选择星表源"
+
+#: ginga/rv/plugins/Catalogs.py:312
+msgid " Name Server "
+msgstr " 名称服务器 "
+
+#: ginga/rv/plugins/Catalogs.py:318
+msgid "Search name"
+msgstr "搜索名称"
+
+#: ginga/rv/plugins/Catalogs.py:323
+msgid "Lookup name and populate ra/dec coordinates"
+msgstr "查找名称并填充 RA/DEC 坐标"
+
+#: ginga/rv/plugins/Catalogs.py:336
+msgid "Choose the object name resolver"
+msgstr "选择对象名称解析器"
+
+#: ginga/rv/plugins/Catalogs.py:346
+msgid "Rectangle"
+msgstr "矩形"
+
+#: ginga/rv/plugins/Catalogs.py:351
+msgid "Circle"
+msgstr "圆形"
+
+#: ginga/rv/plugins/Catalogs.py:356
+msgid "Entire image"
+msgstr "整幅图像"
+
+#: ginga/rv/plugins/Catalogs.py:365
+msgid "Select"
+msgstr "选择"
+
+#: ginga/rv/plugins/Catalogs.py:369
+msgid "Choose this to highlight selection on table"
+msgstr "选择此项以在表格中高亮选中项"
+
+#: ginga/rv/plugins/Catalogs.py:377
+msgid "Choose this to define search region"
+msgstr "选择此项以定义搜索区域"
+
+#: ginga/rv/plugins/Catalogs.py:384
+msgid "Choose this to edit or move a region"
+msgstr "选择此项以编辑或移动区域"
+
+#: ginga/rv/plugins/Catalogs.py:396
+msgid "Params"
+msgstr "参数"
+
+#: ginga/rv/plugins/Catalogs.py:406
+msgid "Choose subset of stars plotted"
+msgstr "选择要绘制的恒星子集"
+
+#: ginga/rv/plugins/Catalogs.py:416
+msgid "Adjust size of subset of stars plotted"
+msgstr "调整要绘制的恒星子集的大小"
+
+#: ginga/rv/plugins/Catalogs.py:422
+msgid "Listing"
+msgstr "列表"
+
+#: ginga/rv/plugins/Catalogs.py:1341
+msgid "Do it"
+msgstr "执行"
+
+#: ginga/rv/plugins/ChangeHistory.py:101
+msgid "Selected History"
+msgstr "选中的历史记录"
+
+#: ginga/rv/plugins/ChangeHistory.py:103 ginga/rv/plugins/Info.py:118
+#: ginga/rv/plugins/Info.py:516 ginga/rv/plugins/Info.py:1005
+#: ginga/rv/plugins/SaveImage.py:99
+msgid "Channel:"
+msgstr "通道:"
+
+#: ginga/rv/plugins/ChangeHistory.py:104
+msgid "Image:"
+msgstr "图像:"
+
+#: ginga/rv/plugins/ChangeHistory.py:105
+msgid "Timestamp:"
+msgstr "时间戳:"
+
+#: ginga/rv/plugins/ChangeHistory.py:110
+msgid "Channel name"
+msgstr "通道名称"
+
+#: ginga/rv/plugins/ChangeHistory.py:113
+msgid "Image name"
+msgstr "图像名称"
+
+#: ginga/rv/plugins/ChangeHistory.py:116
+msgid "Timestamp (UTC)"
+msgstr "时间戳 (UTC)"
+
+#: ginga/rv/plugins/ChangeHistory.py:125
+msgid "Displays selected history entry"
+msgstr "显示选中的历史记录项"
+
+#: ginga/rv/plugins/Collage.py:138
+msgid "Collage"
+msgstr "拼贴"
+
+#: ginga/rv/plugins/Collage.py:141
+msgid "Method:"
+msgstr "方法:"
+
+#: ginga/rv/plugins/Collage.py:141
+msgid "New Collage"
+msgstr "新建拼贴"
+
+#: ginga/rv/plugins/Collage.py:142
+msgid "Collage HDUs"
+msgstr "拼贴 HDU"
+
+#: ginga/rv/plugins/Collage.py:142 ginga/rv/plugins/Mosaic.py:126
+msgid "Label images"
+msgstr "为图像添加标签"
+
+#: ginga/rv/plugins/Collage.py:143 ginga/rv/plugins/Mosaic.py:126
+msgid "Match bg"
+msgstr "匹配背景"
+
+#: ginga/rv/plugins/Collage.py:144 ginga/rv/plugins/Mosaic.py:129
+msgid "Num Threads:"
+msgstr "线程数:"
+
+#: ginga/rv/plugins/Collage.py:162
+msgid "Collage data HDUs in each file"
+msgstr "将每个文件的数据 HDU 拼贴"
+
+#: ginga/rv/plugins/Collage.py:168
+msgid "Label tiles with their names"
+msgstr "用名称标注各图块"
+
+#: ginga/rv/plugins/Collage.py:172 ginga/rv/plugins/Mosaic.py:161
+msgid "Try to match background levels"
+msgstr "尝试匹配背景电平"
+
+#: ginga/rv/plugins/Collage.py:180 ginga/rv/plugins/Mosaic.py:174
+msgid "Number of threads to use for mosaicing"
+msgstr "用于拼接的线程数"
+
+#: ginga/rv/plugins/Collage.py:201 ginga/rv/plugins/Mosaic.py:207
+#: ginga/rv/plugins/Operations.py:225 ginga/rv/plugins/Pick.py:690
+#: ginga/rv/plugins/SlideShow.py:152
+msgid "Stop"
+msgstr "停止"
+
+#: ginga/rv/plugins/Command.py:67
+msgid "Output:"
+msgstr "输出:"
+
+#: ginga/rv/plugins/Command.py:80
+msgid "Type command here:"
+msgstr "在此输入命令:"
+
+#: ginga/rv/plugins/Compose.py:137
+msgid "Compositing"
+msgstr "合成"
+
+#: ginga/rv/plugins/Compose.py:139
+msgid "Compose Type:"
+msgstr "合成类型:"
+
+#: ginga/rv/plugins/Compose.py:140
+msgid "Insert from Channel"
+msgstr "从通道插入"
+
+#: ginga/rv/plugins/Compose.py:140
+msgid "New Image"
+msgstr "新建图像"
+
+#: ginga/rv/plugins/Compose.py:156
+msgid "Start a new composite image"
+msgstr "开始新的合成图像"
+
+#: ginga/rv/plugins/Compose.py:158
+msgid "Insert channel image as layer"
+msgstr "将通道图像作为图层插入"
+
+#: ginga/rv/plugins/Compose.py:182
+msgid "Preview"
+msgstr "预览"
+
+#: ginga/rv/plugins/Compose.py:191
+msgid "Layers"
+msgstr "图层"
+
+#: ginga/rv/plugins/Compose.py:198
+msgid "Save Image As"
+msgstr "将图像另存为"
+
+#: ginga/rv/plugins/Compose.py:199
+msgid "Save to Channel"
+msgstr "保存到通道"
+
+#: ginga/rv/plugins/Compose.py:204
+msgid "Save composite image to channel"
+msgstr "将合成图像保存到通道"
+
+#: ginga/rv/plugins/Contents.py:132
+msgid "Display"
+msgstr "显示"
+
+#: ginga/rv/plugins/Contents.py:134
+msgid "Display the selected object in its channel viewer"
+msgstr "在其通道查看器中显示选中的对象"
+
+#: ginga/rv/plugins/Contents.py:137 ginga/rv/plugins/Cuts.py:307
+#: ginga/rv/plugins/Histogram.py:225 ginga/rv/plugins/LineProfile.py:179
+#: ginga/rv/plugins/Pick.py:1076 ginga/rv/plugins/PixTable.py:310
+msgid "Move"
+msgstr "移动"
+
+#: ginga/rv/plugins/Contents.py:139
+msgid "Move the selected objects to a channel"
+msgstr "将选中的对象移动到某个通道"
+
+#: ginga/rv/plugins/Contents.py:142
+msgid "Copy"
+msgstr "复制"
+
+#: ginga/rv/plugins/Contents.py:144
+msgid "Copy the selected objects to a channel"
+msgstr "将选中的对象复制到某个通道"
+
+#: ginga/rv/plugins/Contents.py:147 ginga/rv/plugins/Errors.py:110
+msgid "Remove"
+msgstr "移除"
+
+#: ginga/rv/plugins/Contents.py:149
+msgid "Remove the selected objects from a channel"
+msgstr "从通道中移除选中的对象"
+
+#: ginga/rv/plugins/Contents.py:560
+msgid "To channel: "
+msgstr "到通道: "
+
+#: ginga/rv/plugins/Crosshair.py:165 ginga/rv/plugins/Crosshair.py:192
+msgid "Cuts"
+msgstr "剖切"
+
+#: ginga/rv/plugins/Crosshair.py:166
+msgid "Line index"
+msgstr "线索引"
+
+#: ginga/rv/plugins/Crosshair.py:167 ginga/rv/plugins/Histogram.py:377
+#: ginga/rv/plugins/Histogram.py:394
+msgid "Pixel value"
+msgstr "像素值"
+
+#: ginga/rv/plugins/Crosshair.py:194
+msgid "Crosshair"
+msgstr "十字线"
+
+#: ginga/rv/plugins/Crosshair.py:196
+msgid "Format:"
+msgstr "格式:"
+
+#: ginga/rv/plugins/Crosshair.py:197
+msgid "Drag only"
+msgstr "仅拖动"
+
+#: ginga/rv/plugins/Crosshair.py:209
+msgid "Must click and drag to update"
+msgstr "必须点击并拖动以更新"
+
+#: ginga/rv/plugins/Crosshair.py:216 ginga/rv/plugins/Crosshair.py:218
+msgid "Quick Cuts"
+msgstr "快速剖切"
+
+#: ginga/rv/plugins/Crosshair.py:219 ginga/rv/plugins/Pick.py:706
+#: ginga/util/stages/sharpen.py:33
+msgid "Radius:"
+msgstr "半径:"
+
+#: ginga/rv/plugins/Crosshair.py:220
+msgid "Warn Level:"
+msgstr "警告级别:"
+
+#: ginga/rv/plugins/Crosshair.py:221
+msgid "Alert Level:"
+msgstr "警戒级别:"
+
+#: ginga/rv/plugins/Crosshair.py:226
+msgid "Do quick cuts plots"
+msgstr "绘制快速剖切图"
+
+#: ginga/rv/plugins/Crosshair.py:231
+msgid "Pixel radius for quick mode cuts"
+msgstr "快速模式剖切的像素半径"
+
+#: ginga/rv/plugins/Crosshair.py:234
+msgid "Warning level for quick mode cuts"
+msgstr "快速模式剖切的警告级别"
+
+#: ginga/rv/plugins/Crosshair.py:235
+msgid "Alert level for quick mode cuts"
+msgstr "快速模式剖切的警戒级别"
+
+#: ginga/rv/plugins/Cuts.py:221
+msgid "Cut:"
+msgstr "剖切:"
+
+#: ginga/rv/plugins/Cuts.py:222
+msgid "New Cut Type:"
+msgstr "新剖切类型:"
+
+#: ginga/rv/plugins/Cuts.py:223
+msgid "Delete Cut"
+msgstr "删除剖切"
+
+#: ginga/rv/plugins/Cuts.py:223 ginga/rv/plugins/LineProfile.py:144
+#: ginga/rv/plugins/PixTable.py:260
+msgid "Delete All"
+msgstr "全部删除"
+
+#: ginga/rv/plugins/Cuts.py:224
+msgid "Copy Cut"
+msgstr "复制剖切"
+
+#: ginga/rv/plugins/Cuts.py:224 ginga/rv/plugins/Cuts.py:340
+#: ginga/rv/plugins/LoaderConfig.py:102 ginga/rv/plugins/PlotTable.py:119
+#: ginga/rv/plugins/PluginConfig.py:106 ginga/rv/plugins/SaveImage.py:151
+#: ginga/rv/plugins/ScreenShot.py:215 ginga/util/stages/output.py:42
+msgid "Save"
+msgstr "保存"
+
+#: ginga/rv/plugins/Cuts.py:236
+msgid "Select a cut to redraw or delete"
+msgstr "选择要重绘或删除的剖切"
+
+#: ginga/rv/plugins/Cuts.py:246
+msgid "Choose the cut type to draw"
+msgstr "选择要绘制的剖切类型"
+
+#: ginga/rv/plugins/Cuts.py:249
+msgid "Save cuts plot and data"
+msgstr "保存剖切图和数据"
+
+#: ginga/rv/plugins/Cuts.py:256
+msgid "Copy selected cut"
+msgstr "复制选中的剖切"
+
+#: ginga/rv/plugins/Cuts.py:260
+msgid "Delete selected cut"
+msgstr "删除选中的剖切"
+
+#: ginga/rv/plugins/Cuts.py:264
+msgid "Clear all cuts"
+msgstr "清除所有剖切"
+
+#: ginga/rv/plugins/Cuts.py:271
+msgid "Cut Width"
+msgstr "剖切宽度"
+
+#: ginga/rv/plugins/Cuts.py:273
+msgid "Width Type:"
+msgstr "宽度类型:"
+
+#: ginga/rv/plugins/Cuts.py:274
+msgid "Width radius:"
+msgstr "宽度半径:"
+
+#: ginga/rv/plugins/Cuts.py:286
+msgid "Direction of summation orthogonal to cut"
+msgstr "与剖切正交的求和方向"
+
+#: ginga/rv/plugins/Cuts.py:290
+msgid "Radius of cut width"
+msgstr "剖切宽度的半径"
+
+#: ginga/rv/plugins/Cuts.py:311
+msgid "Choose this to position cuts"
+msgstr "选择此项以定位剖切"
+
+#: ginga/rv/plugins/Cuts.py:319
+msgid "Choose this to draw a new or replacement cut"
+msgstr "选择此项以绘制新的或替换的剖切"
+
+#: ginga/rv/plugins/Cuts.py:327
+msgid "Choose this to edit a cut"
+msgstr "选择此项以编辑剖切"
+
+#: ginga/rv/plugins/Cuts.py:339
+msgid "Enable Slit"
+msgstr "启用狭缝"
+
+#: ginga/rv/plugins/Cuts.py:340
+msgid "Transpose Plot"
+msgstr "转置绘图"
+
+#: ginga/rv/plugins/Cuts.py:351
+msgid "Enable the slit function"
+msgstr "启用狭缝功能"
+
+#: ginga/rv/plugins/Cuts.py:355
+msgid "Flip the plot"
+msgstr "翻转绘图"
+
+#: ginga/rv/plugins/Cuts.py:360
+msgid "Save slit plot and data"
+msgstr "保存狭缝图和数据"
+
+#: ginga/rv/plugins/Cuts.py:366 ginga/rv/plugins/LineProfile.py:133
+msgid "Axes controls"
+msgstr "坐标轴控件"
+
+#: ginga/rv/plugins/Cuts.py:377
+msgid "Slit"
+msgstr "狭缝"
+
+#: ginga/rv/plugins/Cuts.py:652
+msgid "Line Index"
+msgstr "线索引"
+
+#: ginga/rv/plugins/Cuts.py:652
+msgid "Pixel Value"
+msgstr "像素值"
+
+#: ginga/rv/plugins/Cuts.py:1152 ginga/rv/plugins/Cuts.py:1155
+msgid "Position along slit"
+msgstr "沿狭缝的位置"
+
+#: ginga/rv/plugins/Downloads.py:72
+msgid "Downloads"
+msgstr "下载"
+
+#: ginga/rv/plugins/Downloads.py:88
+msgid "Clear All"
+msgstr "全部清除"
+
+#: ginga/rv/plugins/Downloads.py:110 ginga/rv/plugins/Log.py:70
+#: ginga/rv/plugins/Ruler.py:138 ginga/rv/plugins/ScreenShot.py:174
+#: ginga/rv/plugins/Thumbs.py:232
+msgid "Clear"
+msgstr "清除"
+
+#: ginga/rv/plugins/Drawing.py:109
+msgid "Drawing"
+msgstr "绘图"
+
+#: ginga/rv/plugins/Drawing.py:111 ginga/rv/plugins/Pick.py:704
+msgid "Draw type:"
+msgstr "绘制类型:"
+
+#: ginga/rv/plugins/Drawing.py:133
+msgid "Choose this to draw"
+msgstr "选择此项以绘制"
+
+#: ginga/rv/plugins/Drawing.py:141
+msgid "Choose this to edit"
+msgstr "选择此项以编辑"
+
+#: ginga/rv/plugins/Drawing.py:148
+msgid "Attributes"
+msgstr "属性"
+
+#: ginga/rv/plugins/Drawing.py:158
+msgid "Rotate By:"
+msgstr "旋转量:"
+
+#: ginga/rv/plugins/Drawing.py:159
+msgid "Scale By:"
+msgstr "缩放量:"
+
+#: ginga/rv/plugins/Drawing.py:160
+msgid "Copy Obj"
+msgstr "复制对象"
+
+#: ginga/rv/plugins/Drawing.py:160
+msgid "Delete Obj"
+msgstr "删除对象"
+
+#: ginga/rv/plugins/Drawing.py:161
+msgid "Clear canvas"
+msgstr "清除画布"
+
+#: ginga/rv/plugins/Drawing.py:161
+msgid "Create mask"
+msgstr "创建掩模"
+
+#: ginga/rv/plugins/Drawing.py:166
+msgid "Delete selected object in edit mode"
+msgstr "在编辑模式下删除选中的对象"
+
+#: ginga/rv/plugins/Drawing.py:170
+msgid "Copy selected object in edit mode"
+msgstr "在编辑模式下复制选中的对象"
+
+#: ginga/rv/plugins/Drawing.py:175
+msgid "Scale selected object in edit mode"
+msgstr "在编辑模式下缩放选中的对象"
+
+#: ginga/rv/plugins/Drawing.py:180
+msgid "Rotate selected object in edit mode"
+msgstr "在编辑模式下旋转选中的对象"
+
+#: ginga/rv/plugins/Drawing.py:184
+msgid "Create boolean mask from drawing"
+msgstr "从绘图创建布尔掩模"
+
+#: ginga/rv/plugins/Drawing.py:186
+msgid "Delete all drawing objects"
+msgstr "删除所有绘图对象"
+
+#: ginga/rv/plugins/Drawing.py:190
+msgid "Export regions"
+msgstr "导出区域"
+
+#: ginga/rv/plugins/Drawing.py:190
+msgid "Import regions"
+msgstr "导入区域"
+
+#: ginga/rv/plugins/Drawing.py:196
+msgid "Load a regions file"
+msgstr "加载区域文件"
+
+#: ginga/rv/plugins/Drawing.py:199
+msgid "Save a regions file"
+msgstr "保存区域文件"
+
+#: ginga/rv/plugins/Drawing.py:223
+msgid "Select format for regions output file"
+msgstr "选择区域输出文件的格式"
+
+#: ginga/rv/plugins/Errors.py:73
+msgid "Remove All"
+msgstr "全部移除"
+
+#: ginga/rv/plugins/FBrowser.py:143
+msgid "Close this plugin"
+msgstr "关闭此插件"
+
+#: ginga/rv/plugins/FBrowser.py:147
+msgid "Show documentation for this plugin"
+msgstr "显示此插件的文档"
+
+#: ginga/rv/plugins/FBrowser.py:149
+msgid "Refresh"
+msgstr "刷新"
+
+#: ginga/rv/plugins/FBrowser.py:151
+msgid "Refresh the file list from the directory"
+msgstr "从目录刷新文件列表"
+
+#: ginga/rv/plugins/FBrowser.py:153 ginga/rv/plugins/SlideShow.py:116
+#: ginga/rv/plugins/SlideShow.py:147
+msgid "Load"
+msgstr "加载"
+
+#: ginga/rv/plugins/FBrowser.py:155
+msgid "Load files selected in file pane"
+msgstr "加载文件窗格中选中的文件"
+
+#: ginga/rv/plugins/FBrowser.py:157
+msgid "Make Thumbs"
+msgstr "生成缩略图"
+
+#: ginga/rv/plugins/FBrowser.py:159
+msgid "Make thumbnails for files in directory"
+msgstr "为目录中的文件生成缩略图"
+
+#: ginga/rv/plugins/Header.py:117
+msgid "Sortable"
+msgstr "可排序"
+
+#: ginga/rv/plugins/Header.py:121
+msgid "Include primary header"
+msgstr "包含主头"
+
+#: ginga/rv/plugins/Histogram.py:180 ginga/rv/plugins/Info.py:152
+#: ginga/rv/plugins/Preferences.py:749 ginga/util/stages/cuts.py:35
+msgid "Cut Low:"
+msgstr "剖切下限:"
+
+#: ginga/rv/plugins/Histogram.py:181 ginga/rv/plugins/Info.py:154
+#: ginga/rv/plugins/Preferences.py:751 ginga/util/stages/cuts.py:36
+msgid "Cut High:"
+msgstr "剖切上限:"
+
+#: ginga/rv/plugins/Histogram.py:182 ginga/rv/plugins/Info.py:157
+#: ginga/rv/plugins/Preferences.py:754
+msgid "Cut Levels"
+msgstr "剖切电平"
+
+#: ginga/rv/plugins/Histogram.py:183 ginga/rv/plugins/Info.py:156
+#: ginga/rv/plugins/Preferences.py:756
+msgid "Auto Levels"
+msgstr "自动电平"
+
+#: ginga/rv/plugins/Histogram.py:184
+msgid "Log Histogram"
+msgstr "对数直方图"
+
+#: ginga/rv/plugins/Histogram.py:185
+msgid "Plot By Cuts"
+msgstr "按剖切绘制"
+
+#: ginga/rv/plugins/Histogram.py:186
+msgid "NumBins:"
+msgstr "分箱数:"
+
+#: ginga/rv/plugins/Histogram.py:187
+msgid "Full Image"
+msgstr "整幅图像"
+
+#: ginga/rv/plugins/Histogram.py:192 ginga/rv/plugins/Info.py:167
+#: ginga/rv/plugins/Preferences.py:761
+msgid "Set cut levels manually"
+msgstr "手动设置剖切电平"
+
+#: ginga/rv/plugins/Histogram.py:193 ginga/rv/plugins/Info.py:170
+#: ginga/rv/plugins/Preferences.py:762
+msgid "Set cut levels by algorithm"
+msgstr "按算法设置剖切电平"
+
+#: ginga/rv/plugins/Histogram.py:194 ginga/rv/plugins/Info.py:171
+#: ginga/rv/plugins/Preferences.py:763
+msgid "Set low cut level (press Enter)"
+msgstr "设置剖切下限电平（按回车键）"
+
+#: ginga/rv/plugins/Histogram.py:195 ginga/rv/plugins/Info.py:175
+#: ginga/rv/plugins/Preferences.py:766
+msgid "Set high cut level (press Enter)"
+msgstr "设置剖切上限电平（按回车键）"
+
+#: ginga/rv/plugins/Histogram.py:200
+msgid "Number of bins for the histogram"
+msgstr "直方图的分箱数"
+
+#: ginga/rv/plugins/Histogram.py:229
+msgid "Choose this to position box"
+msgstr "选择此项以定位方框"
+
+#: ginga/rv/plugins/Histogram.py:237
+msgid "Choose this to draw a replacement box"
+msgstr "选择此项以绘制替换方框"
+
+#: ginga/rv/plugins/Histogram.py:245
+msgid "Choose this to edit a box"
+msgstr "选择此项以编辑方框"
+
+#: ginga/rv/plugins/Histogram.py:377 ginga/rv/plugins/Histogram.py:394
+msgid "Number"
+msgstr "数量"
+
+#: ginga/rv/plugins/Histogram.py:378 ginga/rv/plugins/Histogram.py:395
+msgid "Pixel Value Distribution"
+msgstr "像素值分布"
+
+#: ginga/rv/plugins/Info.py:119 ginga/rv/plugins/Info.py:517
+#: ginga/rv/plugins/Info.py:1006 ginga/rv/plugins/ScreenShot.py:214
+msgid "Name:"
+msgstr "名称:"
+
+#: ginga/rv/plugins/Info.py:120
+msgid "Object:"
+msgstr "天体:"
+
+#: ginga/rv/plugins/Info.py:121 ginga/rv/plugins/Info.py:518
+#: ginga/rv/plugins/PlotTable.py:111
+msgid "X:"
+msgstr "X:"
+
+#: ginga/rv/plugins/Info.py:122 ginga/rv/plugins/Info.py:519
+#: ginga/rv/plugins/PlotTable.py:112
+msgid "Y:"
+msgstr "Y:"
+
+#: ginga/rv/plugins/Info.py:123
+msgid "Image-X:"
+msgstr "图像-X:"
+
+#: ginga/rv/plugins/Info.py:124
+msgid "Image-Y:"
+msgstr "图像-Y:"
+
+#: ginga/rv/plugins/Info.py:125
+msgid "Value:"
+msgstr "值:"
+
+#: ginga/rv/plugins/Info.py:126 ginga/rv/plugins/Pick.py:634
+msgid "RA:"
+msgstr "RA:"
+
+#: ginga/rv/plugins/Info.py:127 ginga/rv/plugins/Pick.py:635
+msgid "DEC:"
+msgstr "DEC:"
+
+#: ginga/rv/plugins/Info.py:128 ginga/rv/plugins/Pick.py:636
+msgid "Equinox:"
+msgstr "分点:"
+
+#: ginga/rv/plugins/Info.py:129
+msgid "Dimensions:"
+msgstr "尺寸:"
+
+#: ginga/rv/plugins/Info.py:146
+msgid "Content Info"
+msgstr "内容信息"
+
+#: ginga/rv/plugins/Info.py:150 ginga/rv/plugins/Pick.py:631
+#: ginga/rv/plugins/Zoom.py:153
+msgid "Zoom:"
+msgstr "缩放:"
+
+#: ginga/rv/plugins/Info.py:158 ginga/rv/plugins/Preferences.py:1154
+msgid "Cut New:"
+msgstr "剖切（新）:"
+
+#: ginga/rv/plugins/Info.py:159 ginga/rv/plugins/Preferences.py:1155
+msgid "Zoom New:"
+msgstr "缩放（新）:"
+
+#: ginga/rv/plugins/Info.py:160 ginga/rv/plugins/Preferences.py:1157
+msgid "Follow New"
+msgstr "跟随新图像"
+
+#: ginga/rv/plugins/Info.py:161 ginga/rv/plugins/Preferences.py:1156
+msgid "Center New:"
+msgstr "居中（新）:"
+
+#: ginga/rv/plugins/Info.py:162 ginga/rv/plugins/Preferences.py:1157
+msgid "Raise New"
+msgstr "前置新图像"
+
+#: ginga/rv/plugins/Info.py:183
+msgid "Set distribution (stretching) algorithm"
+msgstr "设置分布（拉伸）算法"
+
+#: ginga/rv/plugins/Info.py:188 ginga/rv/plugins/Preferences.py:1173
+msgid "Automatically set cut levels when switching images"
+msgstr "切换图像时自动设置剖切电平"
+
+#: ginga/rv/plugins/Info.py:193 ginga/rv/plugins/Preferences.py:1184
+msgid "Automatically fit image to window when switching images"
+msgstr "切换图像时自动使图像适应窗口"
+
+#: ginga/rv/plugins/Info.py:198 ginga/rv/plugins/Preferences.py:1199
+msgid "Automatically center image in window when switching images"
+msgstr "切换图像时自动在窗口中居中图像"
+
+#: ginga/rv/plugins/Info.py:200
+msgid "Automatically switch to new images in channel"
+msgstr "自动切换到通道中的新图像"
+
+#: ginga/rv/plugins/Info.py:201
+msgid "Automatically raise channel viewer for new images"
+msgstr "对新图像自动将通道查看器置于前台"
+
+#: ginga/rv/plugins/Info.py:539
+msgid "Col:"
+msgstr "列:"
+
+#: ginga/rv/plugins/Info.py:541
+msgid "Add to plot"
+msgstr "添加到绘图"
+
+#: ginga/rv/plugins/Info.py:541
+msgid "Color"
+msgstr "颜色"
+
+#: ginga/rv/plugins/Info.py:543
+msgid "Clear Plot"
+msgstr "清除绘图"
+
+#: ginga/rv/plugins/Info.py:556 ginga/rv/plugins/PlotTable.py:127
+msgid "Select a column to plot on X-axis"
+msgstr "选择要在 X 轴上绘制的列"
+
+#: ginga/rv/plugins/Info.py:566 ginga/rv/plugins/PlotTable.py:133
+msgid "Select a column to plot on Y-axis"
+msgstr "选择要在 Y 轴上绘制的列"
+
+#: ginga/rv/plugins/Info.py:575
+msgid "Set the color of the line to be added"
+msgstr "设置要添加的线条颜色"
+
+#: ginga/rv/plugins/Info.py:579
+msgid "Clear the current plot"
+msgstr "清除当前绘图"
+
+#: ginga/rv/plugins/Info.py:583
+msgid "Add selected columns to plot"
+msgstr "将选中的列添加到绘图"
+
+#: ginga/rv/plugins/Info.py:587
+msgid "Plot from Table"
+msgstr "从表格绘图"
+
+#: ginga/rv/plugins/Info.py:598
+msgid "Dist:"
+msgstr "分布:"
+
+#: ginga/rv/plugins/Info.py:600
+msgid "Low:"
+msgstr "下限:"
+
+#: ginga/rv/plugins/Info.py:601
+msgid "High:"
+msgstr "上限:"
+
+#: ginga/rv/plugins/Info.py:602
+msgid "Show marker"
+msgstr "显示标记"
+
+#: ginga/rv/plugins/Info.py:603
+msgid "Save Plot"
+msgstr "保存绘图"
+
+#: ginga/rv/plugins/Info.py:612
+msgid "Select a mapping to plot on X-axis"
+msgstr "选择要在 X 轴上绘制的映射"
+
+#: ginga/rv/plugins/Info.py:620
+msgid "Select a mapping to plot on Y-axis"
+msgstr "选择要在 Y 轴上绘制的映射"
+
+#: ginga/rv/plugins/Info.py:628 ginga/rv/plugins/PlotTable.py:144
+msgid "Set X lower limit"
+msgstr "设置 X 下限"
+
+#: ginga/rv/plugins/Info.py:631 ginga/rv/plugins/PlotTable.py:147
+msgid "Set X upper limit"
+msgstr "设置 X 上限"
+
+#: ginga/rv/plugins/Info.py:634 ginga/rv/plugins/PlotTable.py:150
+msgid "Set Y lower limit"
+msgstr "设置 Y 下限"
+
+#: ginga/rv/plugins/Info.py:637 ginga/rv/plugins/PlotTable.py:153
+msgid "Set Y upper limit"
+msgstr "设置 Y 上限"
+
+#: ginga/rv/plugins/Info.py:641 ginga/rv/plugins/PlotTable.py:157
+msgid "Mark data points"
+msgstr "标记数据点"
+
+#: ginga/rv/plugins/Info.py:644
+msgid "Save plot to file"
+msgstr "将绘图保存到文件"
+
+#: ginga/rv/plugins/Info.py:648
+msgid "Plot Controls"
+msgstr "绘图控件"
+
+#: ginga/rv/plugins/Info.py:1028
+msgid "New Plot"
+msgstr "新建绘图"
+
+#: ginga/rv/plugins/Info.py:1033
+msgid "Create new plot for this table"
+msgstr "为此表格创建新绘图"
+
+#: ginga/rv/plugins/Info.py:1036
+msgid "Plot"
+msgstr "绘图"
+
+#: ginga/rv/plugins/LineProfile.py:123
+msgid "Plot All"
+msgstr "全部绘制"
+
+#: ginga/rv/plugins/LineProfile.py:129
+msgid "Plot all marks"
+msgstr "绘制所有标记"
+
+#: ginga/rv/plugins/LineProfile.py:142
+msgid "New Mark Type:"
+msgstr "新标记类型:"
+
+#: ginga/rv/plugins/LineProfile.py:143 ginga/rv/plugins/PixTable.py:275
+msgid "Pan to mark"
+msgstr "平移到标记"
+
+#: ginga/rv/plugins/LineProfile.py:144 ginga/rv/plugins/PixTable.py:253
+#: ginga/rv/plugins/SlideShow.py:171
+msgid "Delete"
+msgstr "删除"
+
+#: ginga/rv/plugins/LineProfile.py:155 ginga/rv/plugins/PixTable.py:250
+msgid "Select a mark"
+msgstr "选择一个标记"
+
+#: ginga/rv/plugins/LineProfile.py:164
+msgid "Choose the mark type to draw"
+msgstr "选择要绘制的标记类型"
+
+#: ginga/rv/plugins/LineProfile.py:167 ginga/rv/plugins/PixTable.py:278
+msgid "Pan follows selected mark"
+msgstr "平移跟随选中的标记"
+
+#: ginga/rv/plugins/LineProfile.py:170 ginga/rv/plugins/PixTable.py:255
+msgid "Delete selected mark"
+msgstr "删除选中的标记"
+
+#: ginga/rv/plugins/LineProfile.py:173 ginga/rv/plugins/PixTable.py:262
+msgid "Clear all marks"
+msgstr "清除所有标记"
+
+#: ginga/rv/plugins/LineProfile.py:187
+msgid "Choose this to position marks"
+msgstr "选择此项以定位标记"
+
+#: ginga/rv/plugins/LineProfile.py:193
+msgid "Choose this to draw a new mark"
+msgstr "选择此项以绘制新标记"
+
+#: ginga/rv/plugins/LineProfile.py:199 ginga/rv/plugins/PixTable.py:330
+msgid "Choose this to edit a mark"
+msgstr "选择此项以编辑标记"
+
+#: ginga/rv/plugins/LineProfile.py:204
+msgid "Mark controls"
+msgstr "标记控件"
+
+#: ginga/rv/plugins/LineProfile.py:266
+msgid "No NAXIS info"
+msgstr "无 NAXIS 信息"
+
+#: ginga/rv/plugins/LineProfile.py:400
+msgid "Index"
+msgstr "索引"
+
+#: ginga/rv/plugins/LoaderConfig.py:81
+msgid "Priority:"
+msgstr "优先级:"
+
+#: ginga/rv/plugins/LoaderConfig.py:83
+msgid "Edit priority of loader (lower=better, negative numbers ok)"
+msgstr "编辑加载器的优先级（越小越优先，可为负数）"
+
+#: ginga/rv/plugins/LoaderConfig.py:104
+msgid "Save configuration of loaders"
+msgstr "保存加载器的配置"
+
+#: ginga/rv/plugins/Log.py:70 ginga/rv/plugins/Thumbs.py:232
+msgid "Auto scroll"
+msgstr "自动滚动"
+
+#: ginga/rv/plugins/Log.py:80
+msgid "Set the logging level"
+msgstr "设置日志级别"
+
+#: ginga/rv/plugins/Log.py:86
+msgid "Set the logging history line limit"
+msgstr "设置日志历史的行数上限"
+
+#: ginga/rv/plugins/Log.py:90
+msgid "Scroll the log window automatically"
+msgstr "自动滚动日志窗口"
+
+#: ginga/rv/plugins/Log.py:95
+msgid "Clear the log history"
+msgstr "清除日志历史"
+
+#: ginga/rv/plugins/Menubar.py:87
+msgid "File"
+msgstr "文件"
+
+#: ginga/rv/plugins/Menubar.py:89
+msgid "Load Image"
+msgstr "加载图像"
+
+#: ginga/rv/plugins/Menubar.py:92
+msgid "Remove Image"
+msgstr "移除图像"
+
+#: ginga/rv/plugins/Menubar.py:102
+msgid "Channel"
+msgstr "通道"
+
+#: ginga/rv/plugins/Menubar.py:123
+msgid "Plugins"
+msgstr "插件"
+
+#: ginga/rv/plugins/Menubar.py:140
+msgid "About"
+msgstr "关于"
+
+#: ginga/rv/plugins/Menubar.py:144
+msgid "Documentation"
+msgstr "文档"
+
+#: ginga/rv/plugins/Mosaic.py:121
+msgid "Mosaic"
+msgstr "拼接"
+
+#: ginga/rv/plugins/Mosaic.py:124
+msgid "FOV (deg):"
+msgstr "FOV（度）:"
+
+#: ginga/rv/plugins/Mosaic.py:125
+msgid "Allow expansion"
+msgstr "允许扩展"
+
+#: ginga/rv/plugins/Mosaic.py:125
+msgid "New Mosaic"
+msgstr "新建拼接"
+
+#: ginga/rv/plugins/Mosaic.py:127
+msgid "Trim Pixels:"
+msgstr "裁剪像素:"
+
+#: ginga/rv/plugins/Mosaic.py:131
+msgid "Drop new"
+msgstr "拖入新图像"
+
+#: ginga/rv/plugins/Mosaic.py:131
+msgid "Merge data"
+msgstr "合并数据"
+
+#: ginga/rv/plugins/Mosaic.py:133
+msgid "Mosaic HDUs"
+msgstr "拼接 HDU"
+
+#: ginga/rv/plugins/Mosaic.py:148
+msgid "Set size of mosaic FOV (deg)"
+msgstr "设置拼接 FOV 的大小（度）"
+
+#: ginga/rv/plugins/Mosaic.py:149
+msgid "Allow image to expand the FOV"
+msgstr "允许图像扩展 FOV"
+
+#: ginga/rv/plugins/Mosaic.py:156
+msgid "Label tiles with their names (only if allow_expand=False)"
+msgstr "用名称标注各图块（仅当 allow_expand=False 时）"
+
+#: ginga/rv/plugins/Mosaic.py:164
+msgid "Set number of pixels to trim from each edge"
+msgstr "设置从每条边裁剪的像素数"
+
+#: ginga/rv/plugins/Mosaic.py:177
+msgid "Merge data instead of overlay"
+msgstr "合并数据而非叠加"
+
+#: ginga/rv/plugins/Mosaic.py:181
+msgid "Dropping files on image starts a new mosaic"
+msgstr "将文件拖放到图像上会开始新的拼接"
+
+#: ginga/rv/plugins/Mosaic.py:185
+msgid "Mosaic data HDUs in each file"
+msgstr "将每个文件的数据 HDU 拼接"
+
+#: ginga/rv/plugins/MultiDim.py:112
+msgid "HDU"
+msgstr "HDU"
+
+#: ginga/rv/plugins/MultiDim.py:115
+msgid "Num HDUs:"
+msgstr "HDU 数:"
+
+#: ginga/rv/plugins/MultiDim.py:128
+msgid "Choose which HDU to view"
+msgstr "选择要查看的 HDU"
+
+#: ginga/rv/plugins/MultiDim.py:134
+msgid "NAXIS (data cubes)"
+msgstr "NAXIS（数据立方体）"
+
+#: ginga/rv/plugins/MultiDim.py:168
+msgid "Slice:"
+msgstr "切片:"
+
+#: ginga/rv/plugins/MultiDim.py:170
+msgid "Save Slice"
+msgstr "保存切片"
+
+#: ginga/rv/plugins/MultiDim.py:177
+msgid "Save current slice as RGB image"
+msgstr "将当前切片保存为 RGB 图像"
+
+#: ginga/rv/plugins/MultiDim.py:180
+msgid "Movie"
+msgstr "影片"
+
+#: ginga/rv/plugins/MultiDim.py:182
+msgid "Start:"
+msgstr "起始:"
+
+#: ginga/rv/plugins/MultiDim.py:183
+msgid "End:"
+msgstr "结束:"
+
+#: ginga/rv/plugins/MultiDim.py:184
+msgid "Save Movie"
+msgstr "保存影片"
+
+#: ginga/rv/plugins/MultiDim.py:187
+msgid "Starting slice"
+msgstr "起始切片"
+
+#: ginga/rv/plugins/MultiDim.py:188
+msgid "Ending slice"
+msgstr "结束切片"
+
+#: ginga/rv/plugins/MultiDim.py:242
+msgid "NAXIS1:"
+msgstr "NAXIS1:"
+
+#: ginga/rv/plugins/MultiDim.py:243
+msgid "NAXIS2:"
+msgstr "NAXIS2:"
+
+#: ginga/rv/plugins/Operations.py:65
+msgid "Select a channel"
+msgstr "选择一个通道"
+
+#: ginga/rv/plugins/Operations.py:72
+msgid "Operation"
+msgstr "操作"
+
+#: ginga/rv/plugins/Operations.py:73
+msgid "Invoke operation"
+msgstr "调用操作"
+
+#: ginga/rv/plugins/Operations.py:79
+msgid "Go"
+msgstr "执行"
+
+#: ginga/rv/plugins/Operations.py:221
+msgid "Focus"
+msgstr "聚焦"
+
+#: ginga/rv/plugins/Operations.py:223
+msgid "Unfocus"
+msgstr "取消聚焦"
+
+#: ginga/rv/plugins/Operations.py:227 ginga/rv/plugins/SlideShow.py:117
+msgid "Reload"
+msgstr "重新加载"
+
+#: ginga/rv/plugins/Operations.py:234
+msgid "Right click for menu"
+msgstr "右键点击打开菜单"
+
+#: ginga/rv/plugins/Overlays.py:80
+msgid "Limits"
+msgstr "范围"
+
+#: ginga/rv/plugins/Overlays.py:82
+msgid "Opacity:"
+msgstr "不透明度:"
+
+#: ginga/rv/plugins/Overlays.py:83
+msgid "Hi color:"
+msgstr "上限颜色:"
+
+#: ginga/rv/plugins/Overlays.py:84
+msgid "Hi limit:"
+msgstr "上限:"
+
+#: ginga/rv/plugins/Overlays.py:85
+msgid "Lo color:"
+msgstr "下限颜色:"
+
+#: ginga/rv/plugins/Overlays.py:86
+msgid "Lo limit:"
+msgstr "下限:"
+
+#: ginga/rv/plugins/Overlays.py:87
+msgid "Redo"
+msgstr "重做"
+
+#: ginga/rv/plugins/Pick.py:530
+msgid "Image"
+msgstr "图像"
+
+#: ginga/rv/plugins/Pick.py:582 ginga/rv/plugins/Pick.py:599
+msgid "Contour"
+msgstr "等值线"
+
+#: ginga/rv/plugins/Pick.py:607 ginga/util/plots.py:310 ginga/util/plots.py:357
+msgid "FWHM"
+msgstr "FWHM"
+
+#: ginga/rv/plugins/Pick.py:615
+msgid "Radial"
+msgstr "径向"
+
+#: ginga/rv/plugins/Pick.py:623 ginga/util/plots.py:452
+msgid "EE"
+msgstr "EE"
+
+#: ginga/rv/plugins/Pick.py:632
+msgid "Object_X:"
+msgstr "天体_X:"
+
+#: ginga/rv/plugins/Pick.py:633
+msgid "Object_Y:"
+msgstr "天体_Y:"
+
+#: ginga/rv/plugins/Pick.py:637
+msgid "Background:"
+msgstr "背景:"
+
+#: ginga/rv/plugins/Pick.py:638
+msgid "Sky Level:"
+msgstr "天空电平:"
+
+#: ginga/rv/plugins/Pick.py:639 ginga/rv/plugins/Preferences.py:715
+#: ginga/util/stages/rgbmap.py:155
+msgid "Brightness:"
+msgstr "亮度:"
+
+#: ginga/rv/plugins/Pick.py:640
+msgid "FWHM X:"
+msgstr "FWHM X:"
+
+#: ginga/rv/plugins/Pick.py:641
+msgid "FWHM Y:"
+msgstr "FWHM Y:"
+
+#: ginga/rv/plugins/Pick.py:642
+msgid "FWHM:"
+msgstr "FWHM:"
+
+#: ginga/rv/plugins/Pick.py:643
+msgid "Star Size:"
+msgstr "星像大小:"
+
+#: ginga/rv/plugins/Pick.py:644
+msgid "EE (circ):"
+msgstr "EE（圆）:"
+
+#: ginga/rv/plugins/Pick.py:645
+msgid "EE (sq):"
+msgstr "EE（方）:"
+
+#: ginga/rv/plugins/Pick.py:646
+msgid "Sample Area:"
+msgstr "采样区域:"
+
+#: ginga/rv/plugins/Pick.py:647
+msgid "Default Region"
+msgstr "默认区域"
+
+#: ginga/rv/plugins/Pick.py:647
+msgid "Pan to pick"
+msgstr "平移到拾取"
+
+#: ginga/rv/plugins/Pick.py:649
+msgid "Center on pick"
+msgstr "以拾取为中心"
+
+#: ginga/rv/plugins/Pick.py:656
+msgid "Encircled energy"
+msgstr "圆内包围能量"
+
+#: ginga/rv/plugins/Pick.py:657
+msgid "Ensquared energy"
+msgstr "方内包围能量"
+
+#: ginga/rv/plugins/Pick.py:660
+msgid "Reset region size to default"
+msgstr "将区域大小重置为默认值"
+
+#: ginga/rv/plugins/Pick.py:663
+msgid "Pan image to pick center"
+msgstr "将图像平移到拾取中心"
+
+#: ginga/rv/plugins/Pick.py:700
+msgid "Readout"
+msgstr "读数"
+
+#: ginga/rv/plugins/Pick.py:703
+msgid "Show Candidates"
+msgstr "显示候选"
+
+#: ginga/rv/plugins/Pick.py:708
+msgid "Threshold:"
+msgstr "阈值:"
+
+#: ginga/rv/plugins/Pick.py:710
+msgid "Min FWHM:"
+msgstr "最小 FWHM:"
+
+#: ginga/rv/plugins/Pick.py:712
+msgid "Max FWHM:"
+msgstr "最大 FWHM:"
+
+#: ginga/rv/plugins/Pick.py:714
+msgid "Ellipticity:"
+msgstr "椭率:"
+
+#: ginga/rv/plugins/Pick.py:716
+msgid "Edge:"
+msgstr "边缘:"
+
+#: ginga/rv/plugins/Pick.py:718
+msgid "Max side:"
+msgstr "最大边:"
+
+#: ginga/rv/plugins/Pick.py:720
+msgid "Coordinate Base:"
+msgstr "坐标基准:"
+
+#: ginga/rv/plugins/Pick.py:723
+msgid "Calc center:"
+msgstr "计算中心:"
+
+#: ginga/rv/plugins/Pick.py:725
+msgid "FWHM fitting:"
+msgstr "FWHM 拟合:"
+
+#: ginga/rv/plugins/Pick.py:727
+msgid "Contour Interpolation:"
+msgstr "等值线插值:"
+
+#: ginga/rv/plugins/Pick.py:729
+msgid "EE total radius:"
+msgstr "EE 总半径:"
+
+#: ginga/rv/plugins/Pick.py:731
+msgid "EE sampling radius:"
+msgstr "EE 采样半径:"
+
+#: ginga/rv/plugins/Pick.py:737
+msgid "Radius for peak detection"
+msgstr "峰值检测的半径"
+
+#: ginga/rv/plugins/Pick.py:738
+msgid "Threshold for peak detection (blank=default)"
+msgstr "峰值检测的阈值（空白=默认）"
+
+#: ginga/rv/plugins/Pick.py:739
+msgid "Minimum FWHM for selection"
+msgstr "选择的最小 FWHM"
+
+#: ginga/rv/plugins/Pick.py:740
+msgid "Maximum FWHM for selection"
+msgstr "选择的最大 FWHM"
+
+#: ginga/rv/plugins/Pick.py:741
+msgid "Minimum ellipticity for selection"
+msgstr "选择的最小椭率"
+
+#: ginga/rv/plugins/Pick.py:742
+msgid "Minimum edge distance for selection"
+msgstr "选择的最小边缘距离"
+
+#: ginga/rv/plugins/Pick.py:743
+msgid "Show all peak candidates"
+msgstr "显示所有候选峰"
+
+#: ginga/rv/plugins/Pick.py:744
+msgid "Maximum dimension to search for peaks"
+msgstr "搜索峰值的最大尺寸"
+
+#: ginga/rv/plugins/Pick.py:745
+msgid "Base of pixel coordinate system"
+msgstr "像素坐标系的基准"
+
+#: ginga/rv/plugins/Pick.py:746
+msgid "How to calculate the center of object"
+msgstr "如何计算天体的中心"
+
+#: ginga/rv/plugins/Pick.py:747
+msgid "Function for fitting the FWHM"
+msgstr "拟合 FWHM 的函数"
+
+#: ginga/rv/plugins/Pick.py:748
+msgid "Interpolation for use in contour plot"
+msgstr "等值线图使用的插值"
+
+#: ginga/rv/plugins/Pick.py:749
+msgid "Radius where EE fraction is 1"
+msgstr "EE 比例为 1 处的半径"
+
+#: ginga/rv/plugins/Pick.py:750
+msgid "Radius for EE sampling"
+msgstr "EE 采样的半径"
+
+#: ginga/rv/plugins/Pick.py:939
+msgid "Redo Pick"
+msgstr "重做拾取"
+
+#: ginga/rv/plugins/Pick.py:944
+msgid "Settings"
+msgstr "设置"
+
+#: ginga/rv/plugins/Pick.py:949
+msgid "Bg cut"
+msgstr "背景剖切"
+
+#: ginga/rv/plugins/Pick.py:949
+msgid "Delta bg:"
+msgstr "背景增量:"
+
+#: ginga/rv/plugins/Pick.py:951
+msgid "Delta sky:"
+msgstr "天空增量:"
+
+#: ginga/rv/plugins/Pick.py:951
+msgid "Sky cut"
+msgstr "天空剖切"
+
+#: ginga/rv/plugins/Pick.py:953
+msgid "Bright cut"
+msgstr "亮度剖切"
+
+#: ginga/rv/plugins/Pick.py:953
+msgid "Delta bright:"
+msgstr "亮度增量:"
+
+#: ginga/rv/plugins/Pick.py:959
+msgid "Set image low cut to Background Level"
+msgstr "将图像剖切下限设为背景电平"
+
+#: ginga/rv/plugins/Pick.py:960 ginga/rv/plugins/Pick.py:962
+#: ginga/rv/plugins/Pick.py:964
+msgid "Delta to apply to this cut"
+msgstr "应用于此剖切的增量"
+
+#: ginga/rv/plugins/Pick.py:961
+msgid "Set image low cut to Sky Level"
+msgstr "将图像剖切下限设为天空电平"
+
+#: ginga/rv/plugins/Pick.py:963
+msgid "Set image high cut to Sky Level+Brightness"
+msgstr "将图像剖切上限设为天空电平+亮度"
+
+#: ginga/rv/plugins/Pick.py:1023
+msgid "Controls"
+msgstr "控件"
+
+#: ginga/rv/plugins/Pick.py:1035
+msgid "Add Pick"
+msgstr "添加拾取"
+
+#: ginga/rv/plugins/Pick.py:1038
+msgid "Record Picks automatically"
+msgstr "自动记录拾取"
+
+#: ginga/rv/plugins/Pick.py:1042
+msgid "Clear Log"
+msgstr "清除日志"
+
+#: ginga/rv/plugins/Pick.py:1050
+msgid "Save table"
+msgstr "保存表格"
+
+#: ginga/rv/plugins/Pick.py:1053
+msgid "File:"
+msgstr "文件:"
+
+#: ginga/rv/plugins/Pick.py:1059
+msgid "File type determined by extension"
+msgstr "文件类型由扩展名决定"
+
+#: ginga/rv/plugins/Pick.py:1064
+msgid "Report"
+msgstr "报告"
+
+#: ginga/rv/plugins/Pick.py:1080
+msgid "Choose this to position pick"
+msgstr "选择此项以定位拾取"
+
+#: ginga/rv/plugins/Pick.py:1088
+msgid "Choose this to draw a replacement pick"
+msgstr "选择此项以绘制替换拾取"
+
+#: ginga/rv/plugins/Pick.py:1096
+msgid "Choose this to edit or move a pick"
+msgstr "选择此项以编辑或移动拾取"
+
+#: ginga/rv/plugins/Pipeline.py:61
+msgid "Operation on pipeline"
+msgstr "对流水线的操作"
+
+#: ginga/rv/plugins/Pipeline.py:63
+msgid "Load a new pipeline"
+msgstr "加载新的流水线"
+
+#: ginga/rv/plugins/Pipeline.py:66
+msgid "Save this pipeline"
+msgstr "保存此流水线"
+
+#: ginga/rv/plugins/Pipeline.py:70
+msgid "Edit on pipeline"
+msgstr "编辑流水线"
+
+#: ginga/rv/plugins/Pipeline.py:72
+msgid "Undo last action"
+msgstr "撤销上一操作"
+
+#: ginga/rv/plugins/Pipeline.py:75
+msgid "Redo last action"
+msgstr "重做上一操作"
+
+#: ginga/rv/plugins/Pipeline.py:113
+msgid "Delete selected stages"
+msgstr "删除选中的阶段"
+
+#: ginga/rv/plugins/Pipeline.py:116
+msgid "Insert above selected stage"
+msgstr "在选中阶段上方插入"
+
+#: ginga/rv/plugins/Pipeline.py:120
+msgid "Move selected stage up"
+msgstr "将选中的阶段上移"
+
+#: ginga/rv/plugins/Pipeline.py:124
+msgid "Move selected stage down"
+msgstr "将选中的阶段下移"
+
+#: ginga/rv/plugins/Pipeline.py:128
+msgid "Clear selection"
+msgstr "清除选择"
+
+#: ginga/rv/plugins/Pipeline.py:136
+msgid "Run entire pipeline"
+msgstr "运行整个流水线"
+
+#: ginga/rv/plugins/Pipeline.py:140
+msgid "Enable pipeline"
+msgstr "启用流水线"
+
+#: ginga/rv/plugins/Pipeline.py:175
+msgid "Bypass this stage"
+msgstr "跳过此阶段"
+
+#: ginga/rv/plugins/Pipeline.py:178
+msgid "Select this stage"
+msgstr "选择此阶段"
+
+#: ginga/rv/plugins/Pipeline.py:182
+msgid "Configure this stage"
+msgstr "配置此阶段"
+
+#: ginga/rv/plugins/Pipeline.py:186
+msgid "Rename this stage"
+msgstr "重命名此阶段"
+
+#: ginga/rv/plugins/PixTable.py:191
+msgid "Pixel Values"
+msgstr "像素值"
+
+#: ginga/rv/plugins/PixTable.py:205
+msgid "Summary"
+msgstr "摘要"
+
+#: ginga/rv/plugins/PixTable.py:237
+msgid "Select size of pixel table"
+msgstr "选择像素表格的大小"
+
+#: ginga/rv/plugins/PixTable.py:285 ginga/rv/plugins/WCSAxes.py:127
+msgid "Font size:"
+msgstr "字体大小:"
+
+#: ginga/rv/plugins/PixTable.py:286
+msgid "Caption:"
+msgstr "标题:"
+
+#: ginga/rv/plugins/PixTable.py:292
+msgid "Set font size for pixel display"
+msgstr "设置像素显示的字体大小"
+
+#: ginga/rv/plugins/PixTable.py:298
+msgid "Text to append to the marker"
+msgstr "要追加到标记的文本"
+
+#: ginga/rv/plugins/PixTable.py:314
+msgid "Choose this to add or move a mark"
+msgstr "选择此项以添加或移动标记"
+
+#: ginga/rv/plugins/PixTable.py:322
+msgid "Choose this to draw a new or replacement mark"
+msgstr "选择此项以绘制新的或替换的标记"
+
+#: ginga/rv/plugins/PlotTable.py:113
+msgid "Log X"
+msgstr "对数 X"
+
+#: ginga/rv/plugins/PlotTable.py:113
+msgid "Log Y"
+msgstr "对数 Y"
+
+#: ginga/rv/plugins/PlotTable.py:114
+msgid "Show Marker"
+msgstr "显示标记"
+
+#: ginga/rv/plugins/PlotTable.py:115
+msgid "X Low:"
+msgstr "X 下限:"
+
+#: ginga/rv/plugins/PlotTable.py:116
+msgid "X High:"
+msgstr "X 上限:"
+
+#: ginga/rv/plugins/PlotTable.py:117
+msgid "Y Low:"
+msgstr "Y 下限:"
+
+#: ginga/rv/plugins/PlotTable.py:118
+msgid "Y High:"
+msgstr "Y 上限:"
+
+#: ginga/rv/plugins/PlotTable.py:137
+msgid "Plot X-axis in log scale"
+msgstr "以对数刻度绘制 X 轴"
+
+#: ginga/rv/plugins/PlotTable.py:141
+msgid "Plot Y-axis in log scale"
+msgstr "以对数刻度绘制 Y 轴"
+
+#: ginga/rv/plugins/PlotTable.py:161
+msgid "Save table plot"
+msgstr "保存表格绘图"
+
+#: ginga/rv/plugins/PluginConfig.py:104
+msgid "Edit configuration of selected plugins"
+msgstr "编辑选中插件的配置"
+
+#: ginga/rv/plugins/PluginConfig.py:153
+msgid "Enabled"
+msgstr "已启用"
+
+#: ginga/rv/plugins/PluginConfig.py:154
+msgid "Category:"
+msgstr "类别:"
+
+#: ginga/rv/plugins/PluginConfig.py:155
+msgid "Workspace:"
+msgstr "工作区:"
+
+#: ginga/rv/plugins/PluginConfig.py:156
+msgid "Auto start"
+msgstr "自动开始"
+
+#: ginga/rv/plugins/PluginConfig.py:156
+msgid "Hidden"
+msgstr "隐藏"
+
+#: ginga/rv/plugins/PluginConfig.py:161
+msgid "Enable plugin(s)"
+msgstr "启用插件"
+
+#: ginga/rv/plugins/PluginConfig.py:163
+msgid "Edit menu category of plugin(s)"
+msgstr "编辑插件的菜单类别"
+
+#: ginga/rv/plugins/PluginConfig.py:165
+msgid "Edit workspace of plugin(s)"
+msgstr "编辑插件的工作区"
+
+#: ginga/rv/plugins/PluginConfig.py:170
+msgid "Hide plugin(s) names from program menus"
+msgstr "在程序菜单中隐藏插件名称"
+
+#: ginga/rv/plugins/Preferences.py:614
+msgid "Color Distribution"
+msgstr "颜色分布"
+
+#: ginga/rv/plugins/Preferences.py:616 ginga/util/stages/rgbmap.py:61
+msgid "Algorithm:"
+msgstr "算法:"
+
+#: ginga/rv/plugins/Preferences.py:618 ginga/util/stages/rgbmap.py:63
+msgid "Dist Defaults"
+msgstr "分布默认值"
+
+#: ginga/rv/plugins/Preferences.py:624
+msgid "Choose a color distribution algorithm"
+msgstr "选择颜色分布算法"
+
+#: ginga/rv/plugins/Preferences.py:626
+msgid "Restore color distribution defaults"
+msgstr "恢复颜色分布的默认值"
+
+#: ginga/rv/plugins/Preferences.py:649
+msgid "Color Mapping"
+msgstr "颜色映射"
+
+#: ginga/rv/plugins/Preferences.py:651 ginga/util/stages/rgbmap.py:93
+msgid "Colormap:"
+msgstr "颜色映射表:"
+
+#: ginga/rv/plugins/Preferences.py:652 ginga/util/stages/rgbmap.py:94
+msgid "Intensity:"
+msgstr "强度:"
+
+#: ginga/rv/plugins/Preferences.py:653 ginga/rv/plugins/Preferences.py:801
+#: ginga/util/stages/rgbmap.py:95 ginga/util/stages/rotate.py:50
+msgid "Rotate:"
+msgstr "旋转:"
+
+#: ginga/rv/plugins/Preferences.py:654 ginga/util/stages/rgbmap.py:96
+msgid "Invert CMap"
+msgstr "反转颜色映射表"
+
+#: ginga/rv/plugins/Preferences.py:654 ginga/util/stages/rgbmap.py:96
+msgid "Unrotate CMap"
+msgstr "取消颜色映射表旋转"
+
+#: ginga/rv/plugins/Preferences.py:655 ginga/util/stages/rgbmap.py:97
+msgid "Color Defaults"
+msgstr "颜色默认值"
+
+#: ginga/rv/plugins/Preferences.py:661
+msgid "Invert color map"
+msgstr "反转颜色映射表"
+
+#: ginga/rv/plugins/Preferences.py:669
+msgid "Rotate the colormap"
+msgstr "旋转颜色映射表"
+
+#: ginga/rv/plugins/Preferences.py:671
+msgid "Choose a color map for this image"
+msgstr "为此图像选择颜色映射表"
+
+#: ginga/rv/plugins/Preferences.py:672
+msgid "Choose an intensity map for this image"
+msgstr "为此图像选择强度映射表"
+
+#: ginga/rv/plugins/Preferences.py:673
+msgid "Undo cmap rotation"
+msgstr "撤销颜色映射表旋转"
+
+#: ginga/rv/plugins/Preferences.py:675
+msgid "Restore all color map settings to defaults"
+msgstr "将所有颜色映射表设置恢复为默认值"
+
+#: ginga/rv/plugins/Preferences.py:712
+msgid "Contrast and Brightness (Bias)"
+msgstr "对比度与亮度（偏置）"
+
+#: ginga/rv/plugins/Preferences.py:714 ginga/util/stages/rgbmap.py:154
+msgid "Contrast:"
+msgstr "对比度:"
+
+#: ginga/rv/plugins/Preferences.py:724
+msgid "Set contrast for the viewer"
+msgstr "设置查看器的对比度"
+
+#: ginga/rv/plugins/Preferences.py:730
+msgid "Set brightness/bias for the viewer"
+msgstr "设置查看器的亮度/偏置"
+
+#: ginga/rv/plugins/Preferences.py:732
+msgid "Default Contrast"
+msgstr "默认对比度"
+
+#: ginga/rv/plugins/Preferences.py:733
+msgid "Reset contrast to default"
+msgstr "将对比度重置为默认值"
+
+#: ginga/rv/plugins/Preferences.py:736
+msgid "Default Brightness"
+msgstr "默认亮度"
+
+#: ginga/rv/plugins/Preferences.py:737
+msgid "Reset brightness to default"
+msgstr "将亮度重置为默认值"
+
+#: ginga/rv/plugins/Preferences.py:745
+msgid "Auto Cuts"
+msgstr "自动剖切"
+
+#: ginga/rv/plugins/Preferences.py:755 ginga/util/stages/cuts.py:74
+msgid "Auto Method:"
+msgstr "自动方法:"
+
+#: ginga/rv/plugins/Preferences.py:788
+msgid "Choose algorithm for auto levels"
+msgstr "选择自动电平的算法"
+
+#: ginga/rv/plugins/Preferences.py:797
+msgid "Transform"
+msgstr "变换"
+
+#: ginga/rv/plugins/Preferences.py:799
+msgid "Flip X"
+msgstr "X 翻转"
+
+#: ginga/rv/plugins/Preferences.py:799
+msgid "Flip Y"
+msgstr "Y 翻转"
+
+#: ginga/rv/plugins/Preferences.py:800
+msgid "Swap XY"
+msgstr "交换 XY"
+
+#: ginga/rv/plugins/Preferences.py:802
+msgid "Restore"
+msgstr "恢复"
+
+#: ginga/rv/plugins/Preferences.py:810
+msgid "Flip the image around the X axis"
+msgstr "绕 X 轴翻转图像"
+
+#: ginga/rv/plugins/Preferences.py:811
+msgid "Flip the image around the Y axis"
+msgstr "绕 Y 轴翻转图像"
+
+#: ginga/rv/plugins/Preferences.py:812
+msgid "Swap the X and Y axes in the image"
+msgstr "交换图像中的 X 轴和 Y 轴"
+
+#: ginga/rv/plugins/Preferences.py:813
+msgid "Rotate the image around the pan position"
+msgstr "绕平移位置旋转图像"
+
+#: ginga/rv/plugins/Preferences.py:814
+msgid "Clear any transforms and center image"
+msgstr "清除所有变换并居中图像"
+
+#: ginga/rv/plugins/Preferences.py:826
+msgid "WCS"
+msgstr "WCS"
+
+#: ginga/rv/plugins/Preferences.py:828
+msgid "WCS Coords:"
+msgstr "WCS 坐标:"
+
+#: ginga/rv/plugins/Preferences.py:829
+msgid "WCS Display:"
+msgstr "WCS 显示:"
+
+#: ginga/rv/plugins/Preferences.py:834
+msgid "Set WCS coordinate system"
+msgstr "设置 WCS 坐标系"
+
+#: ginga/rv/plugins/Preferences.py:835
+msgid "Set WCS display format"
+msgstr "设置 WCS 显示格式"
+
+#: ginga/rv/plugins/Preferences.py:869 ginga/rv/plugins/Zoom.py:153
+msgid "Zoom"
+msgstr "缩放"
+
+#: ginga/rv/plugins/Preferences.py:871
+msgid "Zoom Alg:"
+msgstr "缩放算法:"
+
+#: ginga/rv/plugins/Preferences.py:872
+msgid "Zoom Rate:"
+msgstr "缩放速率:"
+
+#: ginga/rv/plugins/Preferences.py:873
+msgid "Stretch XY:"
+msgstr "XY 拉伸:"
+
+#: ginga/rv/plugins/Preferences.py:874
+msgid "Stretch Factor:"
+msgstr "拉伸系数:"
+
+#: ginga/rv/plugins/Preferences.py:875
+msgid "Scale X:"
+msgstr "X 比例:"
+
+#: ginga/rv/plugins/Preferences.py:876
+msgid "Scale Y:"
+msgstr "Y 比例:"
+
+#: ginga/rv/plugins/Preferences.py:877
+msgid "Scale Min:"
+msgstr "最小比例:"
+
+#: ginga/rv/plugins/Preferences.py:878
+msgid "Scale Max:"
+msgstr "最大比例:"
+
+#: ginga/rv/plugins/Preferences.py:879 ginga/util/stages/scale.py:44
+msgid "Interpolation:"
+msgstr "插值:"
+
+#: ginga/rv/plugins/Preferences.py:880
+msgid "Zoom Defaults"
+msgstr "缩放默认值"
+
+#: ginga/rv/plugins/Preferences.py:894
+msgid "Choose Zoom algorithm"
+msgstr "选择缩放算法"
+
+#: ginga/rv/plugins/Preferences.py:902
+msgid "Stretch pixels in X or Y"
+msgstr "在 X 或 Y 方向拉伸像素"
+
+#: ginga/rv/plugins/Preferences.py:909
+msgid "Length of pixel relative to 1 on other side"
+msgstr "像素相对于另一边 1 的长度"
+
+#: ginga/rv/plugins/Preferences.py:917
+msgid "Step rate of increase/decrease per zoom level"
+msgstr "每个缩放级别的增减步率"
+
+#: ginga/rv/plugins/Preferences.py:923
+msgid "Set the scale in X axis"
+msgstr "设置 X 轴的比例"
+
+#: ginga/rv/plugins/Preferences.py:926
+msgid "Set the scale in Y axis"
+msgstr "设置 Y 轴的比例"
+
+#: ginga/rv/plugins/Preferences.py:933
+msgid "Set the minimum allowed scale in any axis"
+msgstr "设置任意轴允许的最小比例"
+
+#: ginga/rv/plugins/Preferences.py:937
+msgid "Set the maximum allowed scale in any axis"
+msgstr "设置任意轴允许的最大比例"
+
+#: ginga/rv/plugins/Preferences.py:952
+msgid "Choose interpolation method"
+msgstr "选择插值方法"
+
+#: ginga/rv/plugins/Preferences.py:959
+msgid "Panning"
+msgstr "平移"
+
+#: ginga/rv/plugins/Preferences.py:961
+msgid "Pan X:"
+msgstr "平移 X:"
+
+#: ginga/rv/plugins/Preferences.py:962
+msgid "WCS sexagesimal"
+msgstr "WCS 六十进制"
+
+#: ginga/rv/plugins/Preferences.py:963
+msgid "Pan Y:"
+msgstr "平移 Y:"
+
+#: ginga/rv/plugins/Preferences.py:964
+msgid "Apply Pan"
+msgstr "应用平移"
+
+#: ginga/rv/plugins/Preferences.py:965
+msgid "Pan Coord:"
+msgstr "平移坐标:"
+
+#: ginga/rv/plugins/Preferences.py:966
+msgid "Center Image"
+msgstr "居中图像"
+
+#: ginga/rv/plugins/Preferences.py:966
+msgid "Mark Center"
+msgstr "标记中心"
+
+#: ginga/rv/plugins/Preferences.py:976
+msgid "Coordinate for the pan position in X axis"
+msgstr "X 轴平移位置的坐标"
+
+#: ginga/rv/plugins/Preferences.py:979
+msgid "Coordinate for the pan position in Y axis"
+msgstr "Y 轴平移位置的坐标"
+
+#: ginga/rv/plugins/Preferences.py:983
+msgid "Set the pan position"
+msgstr "设置平移位置"
+
+#: ginga/rv/plugins/Preferences.py:984
+msgid "Display pan position in sexagesimal"
+msgstr "以六十进制显示平移位置"
+
+#: ginga/rv/plugins/Preferences.py:994
+msgid "Pan coordinates type"
+msgstr "平移坐标类型"
+
+#: ginga/rv/plugins/Preferences.py:997
+msgid "Set the pan position to center of the image"
+msgstr "将平移位置设为图像中心"
+
+#: ginga/rv/plugins/Preferences.py:999
+msgid "Mark the center (pan locator)"
+msgstr "标记中心（平移定位器）"
+
+#: ginga/rv/plugins/Preferences.py:1005 ginga/rv/plugins/WCSAxes.py:82
+msgid "General"
+msgstr "常规"
+
+#: ginga/rv/plugins/Preferences.py:1007
+msgid "Num Images:"
+msgstr "图像数:"
+
+#: ginga/rv/plugins/Preferences.py:1008
+msgid "Sort Order:"
+msgstr "排序方式:"
+
+#: ginga/rv/plugins/Preferences.py:1009
+msgid "Use scrollbars"
+msgstr "使用滚动条"
+
+#: ginga/rv/plugins/Preferences.py:1014
+msgid "Maximum number of in memory images in channel (0==unlimited)"
+msgstr "通道中内存里图像的最大数量（0==无限制）"
+
+#: ginga/rv/plugins/Preferences.py:1028
+msgid "Sort order for images in channel"
+msgstr "通道中图像的排序方式"
+
+#: ginga/rv/plugins/Preferences.py:1033
+msgid "Use scrollbars around viewer"
+msgstr "在查看器周围使用滚动条"
+
+#: ginga/rv/plugins/Preferences.py:1040
+msgid "Reset (Viewer)"
+msgstr "重置（查看器）"
+
+#: ginga/rv/plugins/Preferences.py:1042
+msgid "Reset Scale"
+msgstr "重置比例"
+
+#: ginga/rv/plugins/Preferences.py:1043
+msgid "Reset Pan"
+msgstr "重置平移"
+
+#: ginga/rv/plugins/Preferences.py:1044
+msgid "Reset Transform"
+msgstr "重置变换"
+
+#: ginga/rv/plugins/Preferences.py:1045
+msgid "Reset Rotation"
+msgstr "重置旋转"
+
+#: ginga/rv/plugins/Preferences.py:1046
+msgid "Reset Cuts"
+msgstr "重置剖切电平"
+
+#: ginga/rv/plugins/Preferences.py:1047
+msgid "Reset Distribution"
+msgstr "重置分布"
+
+#: ginga/rv/plugins/Preferences.py:1048
+msgid "Reset Contrast"
+msgstr "重置对比度"
+
+#: ginga/rv/plugins/Preferences.py:1049
+msgid "Reset Color Map"
+msgstr "重置颜色映射表"
+
+#: ginga/rv/plugins/Preferences.py:1056
+msgid "Reset scale between images"
+msgstr "在图像之间重置比例"
+
+#: ginga/rv/plugins/Preferences.py:1059
+msgid "Reset pan position between images"
+msgstr "在图像之间重置平移位置"
+
+#: ginga/rv/plugins/Preferences.py:1063
+msgid "Reset transform between images"
+msgstr "在图像之间重置变换"
+
+#: ginga/rv/plugins/Preferences.py:1067
+msgid "Reset rotation between images"
+msgstr "在图像之间重置旋转"
+
+#: ginga/rv/plugins/Preferences.py:1070
+msgid "Reset cut levels between images"
+msgstr "在图像之间重置剖切电平"
+
+#: ginga/rv/plugins/Preferences.py:1074
+msgid "Reset color distribution between images"
+msgstr "在图像之间重置颜色分布"
+
+#: ginga/rv/plugins/Preferences.py:1078
+msgid "Reset contrast/bias between images"
+msgstr "在图像之间重置对比度/偏置"
+
+#: ginga/rv/plugins/Preferences.py:1082
+msgid "Reset color map between images"
+msgstr "在图像之间重置颜色映射表"
+
+#: ginga/rv/plugins/Preferences.py:1096
+msgid "Remember (Image)"
+msgstr "记住（图像）"
+
+#: ginga/rv/plugins/Preferences.py:1098
+msgid "Remember Scale"
+msgstr "记住比例"
+
+#: ginga/rv/plugins/Preferences.py:1099
+msgid "Remember Pan"
+msgstr "记住平移"
+
+#: ginga/rv/plugins/Preferences.py:1100
+msgid "Remember Transform"
+msgstr "记住变换"
+
+#: ginga/rv/plugins/Preferences.py:1101
+msgid "Remember Rotation"
+msgstr "记住旋转"
+
+#: ginga/rv/plugins/Preferences.py:1102
+msgid "Remember Cuts"
+msgstr "记住剖切电平"
+
+#: ginga/rv/plugins/Preferences.py:1103
+msgid "Remember Distribution"
+msgstr "记住分布"
+
+#: ginga/rv/plugins/Preferences.py:1104
+msgid "Remember Contrast"
+msgstr "记住对比度"
+
+#: ginga/rv/plugins/Preferences.py:1105
+msgid "Remember Color Map"
+msgstr "记住颜色映射表"
+
+#: ginga/rv/plugins/Preferences.py:1112
+msgid "Remember scale with image"
+msgstr "随图像记住比例"
+
+#: ginga/rv/plugins/Preferences.py:1115
+msgid "Remember pan position with image"
+msgstr "随图像记住平移位置"
+
+#: ginga/rv/plugins/Preferences.py:1119
+msgid "Remember transform with image"
+msgstr "随图像记住变换"
+
+#: ginga/rv/plugins/Preferences.py:1123
+msgid "Remember rotation with image"
+msgstr "随图像记住旋转"
+
+#: ginga/rv/plugins/Preferences.py:1126
+msgid "Remember cut levels with image"
+msgstr "随图像记住剖切电平"
+
+#: ginga/rv/plugins/Preferences.py:1130
+msgid "Remember color distribution algorithm with image"
+msgstr "随图像记住颜色分布算法"
+
+#: ginga/rv/plugins/Preferences.py:1134
+msgid "Remember contrast/bias with image"
+msgstr "随图像记住对比度/偏置"
+
+#: ginga/rv/plugins/Preferences.py:1138
+msgid "Remember color map with image"
+msgstr "随图像记住颜色映射表"
+
+#: ginga/rv/plugins/Preferences.py:1152
+msgid "New Images"
+msgstr "新图像"
+
+#: ginga/rv/plugins/Preferences.py:1158
+msgid "Create thumbnail"
+msgstr "创建缩略图"
+
+#: ginga/rv/plugins/Preferences.py:1159
+msgid "Auto Orient"
+msgstr "自动定向"
+
+#: ginga/rv/plugins/Preferences.py:1201
+msgid "View new images as they arrive"
+msgstr "在新图像到达时查看"
+
+#: ginga/rv/plugins/Preferences.py:1202
+msgid "Raise and focus tab for new images"
+msgstr "为新图像将标签页置于前台并聚焦"
+
+#: ginga/rv/plugins/Preferences.py:1203
+msgid "Create thumbnail for new images"
+msgstr "为新图像创建缩略图"
+
+#: ginga/rv/plugins/Preferences.py:1204
+msgid "Auto orient new (RGB) images"
+msgstr "自动定向新（RGB）图像"
+
+#: ginga/rv/plugins/Preferences.py:1220
+msgid "ICC Profiles"
+msgstr "ICC 配置文件"
+
+#: ginga/rv/plugins/Preferences.py:1222 ginga/util/stages/iccprof.py:38
+msgid "Output ICC profile:"
+msgstr "输出 ICC 配置文件:"
+
+#: ginga/rv/plugins/Preferences.py:1224 ginga/util/stages/iccprof.py:40
+msgid "Rendering intent:"
+msgstr "渲染意图:"
+
+#: ginga/rv/plugins/Preferences.py:1226 ginga/util/stages/iccprof.py:42
+msgid "Proof ICC profile:"
+msgstr "打样 ICC 配置文件:"
+
+#: ginga/rv/plugins/Preferences.py:1228 ginga/util/stages/iccprof.py:44
+msgid "Proof intent:"
+msgstr "打样意图:"
+
+#: ginga/rv/plugins/Preferences.py:1229 ginga/util/stages/iccprof.py:45
+msgid "Black point compensation"
+msgstr "黑场补偿"
+
+#: ginga/rv/plugins/Preferences.py:1246
+msgid "ICC profile for the viewer display"
+msgstr "查看器显示的 ICC 配置文件"
+
+#: ginga/rv/plugins/Preferences.py:1260
+msgid "Rendering intent for the viewer display"
+msgstr "查看器显示的渲染意图"
+
+#: ginga/rv/plugins/Preferences.py:1274
+msgid "ICC profile for soft proofing"
+msgstr "软打样的 ICC 配置文件"
+
+#: ginga/rv/plugins/Preferences.py:1288
+msgid "Rendering intent for soft proofing"
+msgstr "软打样的渲染意图"
+
+#: ginga/rv/plugins/Preferences.py:1294
+msgid "Use black point compensation"
+msgstr "使用黑场补偿"
+
+#: ginga/rv/plugins/Preferences.py:1313
+msgid "Save Settings"
+msgstr "保存设置"
+
+#: ginga/rv/plugins/Preferences.py:1315
+msgid "Save current settings for channel (across restarts)"
+msgstr "保存通道的当前设置（跨重启保留）"
+
+#: ginga/rv/plugins/Preferences.py:1317
+msgid "Update Viewer Profile"
+msgstr "更新查看器配置文件"
+
+#: ginga/rv/plugins/Preferences.py:1319
+msgid ""
+"Update viewer profile from current settings (click 'Save Settings' to "
+"make persistent)"
+msgstr "根据当前设置更新查看器配置文件（点击“保存设置”以永久保留）"
+
+#: ginga/rv/plugins/RC.py:229
+msgid "Remote Control"
+msgstr "远程控制"
+
+#: ginga/rv/plugins/RC.py:232
+msgid "Addr:"
+msgstr "地址:"
+
+#: ginga/rv/plugins/RC.py:232
+msgid "Restart"
+msgstr "重启"
+
+#: ginga/rv/plugins/RC.py:233
+msgid "Set Addr:"
+msgstr "设置地址:"
+
+#: ginga/rv/plugins/RC.py:239
+msgid "Restart the server"
+msgstr "重启服务器"
+
+#: ginga/rv/plugins/RC.py:244
+msgid "Set address to run remote control server"
+msgstr "设置运行远程控制服务器的地址"
+
+#: ginga/rv/plugins/Ruler.py:133
+msgid "Ruler"
+msgstr "标尺"
+
+#: ginga/rv/plugins/Ruler.py:135
+msgid "Units:"
+msgstr "单位:"
+
+#: ginga/rv/plugins/Ruler.py:136
+msgid "Show ends"
+msgstr "显示端点"
+
+#: ginga/rv/plugins/Ruler.py:136
+msgid "Show plumb"
+msgstr "显示铅垂线"
+
+#: ginga/rv/plugins/Ruler.py:137
+msgid "Pan to dst"
+msgstr "平移到终点"
+
+#: ginga/rv/plugins/Ruler.py:137
+msgid "Pan to src"
+msgstr "平移到起点"
+
+#: ginga/rv/plugins/Ruler.py:138
+msgid "Pan to ctr"
+msgstr "平移到中心"
+
+#: ginga/rv/plugins/Ruler.py:148
+msgid "What units to show the measurements"
+msgstr "以何种单位显示测量值"
+
+#: ginga/rv/plugins/Ruler.py:152
+msgid "Show end points on ruler"
+msgstr "在标尺上显示端点"
+
+#: ginga/rv/plugins/Ruler.py:155
+msgid "Show plumb lines on ruler"
+msgstr "在标尺上显示铅垂线"
+
+#: ginga/rv/plugins/Ruler.py:160
+msgid "Pan to start position"
+msgstr "平移到起始位置"
+
+#: ginga/rv/plugins/Ruler.py:163
+msgid "Pan to end position"
+msgstr "平移到结束位置"
+
+#: ginga/rv/plugins/Ruler.py:166
+msgid "Pan to center position"
+msgstr "平移到中心位置"
+
+#: ginga/rv/plugins/Ruler.py:169
+msgid "Clear the ruler"
+msgstr "清除标尺"
+
+#: ginga/rv/plugins/Ruler.py:174
+msgid "Result"
+msgstr "结果"
+
+#: ginga/rv/plugins/Ruler.py:176
+msgid "X1:"
+msgstr "X1:"
+
+#: ginga/rv/plugins/Ruler.py:177
+msgid "Y1:"
+msgstr "Y1:"
+
+#: ginga/rv/plugins/Ruler.py:178
+msgid "X2:"
+msgstr "X2:"
+
+#: ginga/rv/plugins/Ruler.py:179
+msgid "Y2:"
+msgstr "Y2:"
+
+#: ginga/rv/plugins/Ruler.py:180
+msgid "dx:"
+msgstr "dx:"
+
+#: ginga/rv/plugins/Ruler.py:181
+msgid "dy:"
+msgstr "dy:"
+
+#: ginga/rv/plugins/Ruler.py:182
+msgid "dh:"
+msgstr "dh:"
+
+#: ginga/rv/plugins/Ruler.py:184
+msgid "θ:"
+msgstr "θ:"
+
+#: ginga/rv/plugins/Ruler.py:194
+msgid "What units to show the angle"
+msgstr "以何种单位显示角度"
+
+#: ginga/rv/plugins/Ruler.py:206
+msgid "Choose this to draw a ruler"
+msgstr "选择此项以绘制标尺"
+
+#: ginga/rv/plugins/Ruler.py:214
+msgid "Choose this to edit a ruler"
+msgstr "选择此项以编辑标尺"
+
+#: ginga/rv/plugins/SAMP.py:92
+msgid "SAMP"
+msgstr "SAMP"
+
+#: ginga/rv/plugins/SAMP.py:94
+msgid "Start hub"
+msgstr "启动中心"
+
+#: ginga/rv/plugins/SAMP.py:95
+msgid "Connect client"
+msgstr "连接客户端"
+
+#: ginga/rv/plugins/SAMP.py:99
+msgid "Start a SAMP hub"
+msgstr "启动 SAMP 中心"
+
+#: ginga/rv/plugins/SAMP.py:102
+msgid "Register with a SAMP hub"
+msgstr "向 SAMP 中心注册"
+
+#: ginga/rv/plugins/SaveImage.py:100
+msgid "Modified only"
+msgstr "仅已修改"
+
+#: ginga/rv/plugins/SaveImage.py:104
+msgid "Channel for locating images to save"
+msgstr "用于定位要保存图像的通道"
+
+#: ginga/rv/plugins/SaveImage.py:110
+msgid "Show only locally modified images"
+msgstr "仅显示本地修改过的图像"
+
+#: ginga/rv/plugins/SaveImage.py:114
+msgid "Browse"
+msgstr "浏览"
+
+#: ginga/rv/plugins/SaveImage.py:120
+msgid "Output directory"
+msgstr "输出目录"
+
+#: ginga/rv/plugins/SaveImage.py:123
+msgid "Browse for output directory"
+msgstr "浏览选择输出目录"
+
+#: ginga/rv/plugins/SaveImage.py:127
+msgid "Suffix to append to filename"
+msgstr "要追加到文件名的后缀"
+
+#: ginga/rv/plugins/SaveImage.py:144
+msgid "Status message"
+msgstr "状态消息"
+
+#: ginga/rv/plugins/SaveImage.py:152
+msgid "Save selected image(s)"
+msgstr "保存选中的图像"
+
+#: ginga/rv/plugins/ScreenShot.py:129
+msgid "Screen size"
+msgstr "屏幕大小"
+
+#: ginga/rv/plugins/ScreenShot.py:130 ginga/rv/plugins/TVMark.py:176
+msgid "Width:"
+msgstr "宽度:"
+
+#: ginga/rv/plugins/ScreenShot.py:131
+msgid "Height:"
+msgstr "高度:"
+
+#: ginga/rv/plugins/ScreenShot.py:132
+msgid "Lock aspect"
+msgstr "锁定宽高比"
+
+#: ginga/rv/plugins/ScreenShot.py:133 ginga/util/stages/crop.py:39
+msgid "Aspect:"
+msgstr "宽高比:"
+
+#: ginga/rv/plugins/ScreenShot.py:144
+msgid "From screen viewer actual size"
+msgstr "按屏幕查看器的实际大小"
+
+#: ginga/rv/plugins/ScreenShot.py:148
+msgid "Lock aspect ratio of screen shot"
+msgstr "锁定截图的宽高比"
+
+#: ginga/rv/plugins/ScreenShot.py:172
+msgid "Type:"
+msgstr "类型:"
+
+#: ginga/rv/plugins/ScreenShot.py:173
+msgid "Snap"
+msgstr "快照"
+
+#: ginga/rv/plugins/ScreenShot.py:174
+msgid "Center"
+msgstr "居中"
+
+#: ginga/rv/plugins/ScreenShot.py:174
+msgid "Fit"
+msgstr "适应"
+
+#: ginga/rv/plugins/ScreenShot.py:175
+msgid "Full"
+msgstr "完整"
+
+#: ginga/rv/plugins/ScreenShot.py:185
+msgid "Set the format of the snap image"
+msgstr "设置快照图像的格式"
+
+#: ginga/rv/plugins/ScreenShot.py:187
+msgid "Click to grab a snapshot of this channel viewer image"
+msgstr "点击以抓取此通道查看器图像的快照"
+
+#: ginga/rv/plugins/ScreenShot.py:189
+msgid "Clear the snap image"
+msgstr "清除快照图像"
+
+#: ginga/rv/plugins/ScreenShot.py:191
+msgid "Center the snap image"
+msgstr "将快照图像居中"
+
+#: ginga/rv/plugins/ScreenShot.py:193
+msgid "Fit snap image to window"
+msgstr "使快照图像适应窗口"
+
+#: ginga/rv/plugins/ScreenShot.py:195
+msgid "View at 100% (1:1)"
+msgstr "以 100% 查看 (1:1)"
+
+#: ginga/rv/plugins/ScreenShot.py:200
+msgid "Screenshot"
+msgstr "截图"
+
+#: ginga/rv/plugins/ScreenShot.py:211
+msgid "Save File"
+msgstr "保存文件"
+
+#: ginga/rv/plugins/ScreenShot.py:213
+msgid "Folder:"
+msgstr "文件夹:"
+
+#: ginga/rv/plugins/ScreenShot.py:221
+msgid "Set the folder path for the snap image"
+msgstr "设置快照图像的文件夹路径"
+
+#: ginga/rv/plugins/ScreenShot.py:223
+msgid "Set the name for the snap image"
+msgstr "设置快照图像的名称"
+
+#: ginga/rv/plugins/ScreenShot.py:224
+msgid "Click to save the last snap"
+msgstr "点击以保存最后一张快照"
+
+#: ginga/rv/plugins/SlideShow.py:118
+msgid "Save As"
+msgstr "另存为"
+
+#: ginga/rv/plugins/SlideShow.py:126
+msgid "Load a slideshow file"
+msgstr "加载幻灯片文件"
+
+#: ginga/rv/plugins/SlideShow.py:128
+msgid "Path for slideshow file"
+msgstr "幻灯片文件的路径"
+
+#: ginga/rv/plugins/SlideShow.py:130
+msgid "Reload slideshow file"
+msgstr "重新加载幻灯片文件"
+
+#: ginga/rv/plugins/SlideShow.py:136
+msgid "Set the default duration if none found for a slide"
+msgstr "若某张幻灯片未指定则设置默认时长"
+
+#: ginga/rv/plugins/SlideShow.py:151
+msgid "Next"
+msgstr "下一个"
+
+#: ginga/rv/plugins/SlideShow.py:151
+msgid "Prev"
+msgstr "上一个"
+
+#: ginga/rv/plugins/SlideShow.py:152
+msgid "Start"
+msgstr "开始"
+
+#: ginga/rv/plugins/SlideShow.py:165
+msgid "Play"
+msgstr "播放"
+
+#: ginga/rv/plugins/SlideShow.py:169
+msgid "Move Down"
+msgstr "下移"
+
+#: ginga/rv/plugins/SlideShow.py:169
+msgid "Move Up"
+msgstr "上移"
+
+#: ginga/rv/plugins/SlideShow.py:170
+msgid "Get Index"
+msgstr "获取索引"
+
+#: ginga/rv/plugins/SlideShow.py:170
+msgid "Move To"
+msgstr "移动到"
+
+#: ginga/rv/plugins/SlideShow.py:171
+msgid "Unhide"
+msgstr "取消隐藏"
+
+#: ginga/rv/plugins/SlideShow.py:171 ginga/rv/plugins/TVMark.py:247
+#: ginga/rv/plugins/TVMask.py:167
+msgid "Hide"
+msgstr "隐藏"
+
+#: ginga/rv/plugins/TVMark.py:173
+msgid "Mark:"
+msgstr "标记:"
+
+#: ginga/rv/plugins/TVMark.py:174 ginga/rv/plugins/TVMask.py:140
+msgid "Color:"
+msgstr "颜色:"
+
+#: ginga/rv/plugins/TVMark.py:175
+msgid "Size:"
+msgstr "大小:"
+
+#: ginga/rv/plugins/TVMark.py:192
+msgid "Size/radius of the marking"
+msgstr "标记的大小/半径"
+
+#: ginga/rv/plugins/TVMark.py:196
+msgid "Line width of the marking"
+msgstr "标记的线宽"
+
+#: ginga/rv/plugins/TVMark.py:213
+msgid "Shown"
+msgstr "显示"
+
+#: ginga/rv/plugins/TVMark.py:220
+msgid "Selected"
+msgstr "已选"
+
+#: ginga/rv/plugins/TVMark.py:227
+msgid "Outliers"
+msgstr "离群值"
+
+#: ginga/rv/plugins/TVMark.py:235
+msgid "Number of objects read from tables"
+msgstr "从表格中读取的对象数"
+
+#: ginga/rv/plugins/TVMark.py:238
+msgid "Number of objects shown on image"
+msgstr "图像上显示的对象数"
+
+#: ginga/rv/plugins/TVMark.py:241
+msgid "Number of objects selected"
+msgstr "选中的对象数"
+
+#: ginga/rv/plugins/TVMark.py:246
+msgid "Load Coords"
+msgstr "加载坐标"
+
+#: ginga/rv/plugins/TVMark.py:246
+msgid "Use RADEC"
+msgstr "使用 RA/DEC"
+
+#: ginga/rv/plugins/TVMark.py:247 ginga/rv/plugins/TVMask.py:167
+msgid "Forget"
+msgstr "放弃"
+
+#: ginga/rv/plugins/TVMark.py:247 ginga/rv/plugins/TVMask.py:167
+msgid "Show"
+msgstr "显示"
+
+#: ginga/rv/plugins/TVMark.py:251
+msgid "Load coordinates file"
+msgstr "加载坐标文件"
+
+#: ginga/rv/plugins/TVMark.py:254
+msgid "Use RA/DEC as coordinates instead of X/Y"
+msgstr "使用 RA/DEC 作为坐标而非 X/Y"
+
+#: ginga/rv/plugins/TVMark.py:258
+msgid "Show markings"
+msgstr "显示标记"
+
+#: ginga/rv/plugins/TVMark.py:261
+msgid "Hide markings"
+msgstr "隐藏标记"
+
+#: ginga/rv/plugins/TVMark.py:264
+msgid "Forget markings"
+msgstr "放弃标记"
+
+#: ginga/rv/plugins/TVMask.py:141 ginga/rv/plugins/WCSAxes.py:84
+msgid "Alpha:"
+msgstr "透明度:"
+
+#: ginga/rv/plugins/TVMask.py:151
+msgid "Mask alpha (transparency)"
+msgstr "掩模透明度"
+
+#: ginga/rv/plugins/TVMask.py:166
+msgid "Load Mask"
+msgstr "加载掩模"
+
+#: ginga/rv/plugins/TVMask.py:171
+msgid "Load mask image"
+msgstr "加载掩模图像"
+
+#: ginga/rv/plugins/TVMask.py:174
+msgid "Show masks"
+msgstr "显示掩模"
+
+#: ginga/rv/plugins/TVMask.py:177
+msgid "Hide masks"
+msgstr "隐藏掩模"
+
+#: ginga/rv/plugins/TVMask.py:180
+msgid "Forget masks"
+msgstr "放弃掩模"
+
+#: ginga/rv/plugins/Thumbs.py:237
+msgid "Scroll the thumbs window when new images arrive"
+msgstr "当新图像到达时滚动缩略图窗口"
+
+#: ginga/rv/plugins/Thumbs.py:238
+msgid "Remove all current thumbnails"
+msgstr "移除所有当前缩略图"
+
+#: ginga/rv/plugins/Toolbar.py:161
+msgid "Select compatible viewer"
+msgstr "选择兼容的查看器"
+
+#: ginga/rv/plugins/Toolbar.py:163
+msgid "Go to previous image in channel"
+msgstr "转到通道中的上一幅图像"
+
+#: ginga/rv/plugins/Toolbar.py:165
+msgid "Go to next image in channel"
+msgstr "转到通道中的下一幅图像"
+
+#: ginga/rv/plugins/Toolbar.py:263
+msgid "Flip image in X axis"
+msgstr "在 X 轴翻转图像"
+
+#: ginga/rv/plugins/Toolbar.py:265
+msgid "Flip image in Y axis"
+msgstr "在 Y 轴翻转图像"
+
+#: ginga/rv/plugins/Toolbar.py:267
+msgid "Swap X and Y axes"
+msgstr "交换 X 轴和 Y 轴"
+
+#: ginga/rv/plugins/Toolbar.py:270
+msgid "Rotate image 90 deg"
+msgstr "将图像旋转 90 度"
+
+#: ginga/rv/plugins/Toolbar.py:272
+msgid "Rotate image -90 deg"
+msgstr "将图像旋转 -90 度"
+
+#: ginga/rv/plugins/Toolbar.py:274
+msgid "Orient image N=Up E=Right"
+msgstr "定向图像 N=上 E=右"
+
+#: ginga/rv/plugins/Toolbar.py:276
+msgid "Orient image N=Up E=Left"
+msgstr "定向图像 N=上 E=左"
+
+#: ginga/rv/plugins/Toolbar.py:279 ginga/rv/plugins/Toolbar.py:568
+msgid "Zoom in"
+msgstr "放大"
+
+#: ginga/rv/plugins/Toolbar.py:281 ginga/rv/plugins/Toolbar.py:570
+msgid "Zoom out"
+msgstr "缩小"
+
+#: ginga/rv/plugins/Toolbar.py:283
+msgid "Zoom to fit window size"
+msgstr "缩放以适应窗口大小"
+
+#: ginga/rv/plugins/Toolbar.py:285
+msgid "Zoom to 100% (1:1)"
+msgstr "缩放到 100% (1:1)"
+
+#: ginga/rv/plugins/Toolbar.py:288
+msgid "Pan with left, zoom with right"
+msgstr "左键平移，右键缩放"
+
+#: ginga/rv/plugins/Toolbar.py:291
+msgid ""
+"Left/right click zooms in/out;\n"
+"hold middle to pan freely over image"
+msgstr ""
+"左键/右键点击放大/缩小；\n"
+"按住中键可在图像上自由平移"
+
+#: ginga/rv/plugins/Toolbar.py:295
+msgid "Drag left to rotate; click right to reset to 0 deg"
+msgstr "左键拖动旋转；右键点击重置为 0 度"
+
+#: ginga/rv/plugins/Toolbar.py:298
+msgid "Scroll to set color distribution algorithm"
+msgstr "滚动以设置颜色分布算法"
+
+#: ginga/rv/plugins/Toolbar.py:301
+msgid "Scroll to set color map"
+msgstr "滚动以设置颜色映射表"
+
+#: ginga/rv/plugins/Toolbar.py:304
+msgid "Left/right sets hi cut, up/down sets lo cut"
+msgstr "左右设置剖切上限，上下设置剖切下限"
+
+#: ginga/rv/plugins/Toolbar.py:307
+msgid "Contrast/bias with left/right/up/down"
+msgstr "用左/右/上/下调整对比度/偏置"
+
+#: ginga/rv/plugins/Toolbar.py:310
+msgid "Modes are oneshot or locked"
+msgstr "模式为单次或锁定"
+
+#: ginga/rv/plugins/Toolbar.py:312
+msgid "Center image"
+msgstr "居中图像"
+
+#: ginga/rv/plugins/Toolbar.py:315
+msgid "Reset all transformations and rotations"
+msgstr "重置所有变换和旋转"
+
+#: ginga/rv/plugins/Toolbar.py:317
+msgid "Auto cut levels"
+msgstr "自动剖切电平"
+
+#: ginga/rv/plugins/Toolbar.py:319
+msgid "Reset contrast"
+msgstr "重置对比度"
+
+#: ginga/rv/plugins/Toolbar.py:322 ginga/rv/plugins/Toolbar.py:579
+#: ginga/rv/plugins/Toolbar.py:669
+msgid "Set channel preferences (in focused channel)"
+msgstr "设置通道首选项（在聚焦的通道中）"
+
+#: ginga/rv/plugins/Toolbar.py:324 ginga/rv/plugins/Toolbar.py:581
+#: ginga/rv/plugins/Toolbar.py:671
+msgid "Open file (in focused channel)"
+msgstr "打开文件（在聚焦的通道中）"
+
+#: ginga/rv/plugins/Toolbar.py:326 ginga/rv/plugins/Toolbar.py:583
+#: ginga/rv/plugins/Toolbar.py:673
+msgid "Select HDUs or cube slices (in focused channel)"
+msgstr "选择 HDU 或立方体切片（在聚焦的通道中）"
+
+#: ginga/rv/plugins/Toolbar.py:328 ginga/rv/plugins/Toolbar.py:585
+#: ginga/rv/plugins/Toolbar.py:675
+msgid "View image metadata (Header plugin)"
+msgstr "查看图像元数据（Header 插件）"
+
+#: ginga/rv/plugins/Toolbar.py:330
+msgid "Magnify detail (Zoom plugin)"
+msgstr "放大细节（Zoom 插件）"
+
+#: ginga/rv/plugins/Toolbar.py:572
+msgid "Fit plot to window size"
+msgstr "使绘图适应窗口大小"
+
+#: ginga/rv/plugins/Toolbar.py:574
+msgid "Fit X axis to window size"
+msgstr "使 X 轴适应窗口大小"
+
+#: ginga/rv/plugins/Toolbar.py:576
+msgid "Fit Y axis to window size"
+msgstr "使 Y 轴适应窗口大小"
+
+#: ginga/rv/plugins/WCSAxes.py:83
+msgid "Line color:"
+msgstr "线条颜色:"
+
+#: ginga/rv/plugins/WCSAxes.py:95
+msgid "Line transparency (alpha)"
+msgstr "线条透明度"
+
+#: ginga/rv/plugins/WCSAxes.py:101
+msgid "Lines"
+msgstr "线条"
+
+#: ginga/rv/plugins/WCSAxes.py:102
+msgid "Line style:"
+msgstr "线型:"
+
+#: ginga/rv/plugins/WCSAxes.py:103
+msgid "# RA lines:"
+msgstr "RA 线数:"
+
+#: ginga/rv/plugins/WCSAxes.py:104
+msgid "# DEC lines:"
+msgstr "DEC 线数:"
+
+#: ginga/rv/plugins/WCSAxes.py:115
+msgid "Number of lines drawn for RA"
+msgstr "为 RA 绘制的线条数"
+
+#: ginga/rv/plugins/WCSAxes.py:119
+msgid "Number of lines drawn for DEC"
+msgstr "为 DEC 绘制的线条数"
+
+#: ginga/rv/plugins/WCSAxes.py:125
+msgid "Labels"
+msgstr "标签"
+
+#: ginga/rv/plugins/WCSAxes.py:126
+msgid "Show label"
+msgstr "显示标签"
+
+#: ginga/rv/plugins/WCSAxes.py:128
+msgid "Text offset:"
+msgstr "文本偏移:"
+
+#: ginga/rv/plugins/WCSAxes.py:129
+msgid "RA angle:"
+msgstr "RA 角度:"
+
+#: ginga/rv/plugins/WCSAxes.py:130
+msgid "DEC angle:"
+msgstr "DEC 角度:"
+
+#: ginga/rv/plugins/WCSAxes.py:135
+msgid "Show/hide label"
+msgstr "显示/隐藏标签"
+
+#: ginga/rv/plugins/WCSAxes.py:139
+msgid "Labels font size"
+msgstr "标签字体大小"
+
+#: ginga/rv/plugins/WCSAxes.py:144
+msgid "Labels text offset in pixels"
+msgstr "标签文本偏移（像素）"
+
+#: ginga/rv/plugins/WCSAxes.py:149
+msgid "Orientation in deg of RA labels"
+msgstr "RA 标签的方向（度）"
+
+#: ginga/rv/plugins/WCSAxes.py:153
+msgid "Orientation in deg of DEC labels"
+msgstr "DEC 标签的方向（度）"
+
+#: ginga/rv/plugins/WCSMatch.py:75
+msgid "WCS Match"
+msgstr "WCS 匹配"
+
+#: ginga/rv/plugins/WCSMatch.py:77
+msgid "Reference Channel:"
+msgstr "参考通道:"
+
+#: ginga/rv/plugins/WCSMatch.py:79
+msgid "Match Pan"
+msgstr "匹配平移"
+
+#: ginga/rv/plugins/WCSMatch.py:80
+msgid "Match Scale"
+msgstr "匹配比例"
+
+#: ginga/rv/plugins/WCSMatch.py:81
+msgid "Match Transforms"
+msgstr "匹配变换"
+
+#: ginga/rv/plugins/WCSMatch.py:82
+msgid "Match Rotation"
+msgstr "匹配旋转"
+
+#: ginga/rv/plugins/WCSMatch.py:89
+msgid "Match pan position of reference image"
+msgstr "匹配参考图像的平移位置"
+
+#: ginga/rv/plugins/WCSMatch.py:95
+msgid "Match scale of reference image"
+msgstr "匹配参考图像的比例"
+
+#: ginga/rv/plugins/WCSMatch.py:99
+msgid "Match transforms of reference image"
+msgstr "匹配参考图像的变换"
+
+#: ginga/rv/plugins/WCSMatch.py:103
+msgid "Match rotation of reference image"
+msgstr "匹配参考图像的旋转"
+
+#: ginga/rv/plugins/Zoom.py:142
+msgid "Zoom Amount:"
+msgstr "缩放量:"
+
+#: ginga/rv/plugins/Zoom.py:154
+msgid "Relative Zoom"
+msgstr "相对缩放"
+
+#: ginga/rv/plugins/Zoom.py:155
+msgid "Refresh Interval"
+msgstr "刷新间隔"
+
+#: ginga/rv/plugins/Zoom.py:157
+msgid "Defaults"
+msgstr "默认值"
+
+#: ginga/util/plots.py:161
+msgid "Contours"
+msgstr "等值线"
+
+#: ginga/util/plots.py:226
+msgid "Radial plot"
+msgstr "径向图"
+
+#: ginga/util/plots.py:226 ginga/util/plots.py:452
+msgid "Radius [pixels]"
+msgstr "半径 [像素]"
+
+#: ginga/util/plots.py:227
+msgid "Pixel Value (ADU)"
+msgstr "像素值 (ADU)"
+
+#: ginga/util/plots.py:309 ginga/util/plots.py:357
+msgid "Brightness"
+msgstr "亮度"
+
+#: ginga/util/plots.py:309 ginga/util/plots.py:357
+msgid "Pixels"
+msgstr "像素"
+
+#: ginga/util/plots.py:484
+msgid "X"
+msgstr "X"
+
+#: ginga/util/plots.py:484
+msgid "Y"
+msgstr "Y"
+
+#: ginga/util/plots.py:485
+msgid "Surface Plot"
+msgstr "曲面图"
+
+#: ginga/util/stages/crop.py:37
+msgid "Crop %:"
+msgstr "裁剪 %:"
+
+#: ginga/util/stages/crop.py:38
+msgid "Output size:"
+msgstr "输出大小:"
+
+#: ginga/util/stages/cuts.py:34
+msgid "Auto"
+msgstr "自动"
+
+#: ginga/util/stages/cuts.py:34
+msgid "Auto:"
+msgstr "自动:"
+
+#: ginga/util/stages/cuts.py:38
+msgid "VMin:"
+msgstr "VMin:"
+
+#: ginga/util/stages/cuts.py:39
+msgid "VMax:"
+msgstr "VMax:"
+
+#: ginga/util/stages/flipswap.py:28
+msgid "Transform:"
+msgstr "变换:"
+
+#: ginga/util/stages/iccprof.py:36
+msgid "Input ICC profile:"
+msgstr "输入 ICC 配置文件:"
+
+#: ginga/util/stages/output.py:39
+msgid "Output Folder:"
+msgstr "输出文件夹:"
+
+#: ginga/util/stages/output.py:40
+msgid "Output Filename:"
+msgstr "输出文件名:"
+
+#: ginga/util/stages/output.py:41
+msgid "Output Filetype:"
+msgstr "输出文件类型:"
+
+#: ginga/util/stages/output.py:42
+msgid "Auto Save"
+msgstr "自动保存"
+
+#: ginga/util/stages/preview.py:29
+msgid "Preview Channel:"
+msgstr "预览通道:"
+
+#: ginga/util/stages/preview.py:30
+msgid "Detach Image"
+msgstr "分离图像"
+
+#: ginga/util/stages/rgbmap.py:97
+msgid "Copy from viewer"
+msgstr "从查看器复制"
+
+#: ginga/util/stages/scale.py:43
+msgid "Long side:"
+msgstr "长边:"
+
+#: ginga/util/stages/scale.py:45
+msgid "Scale:"
+msgstr "比例:"
+
+#: ginga/util/stages/scale.py:47
+msgid "Output Size:"
+msgstr "输出大小:"
+
+#: ginga/util/stages/sharpen.py:34
+msgid "Strength:"
+msgstr "强度:"
+
+#: ginga/util/stages/whbal.py:44
+msgid "R:"
+msgstr "R:"
+
+#: ginga/util/stages/whbal.py:45
+msgid "G:"
+msgstr "G:"
+
+#: ginga/util/stages/whbal.py:46
+msgid "B:"
+msgstr "B:"
+
+#: ginga/util/stages/whbal.py:47
+msgid "Luminosity:"
+msgstr "亮度:"
+

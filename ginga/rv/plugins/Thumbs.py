@@ -234,9 +234,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         w, b = Widgets.build_info(captions)
         self.w.update(b)
 
-        b.auto_scroll.set_tooltip(
-            "Scroll the thumbs window when new images arrive")
-        b.clear.set_tooltip("Remove all current thumbnails")
+        b.auto_scroll.set_tooltip(_tr("Scroll the thumbs window when new images arrive"))
+        b.clear.set_tooltip(_tr("Remove all current thumbnails"))
         b.clear.add_callback('activated', lambda w: self.clear())
         auto_scroll = self.settings.get('auto_scroll', False)
         b.auto_scroll.set_state(auto_scroll)
@@ -247,10 +246,10 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             btns.set_border_width(4)
             btns.set_spacing(4)
 
-            btn = Widgets.Button("Close")
+            btn = Widgets.Button(_tr("Close"))
             btn.add_callback('activated', lambda w: self.close())
             btns.add_widget(btn)
-            btn = Widgets.Button("Help")
+            btn = Widgets.Button(_tr("Help"))
             btn.add_callback('activated', lambda w: self.help())
             btns.add_widget(btn, stretch=0)
             btns.add_widget(Widgets.Label(''), stretch=1)
@@ -1476,6 +1475,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
 # Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
+from ginga.locale.localize import _tr
 if __doc__ is not None:
     __doc__ += generate_cfg_example('plugin_Thumbs', package='ginga')
 

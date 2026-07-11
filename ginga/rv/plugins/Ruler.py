@@ -66,6 +66,7 @@ import numpy as np
 
 from ginga import GingaPlugin, BaseImage
 from ginga.gw import Widgets
+from ginga.locale.localize import _tr
 
 __all__ = ['Ruler']
 
@@ -129,7 +130,7 @@ class Ruler(GingaPlugin.LocalPlugin):
         vbox.set_border_width(4)
         vbox.set_spacing(2)
 
-        fr = Widgets.Frame("Ruler")
+        fr = Widgets.Frame(_tr("Ruler"))
 
         captions = (("Units:", 'label', 'Units', 'combobox'),
                     ("Show ends", 'checkbutton', "Show plumb", 'checkbutton'),
@@ -144,33 +145,33 @@ class Ruler(GingaPlugin.LocalPlugin):
             combobox.append_text(name)
         index = self.unittypes.index(self.units)
         combobox.set_index(index)
-        combobox.set_tooltip("What units to show the measurements")
+        combobox.set_tooltip(_tr("What units to show the measurements"))
         combobox.add_callback('activated', lambda w, idx: self.set_units())
 
         b.show_ends.add_callback('activated', self.show_ends_cb)
-        b.show_ends.set_tooltip("Show end points on ruler")
+        b.show_ends.set_tooltip(_tr("Show end points on ruler"))
         b.show_ends.set_state(self.show_ends)
         b.show_plumb.add_callback('activated', self.show_plumb_cb)
-        b.show_plumb.set_tooltip("Show plumb lines on ruler")
+        b.show_plumb.set_tooltip(_tr("Show plumb lines on ruler"))
         b.show_plumb.set_state(self.show_plumb)
 
         have_ruler = self.ruletag is not None
         b.pan_to_src.add_callback('activated', self.pan_cb, 'src')
-        b.pan_to_src.set_tooltip("Pan to start position")
+        b.pan_to_src.set_tooltip(_tr("Pan to start position"))
         b.pan_to_src.set_enabled(have_ruler)
         b.pan_to_dst.add_callback('activated', self.pan_cb, 'dst')
-        b.pan_to_dst.set_tooltip("Pan to end position")
+        b.pan_to_dst.set_tooltip(_tr("Pan to end position"))
         b.pan_to_dst.set_enabled(have_ruler)
         b.pan_to_ctr.add_callback('activated', self.pan_cb, 'ctr')
-        b.pan_to_ctr.set_tooltip("Pan to center position")
+        b.pan_to_ctr.set_tooltip(_tr("Pan to center position"))
         b.pan_to_ctr.set_enabled(have_ruler)
         b.clear.add_callback('activated', lambda w: self.clear())
-        b.clear.set_tooltip("Clear the ruler")
+        b.clear.set_tooltip(_tr("Clear the ruler"))
 
         fr.set_widget(w)
         vbox.add_widget(fr, stretch=0)
 
-        fr = Widgets.Frame("Result")
+        fr = Widgets.Frame(_tr("Result"))
 
         captions = (("X1:", 'label', 'x1', 'entry',
                      "Y1:", 'label', 'y1', 'entry'),
@@ -190,7 +191,7 @@ class Ruler(GingaPlugin.LocalPlugin):
             combobox.append_text(name)
         index = self.ang_units.index(self.ang_unit)
         combobox.set_index(index)
-        combobox.set_tooltip("What units to show the angle")
+        combobox.set_tooltip(_tr("What units to show the angle"))
         combobox.add_callback('activated', lambda w, idx: self.set_angle_units())
 
         fr.set_widget(w)
@@ -198,19 +199,19 @@ class Ruler(GingaPlugin.LocalPlugin):
 
         mode = self.canvas.get_draw_mode()
         hbox = Widgets.HBox()
-        btn1 = Widgets.RadioButton("Draw")
+        btn1 = Widgets.RadioButton(_tr("Draw"))
         btn1.set_state(mode == 'draw')
         btn1.add_callback(
             'activated', lambda w, val: self.set_mode_cb('draw', val))
-        btn1.set_tooltip("Choose this to draw a ruler")
+        btn1.set_tooltip(_tr("Choose this to draw a ruler"))
         self.w.btn_draw = btn1
         hbox.add_widget(btn1)
 
-        btn2 = Widgets.RadioButton("Edit", group=btn1)
+        btn2 = Widgets.RadioButton(_tr("Edit"), group=btn1)
         btn2.set_state(mode == 'edit')
         btn2.add_callback(
             'activated', lambda w, val: self.set_mode_cb('edit', val))
-        btn2.set_tooltip("Choose this to edit a ruler")
+        btn2.set_tooltip(_tr("Choose this to edit a ruler"))
         self.w.btn_edit = btn2
         hbox.add_widget(btn2)
 
@@ -225,10 +226,10 @@ class Ruler(GingaPlugin.LocalPlugin):
         btns = Widgets.HBox()
         btns.set_spacing(3)
 
-        btn = Widgets.Button("Close")
+        btn = Widgets.Button(_tr("Close"))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
-        btn = Widgets.Button("Help")
+        btn = Widgets.Button(_tr("Help"))
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)

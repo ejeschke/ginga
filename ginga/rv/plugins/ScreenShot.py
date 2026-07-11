@@ -43,6 +43,7 @@ from ginga import GingaPlugin, trcalc
 from ginga.gw import Widgets, Viewers
 from ginga.pilw.ImageViewPil import CanvasView
 from ginga.util.io import io_rgb
+from ginga.locale.localize import _tr
 
 __all__ = ['ScreenShot']
 
@@ -140,11 +141,11 @@ class ScreenShot(GingaPlugin.LocalPlugin):
             wd, ht = self._sg_wd, self._sg_ht
 
         b.screen_size.set_state(self._screen_size)
-        b.screen_size.set_tooltip("From screen viewer actual size")
+        b.screen_size.set_tooltip(_tr("From screen viewer actual size"))
         b.screen_size.add_callback('activated',
                                    self._screen_size_cb)
         b.lock_aspect.set_state(self._lock_aspect)
-        b.lock_aspect.set_tooltip("Lock aspect ratio of screen shot")
+        b.lock_aspect.set_tooltip(_tr("Lock aspect ratio of screen shot"))
         b.lock_aspect.add_callback('activated',
                                    self._lock_aspect_cb)
         b.width.set_text(str(wd))
@@ -181,23 +182,22 @@ class ScreenShot(GingaPlugin.LocalPlugin):
         index = self.savetypes.index(self.tosave_type)
         combobox.set_index(index)
         combobox.add_callback('activated', lambda w, idx: self.set_type(idx))
-        combobox.set_tooltip("Set the format of the snap image")
+        combobox.set_tooltip(_tr("Set the format of the snap image"))
 
-        b.snap.set_tooltip(
-            "Click to grab a snapshot of this channel viewer image")
+        b.snap.set_tooltip(_tr("Click to grab a snapshot of this channel viewer image"))
         b.snap.add_callback('activated', self._snap_cb)
-        b.clear.set_tooltip("Clear the snap image")
+        b.clear.set_tooltip(_tr("Clear the snap image"))
         b.clear.add_callback('activated', self._clear_cb)
-        b.center.set_tooltip("Center the snap image")
+        b.center.set_tooltip(_tr("Center the snap image"))
         b.center.add_callback('activated', self._center_cb)
-        b.fit.set_tooltip("Fit snap image to window")
+        b.fit.set_tooltip(_tr("Fit snap image to window"))
         b.fit.add_callback('activated', self._fit_cb)
-        b.full.set_tooltip("View at 100% (1:1)")
+        b.full.set_tooltip(_tr("View at 100% (1:1)"))
         b.full.add_callback('activated', self._full_cb)
 
         vbox1.add_widget(w, stretch=0)
 
-        fr = Widgets.Frame("Screenshot")
+        fr = Widgets.Frame(_tr("Screenshot"))
         fr.set_widget(vbox1)
 
         vpaned = Widgets.Splitter(orientation='vertical')
@@ -208,7 +208,7 @@ class ScreenShot(GingaPlugin.LocalPlugin):
 
         vbox2 = Widgets.VBox()
 
-        fr = Widgets.Frame("Save File")
+        fr = Widgets.Frame(_tr("Save File"))
 
         captions = (('Folder:', 'label', 'folder', 'entry'),
                     ('Name:', 'label', 'name', 'entry'),
@@ -218,10 +218,10 @@ class ScreenShot(GingaPlugin.LocalPlugin):
         self.w.update(b)
 
         b.folder.set_text(self.save_path)
-        b.folder.set_tooltip("Set the folder path for the snap image")
+        b.folder.set_tooltip(_tr("Set the folder path for the snap image"))
         b.name.set_text(self.save_name)
-        b.name.set_tooltip("Set the name for the snap image")
-        b.save.set_tooltip("Click to save the last snap")
+        b.name.set_tooltip(_tr("Set the name for the snap image"))
+        b.save.set_tooltip(_tr("Click to save the last snap"))
         b.save.add_callback('activated', self._save_cb)
 
         fr.set_widget(w)
@@ -234,10 +234,10 @@ class ScreenShot(GingaPlugin.LocalPlugin):
         btns = Widgets.HBox()
         btns.set_spacing(3)
 
-        btn = Widgets.Button("Close")
+        btn = Widgets.Button(_tr("Close"))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
-        btn = Widgets.Button("Help")
+        btn = Widgets.Button(_tr("Help"))
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)

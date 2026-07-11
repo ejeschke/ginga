@@ -60,10 +60,10 @@ class Header(GingaPlugin.ParentPlugin):
             btns.set_border_width(4)
             btns.set_spacing(4)
 
-            btn = Widgets.Button("Close")
+            btn = Widgets.Button(_tr("Close"))
             btn.add_callback('activated', lambda w: self.close())
             btns.add_widget(btn)
-            btn = Widgets.Button("Help")
+            btn = Widgets.Button(_tr("Help"))
             btn.add_callback('activated', lambda w: self.help())
             btns.add_widget(btn, stretch=0)
             btns.add_widget(Widgets.Label(''), stretch=1)
@@ -114,11 +114,11 @@ class HeaderChild(GingaPlugin.ChildPlugin):
 
         # create sort toggle
         hbox = Widgets.HBox()
-        cb = Widgets.CheckBox("Sortable")
+        cb = Widgets.CheckBox(_tr("Sortable"))
         cb.set_state(self.flg_sort)
         cb.add_callback('activated', lambda w, tf: self.set_sortable_cb(tf))
         hbox.add_widget(cb, stretch=0)
-        cb = Widgets.CheckBox("Include primary header")
+        cb = Widgets.CheckBox(_tr("Include primary header"))
         cb.set_state(self.flg_prihdr)
         cb.add_callback('activated', lambda w, tf: self.set_prihdr_cb(tf))
         self.w.chk_prihdr = cb
@@ -200,6 +200,7 @@ class HeaderChild(GingaPlugin.ChildPlugin):
 
 # Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
+from ginga.locale.localize import _tr
 if __doc__ is not None:
     __doc__ += generate_cfg_example('plugin_Header', package='ginga')
 

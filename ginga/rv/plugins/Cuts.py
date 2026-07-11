@@ -233,7 +233,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         combobox.show_text(self.cutstag)
         combobox.add_callback('activated', self.cut_select_cb)
         self.w.cuts = combobox
-        combobox.set_tooltip("Select a cut to redraw or delete")
+        combobox.set_tooltip(_tr("Select a cut to redraw or delete"))
 
         # control for selecting cut type
         combobox = b.cut_type
@@ -243,32 +243,32 @@ class Cuts(GingaPlugin.LocalPlugin):
         index = self.cuttypes.index(self.cuttype)
         combobox.set_index(index)
         combobox.add_callback('activated', self.set_cutsdrawtype_cb)
-        combobox.set_tooltip("Choose the cut type to draw")
+        combobox.set_tooltip(_tr("Choose the cut type to draw"))
 
         self.save_cuts = b.save
-        self.save_cuts.set_tooltip("Save cuts plot and data")
+        self.save_cuts.set_tooltip(_tr("Save cuts plot and data"))
         self.save_cuts.add_callback('activated',
                                     lambda w: self.save_cb(mode='cuts'))
         self.save_cuts.set_enabled(self.save_enabled)
 
         btn = b.copy_cut
         btn.add_callback('activated', self.copy_cut_cb)
-        btn.set_tooltip("Copy selected cut")
+        btn.set_tooltip(_tr("Copy selected cut"))
 
         btn = b.delete_cut
         btn.add_callback('activated', self.delete_cut_cb)
-        btn.set_tooltip("Delete selected cut")
+        btn.set_tooltip(_tr("Delete selected cut"))
 
         btn = b.delete_all
         btn.add_callback('activated', self.delete_all_cb)
-        btn.set_tooltip("Clear all cuts")
+        btn.set_tooltip(_tr("Clear all cuts"))
 
         fr = Widgets.Frame(self.ident.capitalize())
         fr.set_widget(w)
 
         box.add_widget(fr, stretch=0)
 
-        exp = Widgets.Expander("Cut Width")
+        exp = Widgets.Expander(_tr("Cut Width"))
 
         captions = (('Width Type:', 'label', 'Width Type', 'combobox',
                      'Width radius:', 'label', 'Width radius', 'spinbutton'),
@@ -283,11 +283,11 @@ class Cuts(GingaPlugin.LocalPlugin):
         index = self.widthtypes.index(self.widthtype)
         combobox.set_index(index)
         combobox.add_callback('activated', self.set_width_type_cb)
-        combobox.set_tooltip("Direction of summation orthogonal to cut")
+        combobox.set_tooltip(_tr("Direction of summation orthogonal to cut"))
 
         sb = b.width_radius
         sb.add_callback('value-changed', self.width_radius_changed_cb)
-        sb.set_tooltip("Radius of cut width")
+        sb.set_tooltip(_tr("Radius of cut width"))
         sb.set_limits(1, 100)
         sb.set_value(self.width_radius)
 
@@ -304,27 +304,27 @@ class Cuts(GingaPlugin.LocalPlugin):
 
         mode = self.canvas.get_draw_mode()
         hbox = Widgets.HBox()
-        btn1 = Widgets.RadioButton("Move")
+        btn1 = Widgets.RadioButton(_tr("Move"))
         btn1.set_state(mode == 'move')
         btn1.add_callback('activated',
                           lambda w, val: self.set_mode_cb('move', val))
-        btn1.set_tooltip("Choose this to position cuts")
+        btn1.set_tooltip(_tr("Choose this to position cuts"))
         self.w.btn_move = btn1
         hbox.add_widget(btn1)
 
-        btn2 = Widgets.RadioButton("Draw", group=btn1)
+        btn2 = Widgets.RadioButton(_tr("Draw"), group=btn1)
         btn2.set_state(mode == 'draw')
         btn2.add_callback('activated',
                           lambda w, val: self.set_mode_cb('draw', val))
-        btn2.set_tooltip("Choose this to draw a new or replacement cut")
+        btn2.set_tooltip(_tr("Choose this to draw a new or replacement cut"))
         self.w.btn_draw = btn2
         hbox.add_widget(btn2)
 
-        btn3 = Widgets.RadioButton("Edit", group=btn1)
+        btn3 = Widgets.RadioButton(_tr("Edit"), group=btn1)
         btn3.set_state(mode == 'edit')
         btn3.add_callback('activated',
                           lambda w, val: self.set_mode_cb('edit', val))
-        btn3.set_tooltip("Choose this to edit a cut")
+        btn3.set_tooltip(_tr("Choose this to edit a cut"))
         self.w.btn_edit = btn3
         hbox.add_widget(btn3)
 
@@ -348,22 +348,22 @@ class Cuts(GingaPlugin.LocalPlugin):
                 self.build_axes()
             return True
         b.enable_slit.set_state(self.use_slit)
-        b.enable_slit.set_tooltip("Enable the slit function")
+        b.enable_slit.set_tooltip(_tr("Enable the slit function"))
         b.enable_slit.add_callback('activated', chg_enable_slit)
 
         self.t_btn = b.transpose_plot
-        self.t_btn.set_tooltip("Flip the plot")
+        self.t_btn.set_tooltip(_tr("Flip the plot"))
         self.t_btn.set_state(self.transpose_enabled)
         self.t_btn.add_callback('activated', self.transpose_plot)
 
         self.save_slit = b.save
-        self.save_slit.set_tooltip("Save slit plot and data")
+        self.save_slit.set_tooltip(_tr("Save slit plot and data"))
         self.save_slit.add_callback('activated',
                                     lambda w: self.save_cb(mode='slit'))
         self.save_slit.set_enabled(self.save_enabled)
 
         # Add frame to hold the slit controls
-        fr = Widgets.Frame("Axes controls")
+        fr = Widgets.Frame(_tr("Axes controls"))
         self.hbox_axes = Widgets.HBox()
         self.hbox_axes.set_border_width(4)
         self.hbox_axes.set_spacing(1)
@@ -374,16 +374,16 @@ class Cuts(GingaPlugin.LocalPlugin):
         vbox_slit.add_widget(self.plot2, stretch=1)
         vbox_slit.add_widget(w)
         vbox_slit.add_widget(fr)
-        nb.add_widget(vbox_slit, title="Slit")
+        nb.add_widget(vbox_slit, title=_tr("Slit"))
 
         btns = Widgets.HBox()
         btns.set_border_width(4)
         btns.set_spacing(3)
 
-        btn = Widgets.Button("Close")
+        btn = Widgets.Button(_tr("Close"))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
-        btn = Widgets.Button("Help")
+        btn = Widgets.Button(_tr("Help"))
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
@@ -649,7 +649,7 @@ class Cuts(GingaPlugin.LocalPlugin):
         points = np.array(points)
 
         rgb = colors.lookup_color(color)
-        self.cuts_plot.cuts(points, xtitle="Line Index", ytitle="Pixel Value",
+        self.cuts_plot.cuts(points, xtitle=_tr("Line Index"), ytitle=_tr("Pixel Value"),
                             color=rgb)
 
         if self.settings.get('show_cuts_legend', False):
@@ -1149,14 +1149,15 @@ class Cuts(GingaPlugin.LocalPlugin):
         if (shape[0] == len(self.slit_data[0]) or
                 shape[1] == len(self.slit_data[0])):
             self.slit_plot.ax.set_xlabel('')
-            self.slit_plot.ax.set_ylabel('Position along slit')
+            self.slit_plot.ax.set_ylabel(_tr('Position along slit'))
         else:
             self.slit_plot.ax.set_ylabel('')
-            self.slit_plot.ax.set_xlabel('Position along slit')
+            self.slit_plot.ax.set_xlabel(_tr('Position along slit'))
 
 
 # Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
+from ginga.locale.localize import _tr
 if __doc__ is not None:
     __doc__ += generate_cfg_example('plugin_Cuts', package='ginga')
 

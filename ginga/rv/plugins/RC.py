@@ -190,6 +190,7 @@ from ginga import GingaPlugin
 from ginga import AstroImage
 from ginga.gw import Widgets
 from ginga.util import grc
+from ginga.locale.localize import _tr
 
 __all__ = ['RC']
 
@@ -225,7 +226,7 @@ class RC(GingaPlugin.GlobalPlugin):
     def build_gui(self, container):
         vbox = Widgets.VBox()
 
-        fr = Widgets.Frame("Remote Control")
+        fr = Widgets.Frame(_tr("Remote Control"))
 
         captions = [
             ("Addr:", 'label', "Addr", 'llabel', 'Restart', 'button'),
@@ -235,12 +236,12 @@ class RC(GingaPlugin.GlobalPlugin):
 
         addr = self.host + ':' + str(self.port)
         b.addr.set_text(addr)
-        b.restart.set_tooltip("Restart the server")
+        b.restart.set_tooltip(_tr("Restart the server"))
         b.restart.add_callback('activated', self.restart_cb)
 
         b.set_addr.set_length(100)
         b.set_addr.set_text(addr)
-        b.set_addr.set_tooltip("Set address to run remote control server")
+        b.set_addr.set_tooltip(_tr("Set address to run remote control server"))
         b.set_addr.add_callback('activated', self.set_addr_cb)
 
         fr.set_widget(w)
@@ -253,10 +254,10 @@ class RC(GingaPlugin.GlobalPlugin):
         btns.set_spacing(4)
         btns.set_border_width(4)
 
-        btn = Widgets.Button("Close")
+        btn = Widgets.Button(_tr("Close"))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn)
-        btn = Widgets.Button("Help")
+        btn = Widgets.Button(_tr("Help"))
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)

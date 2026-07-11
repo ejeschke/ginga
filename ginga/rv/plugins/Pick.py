@@ -527,7 +527,7 @@ class Pick(GingaPlugin.LocalPlugin):
         self.pickcenter = p_canvas.get_object_by_tag(tag)
 
         iw = Viewers.GingaViewerWidget(viewer=di)
-        nb.add_widget(iw, title="Image")
+        nb.add_widget(iw, title=_tr("Image"))
 
         # Set up "Contour" tab viewer
         contour_widget_type = self.settings.get('contour_widget', 'choose')
@@ -579,7 +579,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
             ciw = Viewers.GingaViewerWidget(viewer=ci)
 
-            nb.add_widget(ciw, title="Contour")
+            nb.add_widget(ciw, title=_tr("Contour"))
 
         if have_mpl:
             if contour_widget_type == 'matplotlib':
@@ -596,7 +596,7 @@ class Pick(GingaPlugin.LocalPlugin):
                     self.contour_interpolation = 'nearest'
                 self.contour_plot.interpolation = self.contour_interpolation
 
-                nb.add_widget(pw, title="Contour")
+                nb.add_widget(pw, title=_tr("Contour"))
 
             # FWHM gaussians plot
             self.fwhm_plot = plots.FWHMPlot(logger=self.logger,
@@ -604,7 +604,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.fwhm_plot.set_background('white')
             self.fwhm_plot.set_grid(True)
             pw = self.fwhm_plot.get_ginga_widget()
-            nb.add_widget(pw, title="FWHM")
+            nb.add_widget(pw, title=_tr("FWHM"))
 
             # Radial profile plot
             self.radial_plot = plots.RadialPlot(logger=self.logger,
@@ -612,7 +612,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.radial_plot.set_background('white')
             self.radial_plot.set_grid(True)
             pw = self.radial_plot.get_ginga_widget()
-            nb.add_widget(pw, title="Radial")
+            nb.add_widget(pw, title=_tr("Radial"))
 
             # EE profile plot
             self.ee_plot = plots.EEPlot(logger=self.logger,
@@ -620,7 +620,7 @@ class Pick(GingaPlugin.LocalPlugin):
             self.ee_plot.set_background('white')
             self.ee_plot.set_grid(True)
             pw = self.ee_plot.get_ginga_widget()
-            nb.add_widget(pw, title="EE")
+            nb.add_widget(pw, title=_tr("EE"))
 
         fr = Widgets.Frame(self._textlabel)
 
@@ -653,14 +653,14 @@ class Pick(GingaPlugin.LocalPlugin):
         self.w.update(b)
         b.zoom.set_text(self.fv.scale2text(di.get_scale()))
         self.wdetail = b
-        b.encircled_energy.set_tooltip("Encircled energy")
-        b.ensquared_energy.set_tooltip("Ensquared energy")
+        b.encircled_energy.set_tooltip(_tr("Encircled energy"))
+        b.ensquared_energy.set_tooltip(_tr("Ensquared energy"))
         b.default_region.add_callback('activated',
                                       lambda w: self.reset_region())
-        b.default_region.set_tooltip("Reset region size to default")
+        b.default_region.set_tooltip(_tr("Reset region size to default"))
         b.pan_to_pick.add_callback('activated',
                                    lambda w: self.pan_to_pick_cb())
-        b.pan_to_pick.set_tooltip("Pan image to pick center")
+        b.pan_to_pick.set_tooltip(_tr("Pan image to pick center"))
         b.center_on_pick.add_callback('activated', self.center_on_pick_cb)
         b.center_on_pick.set_state(self.center_on_pick)
         b.center_on_pick.set_tooltip("When peak is found, center shape\n"
@@ -687,7 +687,7 @@ class Pick(GingaPlugin.LocalPlugin):
         hbox = Widgets.HBox()
         hbox.set_spacing(4)
         hbox.set_border_width(4)
-        btn = Widgets.Button("Stop")
+        btn = Widgets.Button(_tr("Stop"))
         btn.add_callback('activated', lambda w: self.eval_intr())
         btn.set_enabled(False)
         self.w.btn_intr_eval = btn
@@ -697,57 +697,57 @@ class Pick(GingaPlugin.LocalPlugin):
         hbox.add_widget(self.w.eval_pgs, stretch=1)
         vbox1.add_widget(hbox, stretch=0)
 
-        nb.add_widget(vbox1, title="Readout")
+        nb.add_widget(vbox1, title=_tr("Readout"))
 
         # Build settings panel
         captions = (('Show Candidates', 'checkbutton'),
-                    ("Draw type:", 'label', 'xlbl_drawtype', 'label',
+                    ("Draw type:", 'label', '^xlbl_drawtype', 'label',
                      "Draw type", 'combobox'),
-                    ('Radius:', 'label', 'xlbl_radius', 'label',
+                    ('Radius:', 'label', '^xlbl_radius', 'label',
                      'Radius', 'spinbutton'),
-                    ('Threshold:', 'label', 'xlbl_threshold', 'label',
+                    ('Threshold:', 'label', '^xlbl_threshold', 'label',
                      'Threshold', 'entry'),
-                    ('Min FWHM:', 'label', 'xlbl_min_fwhm', 'label',
+                    ('Min FWHM:', 'label', '^xlbl_min_fwhm', 'label',
                      'Min FWHM', 'spinfloat'),
-                    ('Max FWHM:', 'label', 'xlbl_max_fwhm', 'label',
+                    ('Max FWHM:', 'label', '^xlbl_max_fwhm', 'label',
                      'Max FWHM', 'spinfloat'),
-                    ('Ellipticity:', 'label', 'xlbl_ellipticity', 'label',
+                    ('Ellipticity:', 'label', '^xlbl_ellipticity', 'label',
                      'Ellipticity', 'entry'),
-                    ('Edge:', 'label', 'xlbl_edge', 'label',
+                    ('Edge:', 'label', '^xlbl_edge', 'label',
                      'Edge', 'entry'),
-                    ('Max side:', 'label', 'xlbl_max_side', 'label',
+                    ('Max side:', 'label', '^xlbl_max_side', 'label',
                      'Max side', 'spinbutton'),
                     ('Coordinate Base:', 'label',
-                     'xlbl_coordinate_base', 'label',
+                     '^xlbl_coordinate_base', 'label',
                      'Coordinate Base', 'entry'),
-                    ("Calc center:", 'label', 'xlbl_calccenter', 'label',
+                    ("Calc center:", 'label', '^xlbl_calccenter', 'label',
                      "Calc center", 'combobox'),
-                    ("FWHM fitting:", 'label', 'xlbl_fwhmfitting', 'label',
+                    ("FWHM fitting:", 'label', '^xlbl_fwhmfitting', 'label',
                      "FWHM fitting", 'combobox'),
-                    ('Contour Interpolation:', 'label', 'xlbl_cinterp', 'label',
+                    ('Contour Interpolation:', 'label', '^xlbl_cinterp', 'label',
                      'Contour Interpolation', 'combobox'),
-                    ('EE total radius:', 'label', 'xlbl_ee_total_radius', 'label',
+                    ('EE total radius:', 'label', '^xlbl_ee_total_radius', 'label',
                      'EE total radius', 'spinfloat'),
-                    ('EE sampling radius:', 'label', 'xlbl_ee_radius', 'label',
+                    ('EE sampling radius:', 'label', '^xlbl_ee_radius', 'label',
                      'EE sampling radius', 'spinfloat')
                     )
 
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
-        b.radius.set_tooltip("Radius for peak detection")
-        b.threshold.set_tooltip("Threshold for peak detection (blank=default)")
-        b.min_fwhm.set_tooltip("Minimum FWHM for selection")
-        b.max_fwhm.set_tooltip("Maximum FWHM for selection")
-        b.ellipticity.set_tooltip("Minimum ellipticity for selection")
-        b.edge.set_tooltip("Minimum edge distance for selection")
-        b.show_candidates.set_tooltip("Show all peak candidates")
-        b.max_side.set_tooltip("Maximum dimension to search for peaks")
-        b.coordinate_base.set_tooltip("Base of pixel coordinate system")
-        b.calc_center.set_tooltip("How to calculate the center of object")
-        b.fwhm_fitting.set_tooltip("Function for fitting the FWHM")
-        b.contour_interpolation.set_tooltip("Interpolation for use in contour plot")
-        b.ee_total_radius.set_tooltip("Radius where EE fraction is 1")
-        b.ee_sampling_radius.set_tooltip("Radius for EE sampling")
+        b.radius.set_tooltip(_tr("Radius for peak detection"))
+        b.threshold.set_tooltip(_tr("Threshold for peak detection (blank=default)"))
+        b.min_fwhm.set_tooltip(_tr("Minimum FWHM for selection"))
+        b.max_fwhm.set_tooltip(_tr("Maximum FWHM for selection"))
+        b.ellipticity.set_tooltip(_tr("Minimum ellipticity for selection"))
+        b.edge.set_tooltip(_tr("Minimum edge distance for selection"))
+        b.show_candidates.set_tooltip(_tr("Show all peak candidates"))
+        b.max_side.set_tooltip(_tr("Maximum dimension to search for peaks"))
+        b.coordinate_base.set_tooltip(_tr("Base of pixel coordinate system"))
+        b.calc_center.set_tooltip(_tr("How to calculate the center of object"))
+        b.fwhm_fitting.set_tooltip(_tr("Function for fitting the FWHM"))
+        b.contour_interpolation.set_tooltip(_tr("Interpolation for use in contour plot"))
+        b.ee_total_radius.set_tooltip(_tr("Radius where EE fraction is 1"))
+        b.ee_sampling_radius.set_tooltip(_tr("Radius for EE sampling"))
 
         def chg_pickshape(w, idx):
             pickshape = self.drawtypes[idx]
@@ -936,32 +936,32 @@ class Pick(GingaPlugin.LocalPlugin):
         vbox3.add_widget(sw2, stretch=1)
 
         btns = Widgets.HBox()
-        btn = Widgets.Button('Redo Pick')
+        btn = Widgets.Button(_tr('Redo Pick'))
         btn.add_callback('activated', lambda w: self.redo_manual())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
         vbox3.add_widget(btns, stretch=0)
-        nb.add_widget(vbox3, title="Settings")
+        nb.add_widget(vbox3, title=_tr("Settings"))
 
         # Build controls panel
         vbox3 = Widgets.VBox()
         captions = (
             ('Bg cut', 'button', 'Delta bg:', 'label',
-             'xlbl_delta_bg', 'label', 'Delta bg', 'entry'),
+             '^xlbl_delta_bg', 'label', 'Delta bg', 'entry'),
             ('Sky cut', 'button', 'Delta sky:', 'label',
-             'xlbl_delta_sky', 'label', 'Delta sky', 'entry'),
+             '^xlbl_delta_sky', 'label', 'Delta sky', 'entry'),
             ('Bright cut', 'button', 'Delta bright:', 'label',
-             'xlbl_delta_bright', 'label', 'Delta bright', 'entry'),
+             '^xlbl_delta_bright', 'label', 'Delta bright', 'entry'),
         )
 
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
-        b.bg_cut.set_tooltip("Set image low cut to Background Level")
-        b.delta_bg.set_tooltip("Delta to apply to this cut")
-        b.sky_cut.set_tooltip("Set image low cut to Sky Level")
-        b.delta_sky.set_tooltip("Delta to apply to this cut")
-        b.bright_cut.set_tooltip("Set image high cut to Sky Level+Brightness")
-        b.delta_bright.set_tooltip("Delta to apply to this cut")
+        b.bg_cut.set_tooltip(_tr("Set image low cut to Background Level"))
+        b.delta_bg.set_tooltip(_tr("Delta to apply to this cut"))
+        b.sky_cut.set_tooltip(_tr("Set image low cut to Sky Level"))
+        b.delta_sky.set_tooltip(_tr("Delta to apply to this cut"))
+        b.bright_cut.set_tooltip(_tr("Set image high cut to Sky Level+Brightness"))
+        b.delta_bright.set_tooltip(_tr("Delta to apply to this cut"))
 
         b.bg_cut.set_enabled(False)
         self.w.btn_bg_cut = b.bg_cut
@@ -1020,7 +1020,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
         vbox3.add_widget(w, stretch=0)
         vbox3.add_widget(Widgets.Label(''), stretch=1)
-        nb.add_widget(vbox3, title="Controls")
+        nb.add_widget(vbox3, title=_tr("Controls"))
 
         vbox3 = Widgets.VBox()
         vbox3.set_expanding(True, True)
@@ -1032,14 +1032,14 @@ class Pick(GingaPlugin.LocalPlugin):
 
         btns = Widgets.HBox()
         btns.set_spacing(4)
-        btn = Widgets.Button("Add Pick")
+        btn = Widgets.Button(_tr("Add Pick"))
         btn.add_callback('activated', lambda w: self.add_pick_cb())
         btns.add_widget(btn)
-        btn = Widgets.CheckBox("Record Picks automatically")
+        btn = Widgets.CheckBox(_tr("Record Picks automatically"))
         btn.set_state(self.do_record)
         btn.add_callback('activated', self.record_cb)
         btns.add_widget(btn)
-        btn = Widgets.Button("Clear Log")
+        btn = Widgets.Button(_tr("Clear Log"))
         btn.add_callback('activated', lambda w: self.clear_pick_log_cb())
         btns.add_widget(btn)
         btns.add_widget(Widgets.Label(''), stretch=1)
@@ -1047,21 +1047,21 @@ class Pick(GingaPlugin.LocalPlugin):
 
         btns = Widgets.HBox()
         btns.set_spacing(4)
-        btn = Widgets.Button("Save table")
+        btn = Widgets.Button(_tr("Save table"))
         btn.add_callback('activated', self.write_pick_log_cb)
         btns.add_widget(btn)
-        btns.add_widget(Widgets.Label("File:"))
+        btns.add_widget(Widgets.Label(_tr("File:")))
         ent = Widgets.TextEntry()
         report_log = self.settings.get('report_log_path', None)
         if report_log is None:
             report_log = "pick_log.fits"
         ent.set_text(report_log)
-        ent.set_tooltip('File type determined by extension')
+        ent.set_tooltip(_tr('File type determined by extension'))
         self.w.report_log = ent
         btns.add_widget(ent, stretch=1)
         vbox3.add_widget(btns, stretch=0)
 
-        nb.add_widget(vbox3, title="Report")
+        nb.add_widget(vbox3, title=_tr("Report"))
 
         fr.set_widget(nb)
 
@@ -1073,27 +1073,27 @@ class Pick(GingaPlugin.LocalPlugin):
 
         mode = self.canvas.get_draw_mode()
         hbox = Widgets.HBox()
-        btn1 = Widgets.RadioButton("Move")
+        btn1 = Widgets.RadioButton(_tr("Move"))
         btn1.set_state(mode == 'move')
         btn1.add_callback(
             'activated', lambda w, val: self.set_mode_cb('move', val))
-        btn1.set_tooltip("Choose this to position pick")
+        btn1.set_tooltip(_tr("Choose this to position pick"))
         self.w.btn_move = btn1
         hbox.add_widget(btn1)
 
-        btn2 = Widgets.RadioButton("Draw", group=btn1)
+        btn2 = Widgets.RadioButton(_tr("Draw"), group=btn1)
         btn2.set_state(mode == 'draw')
         btn2.add_callback(
             'activated', lambda w, val: self.set_mode_cb('draw', val))
-        btn2.set_tooltip("Choose this to draw a replacement pick")
+        btn2.set_tooltip(_tr("Choose this to draw a replacement pick"))
         self.w.btn_draw = btn2
         hbox.add_widget(btn2)
 
-        btn3 = Widgets.RadioButton("Edit", group=btn1)
+        btn3 = Widgets.RadioButton(_tr("Edit"), group=btn1)
         btn3.set_state(mode == 'edit')
         btn3.add_callback(
             'activated', lambda w, val: self.set_mode_cb('edit', val))
-        btn3.set_tooltip("Choose this to edit or move a pick")
+        btn3.set_tooltip(_tr("Choose this to edit or move a pick"))
         self.w.btn_edit = btn3
         hbox.add_widget(btn3)
 
@@ -1103,10 +1103,10 @@ class Pick(GingaPlugin.LocalPlugin):
         btns = Widgets.HBox()
         btns.set_spacing(4)
 
-        btn = Widgets.Button("Close")
+        btn = Widgets.Button(_tr("Close"))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn)
-        btn = Widgets.Button("Help")
+        btn = Widgets.Button(_tr("Help"))
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
@@ -1957,6 +1957,7 @@ class Pick(GingaPlugin.LocalPlugin):
 
 # Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
+from ginga.locale.localize import _tr
 if __doc__ is not None:
     __doc__ += generate_cfg_example('plugin_Pick', package='ginga')
 

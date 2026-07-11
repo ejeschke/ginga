@@ -89,15 +89,15 @@ class AutoLoad(GingaPlugin.LocalPlugin):
         w, b = Widgets.build_info(captions, orientation='vertical')
         self.w.update(b)
 
-        b.folder.set_tooltip("Folder to monitor for new files")
+        b.folder.set_tooltip(_tr("Folder to monitor for new files"))
         if self.data_dir is not None:
             b.folder.set_text(self.data_dir)
         b.folder.add_callback('activated', self.set_folder_cb)
-        b.regex.set_tooltip("Regular expression to match file name")
+        b.regex.set_tooltip(_tr("Regular expression to match file name"))
         if self.regex is not None:
             b.folder.set_text(self.regex)
         b.regex.add_callback('activated', self.set_regex_cb)
-        b.pause.set_tooltip("Pause auto loading")
+        b.pause.set_tooltip(_tr("Pause auto loading"))
         b.pause.set_state(self.pause_flag)
         b.pause.add_callback('activated', self.set_pause_cb)
 
@@ -112,10 +112,10 @@ class AutoLoad(GingaPlugin.LocalPlugin):
         btns = Widgets.HBox()
         btns.set_spacing(3)
 
-        btn = Widgets.Button("Close")
+        btn = Widgets.Button(_tr("Close"))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
-        btn = Widgets.Button("Help")
+        btn = Widgets.Button(_tr("Help"))
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
@@ -221,5 +221,6 @@ class AutoLoad(GingaPlugin.LocalPlugin):
 
 # Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
+from ginga.locale.localize import _tr
 if __doc__ is not None:
     __doc__ += generate_cfg_example('plugin_AutoLoad', package='ginga')

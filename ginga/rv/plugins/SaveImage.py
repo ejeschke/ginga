@@ -101,13 +101,13 @@ class SaveImage(GlobalPlugin):
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
 
-        b.channel_name.set_tooltip('Channel for locating images to save')
+        b.channel_name.set_tooltip(_tr('Channel for locating images to save'))
         b.channel_name.add_callback('activated', self.select_channel_cb)
 
         mod_only = self.settings.get('modified_only', True)
         b.modified_only.set_state(mod_only)
         b.modified_only.add_callback('activated', lambda *args: self.redo())
-        b.modified_only.set_tooltip("Show only locally modified images")
+        b.modified_only.set_tooltip(_tr("Show only locally modified images"))
 
         container.add_widget(w, stretch=0)
 
@@ -117,14 +117,14 @@ class SaveImage(GlobalPlugin):
         self.w.update(b)
 
         b.outdir.set_text(self.outdir)
-        b.outdir.set_tooltip('Output directory')
+        b.outdir.set_tooltip(_tr('Output directory'))
         b.outdir.add_callback('activated', lambda w: self.set_outdir())
 
-        b.browse.set_tooltip('Browse for output directory')
+        b.browse.set_tooltip(_tr('Browse for output directory'))
         b.browse.add_callback('activated', lambda w: self.browse_outdir())
 
         b.suffix.set_text(self.suffix)
-        b.suffix.set_tooltip('Suffix to append to filename')
+        b.suffix.set_tooltip(_tr('Suffix to append to filename'))
         b.suffix.add_callback('activated', lambda w: self.set_suffix())
 
         container.add_widget(w, stretch=0)
@@ -141,24 +141,24 @@ class SaveImage(GlobalPlugin):
         w, b = Widgets.build_info(captions, orientation=orientation)
         self.w.update(b)
         b.status.set_text('')
-        b.status.set_tooltip('Status message')
+        b.status.set_tooltip(_tr('Status message'))
         container.add_widget(w, stretch=0)
 
         btns = Widgets.HBox()
         btns.set_border_width(4)
         btns.set_spacing(3)
 
-        btn = Widgets.Button('Save')
-        btn.set_tooltip('Save selected image(s)')
+        btn = Widgets.Button(_tr('Save'))
+        btn.set_tooltip(_tr('Save selected image(s)'))
         btn.add_callback('activated', lambda w: self.save_images())
         btn.set_enabled(False)
         btns.add_widget(btn, stretch=0)
         self.w.save = btn
 
-        btn = Widgets.Button('Close')
+        btn = Widgets.Button(_tr('Close'))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
-        btn = Widgets.Button("Help")
+        btn = Widgets.Button(_tr("Help"))
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
@@ -515,6 +515,7 @@ class SaveImage(GlobalPlugin):
 
 # Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
+from ginga.locale.localize import _tr
 if __doc__ is not None:
     __doc__ += generate_cfg_example('plugin_SaveImage', package='ginga')
 

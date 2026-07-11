@@ -126,11 +126,11 @@ class LineProfile(GingaPlugin.LocalPlugin):
 
         b.plot_all.set_state(False)
         b.plot_all.add_callback('activated', lambda *args: self.redraw_mark())
-        b.plot_all.set_tooltip("Plot all marks")
+        b.plot_all.set_tooltip(_tr("Plot all marks"))
 
         box.add_widget(w, stretch=0)
 
-        fr = Widgets.Frame("Axes controls")
+        fr = Widgets.Frame(_tr("Axes controls"))
         self.hbox_axes = Widgets.HBox()
         self.hbox_axes.set_border_width(4)
         self.hbox_axes.set_spacing(1)
@@ -152,7 +152,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
         cbox2.show_text(self.mark_selected)
         cbox2.add_callback('activated', self.mark_select_cb)
         self.w.marks = cbox2
-        cbox2.set_tooltip("Select a mark")
+        cbox2.set_tooltip(_tr("Select a mark"))
 
         # control for selecting mark type
         cbox2 = b.mark_type
@@ -161,16 +161,16 @@ class LineProfile(GingaPlugin.LocalPlugin):
         self.w.marks_type = cbox2
         cbox2.set_index(self.mark_types.index(self.mark_type))
         cbox2.add_callback('activated', self.set_marksdrawtype_cb)
-        cbox2.set_tooltip("Choose the mark type to draw")
+        cbox2.set_tooltip(_tr("Choose the mark type to draw"))
 
         b.pan_to_mark.add_callback('activated', self.pan2mark_cb)
-        b.pan_to_mark.set_tooltip("Pan follows selected mark")
+        b.pan_to_mark.set_tooltip(_tr("Pan follows selected mark"))
 
         b.delete.add_callback('activated', self.clear_mark_cb)
-        b.delete.set_tooltip("Delete selected mark")
+        b.delete.set_tooltip(_tr("Delete selected mark"))
 
         b.delete_all.add_callback('activated', self.clear_all_cb)
-        b.delete_all.set_tooltip("Clear all marks")
+        b.delete_all.set_tooltip(_tr("Clear all marks"))
 
         vbox2 = Widgets.VBox()
         vbox2.add_widget(w, stretch=0)
@@ -184,24 +184,24 @@ class LineProfile(GingaPlugin.LocalPlugin):
         b.move.set_state(mode == 'move')
         b.move.add_callback(
             'activated', lambda w, val: self.set_mode_cb('move', val))
-        b.move.set_tooltip("Choose this to position marks")
+        b.move.set_tooltip(_tr("Choose this to position marks"))
         self.w.btn_move = b.move
 
         b.draw.set_state(mode == 'draw')
         b.draw.add_callback(
             'activated', lambda w, val: self.set_mode_cb('draw', val))
-        b.draw.set_tooltip("Choose this to draw a new mark")
+        b.draw.set_tooltip(_tr("Choose this to draw a new mark"))
         self.w.btn_draw = b.draw
 
         b.edit.set_state(mode == 'edit')
         b.edit.add_callback(
             'activated', lambda w, val: self.set_mode_cb('edit', val))
-        b.edit.set_tooltip("Choose this to edit a mark")
+        b.edit.set_tooltip(_tr("Choose this to edit a mark"))
         self.w.btn_edit = b.edit
 
         vbox2.add_widget(w, stretch=0)
 
-        fr = Widgets.Frame("Mark controls")
+        fr = Widgets.Frame(_tr("Mark controls"))
         fr.set_widget(vbox2)
         box.add_widget(fr, stretch=0)
 
@@ -217,10 +217,10 @@ class LineProfile(GingaPlugin.LocalPlugin):
         btns.set_spacing(3)
 
         # Add a close button for the convenience of the user
-        btn = Widgets.Button("Close")
+        btn = Widgets.Button(_tr("Close"))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
-        btn = Widgets.Button("Help")
+        btn = Widgets.Button(_tr("Help"))
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
@@ -263,7 +263,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
             # Add filler
             self.hbox_axes.add_widget(Widgets.Label(''), stretch=1)
         else:
-            self.hbox_axes.add_widget(Widgets.Label('No NAXIS info'))
+            self.hbox_axes.add_widget(Widgets.Label(_tr('No NAXIS info')))
 
     def axes_callback_handler(self, chkbox, pos):
         chkbox.add_callback('activated',
@@ -397,7 +397,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
         xx1, xx2 = self.plot.ax.get_xlim()
         ax2.set_xlim((xx1 - self._crval) / self._cdelt + self._crpix - 1,
                      (xx2 - self._crval) / self._cdelt + self._crpix - 1)
-        ax2.set_xlabel('Index')
+        ax2.set_xlabel(_tr('Index'))
 
         self.plot.ax.legend(loc='best')
         self.plot.redraw()
@@ -710,6 +710,7 @@ class LineProfile(GingaPlugin.LocalPlugin):
 
 # Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
+from ginga.locale.localize import _tr
 if __doc__ is not None:
     __doc__ += generate_cfg_example('plugin_LineProfile', package='ginga')
 

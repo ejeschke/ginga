@@ -158,11 +158,11 @@ class Toolbar_Common(GingaPlugin.LocalPlugin):
         self.viewers = []
         self.layout_common = [
             # (Name, type, icon, tooltip)
-            ("viewer", 'combobox', None, "Select compatible viewer",
+            ("viewer", 'combobox', None, _tr("Select compatible viewer"),
              self.viewer_cb),
-            ("Up", 'button', 'up', "Go to previous image in channel",
+            ("Up", 'button', 'up', _tr("Go to previous image in channel"),
              lambda w: self.fv.prev_img()),
-            ("Down", 'button', 'down', "Go to next image in channel",
+            ("Down", 'button', 'down', _tr("Go to next image in channel"),
              lambda w: self.fv.next_img()),
             ("---",)]
 
@@ -260,74 +260,74 @@ class Toolbar_Ginga_Image(Toolbar_Common):
 
         self.layout = [
             # (Name, type, icon, tooltip)
-            ("FlipX", 'toggle', 'flip_x', "Flip image in X axis",
+            ("FlipX", 'toggle', 'flip_x', _tr("Flip image in X axis"),
              self.flipx_cb),
-            ("FlipY", 'toggle', 'flip_y', "Flip image in Y axis",
+            ("FlipY", 'toggle', 'flip_y', _tr("Flip image in Y axis"),
              self.flipy_cb),
-            ("SwapXY", 'toggle', 'swap_xy', "Swap X and Y axes",
+            ("SwapXY", 'toggle', 'swap_xy', _tr("Swap X and Y axes"),
              self.swapxy_cb),
             ("---",),
-            ("Rot90", 'button', 'rot90ccw', "Rotate image 90 deg",
+            ("Rot90", 'button', 'rot90ccw', _tr("Rotate image 90 deg"),
              self.rot90_cb),
-            ("RotN90", 'button', 'rot90cw', "Rotate image -90 deg",
+            ("RotN90", 'button', 'rot90cw', _tr("Rotate image -90 deg"),
              self.rotn90_cb),
-            ("OrientRH", 'button', 'orient_nw', "Orient image N=Up E=Right",
+            ("OrientRH", 'button', 'orient_nw', _tr("Orient image N=Up E=Right"),
              self.orient_rh_cb),
-            ("OrientLH", 'button', 'orient_ne', "Orient image N=Up E=Left",
+            ("OrientLH", 'button', 'orient_ne', _tr("Orient image N=Up E=Left"),
              self.orient_lh_cb),
             ("---",),
-            ("Zoom In", 'button', 'zoom_in', "Zoom in",
+            ("Zoom In", 'button', 'zoom_in', _tr("Zoom in"),
              lambda w: self.fv.zoom_in()),
-            ("Zoom Out", 'button', 'zoom_out', "Zoom out",
+            ("Zoom Out", 'button', 'zoom_out', _tr("Zoom out"),
              lambda w: self.fv.zoom_out()),
-            ("Zoom Fit", 'button', 'zoom_fit', "Zoom to fit window size",
+            ("Zoom Fit", 'button', 'zoom_fit', _tr("Zoom to fit window size"),
              lambda w: self.fv.zoom_fit()),
-            ("Zoom 1:1", 'button', 'zoom_100', "Zoom to 100% (1:1)",
+            ("Zoom 1:1", 'button', 'zoom_100', _tr("Zoom to 100% (1:1)"),
              lambda w: self.fv.zoom_1_to_1()),
             ("---",),
-            ("Pan", 'toggle', 'pan', "Pan with left, zoom with right",
+            ("Pan", 'toggle', 'pan', _tr("Pan with left, zoom with right"),
              lambda w, tf: self.mode_cb(tf, 'pan')),
             ("Zoom", 'toggle', 'crosshair',
-             "Left/right click zooms in/out;\n"
-             "hold middle to pan freely over image",
+             _tr("Left/right click zooms in/out;\n"
+                 "hold middle to pan freely over image"),
              lambda w, tf: self.mode_cb(tf, 'zoom')),
             ("Rotate", 'toggle', 'rotate',
-             "Drag left to rotate; click right to reset to 0 deg",
+             _tr("Drag left to rotate; click right to reset to 0 deg"),
              lambda w, tf: self.mode_cb(tf, 'rotate')),
             ("Dist", 'toggle', 'sqrt',
-             "Scroll to set color distribution algorithm",
+             _tr("Scroll to set color distribution algorithm"),
              lambda w, tf: self.mode_cb(tf, 'dist')),
             ("CMap", 'toggle', 'palette',
-             "Scroll to set color map",
+             _tr("Scroll to set color map"),
              lambda w, tf: self.mode_cb(tf, 'cmap')),
             ("Cuts", 'toggle', 'cuts',
-             "Left/right sets hi cut, up/down sets lo cut",
+             _tr("Left/right sets hi cut, up/down sets lo cut"),
              lambda w, tf: self.mode_cb(tf, 'cuts')),
             ("Contrast", 'toggle', 'contrast',
-             "Contrast/bias with left/right/up/down",
+             _tr("Contrast/bias with left/right/up/down"),
              lambda w, tf: self.mode_cb(tf, 'contrast')),
             ("ModeLock", 'toggle', 'lock',
-             "Modes are oneshot or locked", self.set_locked_cb),
+             _tr("Modes are oneshot or locked"), self.set_locked_cb),
             ("---",),
-            ("Center", 'button', 'center_image', "Center image",
+            ("Center", 'button', 'center_image', _tr("Center image"),
              self.center_image_cb),
             ("Restore", 'button', 'reset_rotation',
-             "Reset all transformations and rotations",
+             _tr("Reset all transformations and rotations"),
              self.reset_all_transforms_cb),
-            ("AutoLevels", 'button', 'auto_cuts', "Auto cut levels",
+            ("AutoLevels", 'button', 'auto_cuts', _tr("Auto cut levels"),
              self.auto_levels_cb),
-            ("ResetContrast", 'button', 'reset_contrast', "Reset contrast",
+            ("ResetContrast", 'button', 'reset_contrast', _tr("Reset contrast"),
              self.reset_contrast_cb),
             ("---",),
-            ("Preferences", 'button', 'settings', "Set channel preferences (in focused channel)",
+            ("Preferences", 'button', 'settings', _tr("Set channel preferences (in focused channel)"),
              lambda w: self.start_local_plugin('Preferences')),
-            ("FBrowser", 'button', 'folder_open', "Open file (in focused channel)",
+            ("FBrowser", 'button', 'folder_open', _tr("Open file (in focused channel)"),
              lambda w: self.start_local_plugin('FBrowser')),
-            ("MultiDim", 'button', 'layers', "Select HDUs or cube slices (in focused channel)",
+            ("MultiDim", 'button', 'layers', _tr("Select HDUs or cube slices (in focused channel)"),
              lambda w: self.start_local_plugin('MultiDim')),
-            ("Header", 'button', 'tags', "View image metadata (Header plugin)",
+            ("Header", 'button', 'tags', _tr("View image metadata (Header plugin)"),
              lambda w: self.start_global_plugin('Header')),
-            ("ZoomPlugin", 'button', 'microscope', "Magnify detail (Zoom plugin)",
+            ("ZoomPlugin", 'button', 'microscope', _tr("Magnify detail (Zoom plugin)"),
              lambda w: self.start_global_plugin('Zoom'))]
 
     def build_gui(self, container):
@@ -565,24 +565,24 @@ class Toolbar_Ginga_Plot(Toolbar_Common):
 
         self.layout = [
             # (Name, type, icon, tooltip)
-            ("Zoom In", 'button', 'zoom_in', "Zoom in",
+            ("Zoom In", 'button', 'zoom_in', _tr("Zoom in"),
              lambda w: self.zoom_in()),
-            ("Zoom Out", 'button', 'zoom_out', "Zoom out",
+            ("Zoom Out", 'button', 'zoom_out', _tr("Zoom out"),
              lambda w: self.zoom_out()),
-            ("Zoom Fit", 'button', 'zoom_fit', "Fit plot to window size",
+            ("Zoom Fit", 'button', 'zoom_fit', _tr("Fit plot to window size"),
              lambda w: self.zoom_fit()),
-            ("Zoom Fit X", 'button', 'zoom_fit_x', "Fit X axis to window size",
+            ("Zoom Fit X", 'button', 'zoom_fit_x', _tr("Fit X axis to window size"),
              lambda w: self.zoom_fit_x()),
-            ("Zoom Fit Y", 'button', 'zoom_fit_y', "Fit Y axis to window size",
+            ("Zoom Fit Y", 'button', 'zoom_fit_y', _tr("Fit Y axis to window size"),
              lambda w: self.zoom_fit_y()),
             ("---",),
-            ("Preferences", 'button', 'settings', "Set channel preferences (in focused channel)",
+            ("Preferences", 'button', 'settings', _tr("Set channel preferences (in focused channel)"),
              lambda w: self.start_local_plugin('Preferences')),
-            ("FBrowser", 'button', 'folder_open', "Open file (in focused channel)",
+            ("FBrowser", 'button', 'folder_open', _tr("Open file (in focused channel)"),
              lambda w: self.start_local_plugin('FBrowser')),
-            ("MultiDim", 'button', 'layers', "Select HDUs or cube slices (in focused channel)",
+            ("MultiDim", 'button', 'layers', _tr("Select HDUs or cube slices (in focused channel)"),
              lambda w: self.start_local_plugin('MultiDim')),
-            ("Header", 'button', 'tags', "View image metadata (Header plugin)",
+            ("Header", 'button', 'tags', _tr("View image metadata (Header plugin)"),
              lambda w: self.start_global_plugin('Header'))]
 
     def build_gui(self, container):
@@ -666,13 +666,13 @@ class Toolbar_Ginga_Table(Toolbar_Common):
 
         self.layout = [
             # (Name, type, icon, tooltip)
-            ("Preferences", 'button', 'settings', "Set channel preferences (in focused channel)",
+            ("Preferences", 'button', 'settings', _tr("Set channel preferences (in focused channel)"),
              lambda w: self.start_local_plugin('Preferences')),
-            ("FBrowser", 'button', 'folder_open', "Open file (in focused channel)",
+            ("FBrowser", 'button', 'folder_open', _tr("Open file (in focused channel)"),
              lambda w: self.start_local_plugin('FBrowser')),
-            ("MultiDim", 'button', 'layers', "Select HDUs or cube slices (in focused channel)",
+            ("MultiDim", 'button', 'layers', _tr("Select HDUs or cube slices (in focused channel)"),
              lambda w: self.start_local_plugin('MultiDim')),
-            ("Header", 'button', 'tags', "View image metadata (Header plugin)",
+            ("Header", 'button', 'tags', _tr("View image metadata (Header plugin)"),
              lambda w: self.start_global_plugin('Header'))]
 
     def build_gui(self, container):
@@ -719,6 +719,7 @@ class Toolbar_Ginga_Table(Toolbar_Common):
 
 # Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
+from ginga.locale.localize import _tr
 if __doc__ is not None:
     __doc__ += generate_cfg_example('plugin_Toolbar', package='ginga')
 

@@ -189,11 +189,11 @@ class TVMark(LocalPlugin):
         b.mark_color.set_index(self._color_options.index(self.markcolor))
         b.mark_color.add_callback('activated', self.set_markcolor_cb)
 
-        b.mark_size.set_tooltip('Size/radius of the marking')
+        b.mark_size.set_tooltip(_tr('Size/radius of the marking'))
         b.mark_size.set_text(str(self.marksize))
         b.mark_size.add_callback('activated', lambda w: self.set_marksize())
 
-        b.mark_width.set_tooltip('Line width of the marking')
+        b.mark_width.set_tooltip(_tr('Line width of the marking'))
         b.mark_width.set_text(str(self.markwidth))
         b.mark_width.add_callback('activated', lambda w: self.set_markwidth())
 
@@ -210,21 +210,21 @@ class TVMark(LocalPlugin):
         self.treeview = treeview
         treeview.setup_table(self.columns, 2, 'MARKID')
         treeview.add_callback('selected', self.hl_table2canvas)
-        nb.add_widget(treeview, title='Shown')
+        nb.add_widget(treeview, title=_tr('Shown'))
 
         treeview2 = Widgets.TreeView(auto_expand=True,
                                      sortable=True,
                                      use_alt_row_color=True)
         self.treeviewsel = treeview2
         treeview2.setup_table(self.columns, 2, 'MARKID')
-        nb.add_widget(treeview2, title='Selected')
+        nb.add_widget(treeview2, title=_tr('Selected'))
 
         treeview3 = Widgets.TreeView(auto_expand=True,
                                      sortable=True,
                                      use_alt_row_color=True)
         self.treeviewbad = treeview3
         treeview3.setup_table(self.columns, 2, 'MARKID')
-        nb.add_widget(treeview3, title='Outliers')
+        nb.add_widget(treeview3, title=_tr('Outliers'))
 
         captions = (('Loaded:', 'llabel', 'ntotal', 'llabel',
                      'Shown:', 'llabel', 'nshown', 'llabel',
@@ -232,13 +232,13 @@ class TVMark(LocalPlugin):
         w, b = Widgets.build_info(captions)
         self.w.update(b)
 
-        b.ntotal.set_tooltip('Number of objects read from tables')
+        b.ntotal.set_tooltip(_tr('Number of objects read from tables'))
         b.ntotal.set_text('0')
 
-        b.nshown.set_tooltip('Number of objects shown on image')
+        b.nshown.set_tooltip(_tr('Number of objects shown on image'))
         b.nshown.set_text('0')
 
-        b.nselected.set_tooltip('Number of objects selected')
+        b.nselected.set_tooltip(_tr('Number of objects selected'))
         b.nselected.set_text('0')
 
         container.add_widget(w, stretch=0)
@@ -248,20 +248,20 @@ class TVMark(LocalPlugin):
         w, b = Widgets.build_info(captions)
         self.w.update(b)
 
-        b.load_coords.set_tooltip('Load coordinates file')
+        b.load_coords.set_tooltip(_tr('Load coordinates file'))
         b.load_coords.add_callback('activated', lambda w: self.load_coords_cb())
 
-        b.use_radec.set_tooltip('Use RA/DEC as coordinates instead of X/Y')
+        b.use_radec.set_tooltip(_tr('Use RA/DEC as coordinates instead of X/Y'))
         b.use_radec.set_state(self.use_radec)
         b.use_radec.add_callback('activated', self.set_coordtype_cb)
 
-        b.show.set_tooltip('Show markings')
+        b.show.set_tooltip(_tr('Show markings'))
         b.show.add_callback('activated', lambda w: self.redo())
 
-        b.hide.set_tooltip('Hide markings')
+        b.hide.set_tooltip(_tr('Hide markings'))
         b.hide.add_callback('activated', lambda w: self.clear_marking())
 
-        b.forget.set_tooltip('Forget markings')
+        b.forget.set_tooltip(_tr('Forget markings'))
         b.forget.add_callback('activated', lambda w: self.forget_coords())
 
         container.add_widget(w, stretch=0)
@@ -270,10 +270,10 @@ class TVMark(LocalPlugin):
         btns.set_border_width(4)
         btns.set_spacing(3)
 
-        btn = Widgets.Button('Close')
+        btn = Widgets.Button(_tr('Close'))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
-        btn = Widgets.Button("Help")
+        btn = Widgets.Button(_tr("Help"))
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
@@ -763,6 +763,7 @@ class TVMark(LocalPlugin):
 
 # Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
+from ginga.locale.localize import _tr
 if __doc__ is not None:
     __doc__ += generate_cfg_example('plugin_TVMark', package='ginga')
 

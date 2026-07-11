@@ -35,6 +35,7 @@ from ginga import GingaPlugin
 from ginga.gw import Widgets
 from ginga.util import wcs
 from ginga.misc import Bunch
+from ginga.locale.localize import _tr
 
 __all__ = ['WCSMatch']
 
@@ -71,7 +72,7 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
         vbox.set_border_width(4)
         vbox.set_spacing(2)
 
-        fr = Widgets.Frame("WCS Match")
+        fr = Widgets.Frame(_tr("WCS Match"))
 
         captions = (('Reference Channel:', 'label',
                      'ref channel', 'combobox'),
@@ -85,21 +86,21 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
 
         b.ref_channel.add_callback('activated', self._set_reference_channel_cb)
         self.w.match_pan.set_state(self._match['pan'])
-        self.w.match_pan.set_tooltip("Match pan position of reference image")
+        self.w.match_pan.set_tooltip(_tr("Match pan position of reference image"))
         self.w.match_pan.add_callback('activated',
                                       self.set_match_cb, 'pan')
         self.w.match_scale.set_state(self._match['scale'])
         self.w.match_scale.add_callback('activated',
                                         self.set_match_cb, 'scale')
-        self.w.match_scale.set_tooltip("Match scale of reference image")
+        self.w.match_scale.set_tooltip(_tr("Match scale of reference image"))
         self.w.match_transforms.set_state(self._match['transforms'])
         self.w.match_transforms.add_callback('activated',
                                              self.set_match_cb, 'transforms')
-        self.w.match_transforms.set_tooltip("Match transforms of reference image")
+        self.w.match_transforms.set_tooltip(_tr("Match transforms of reference image"))
         self.w.match_rotation.set_state(self._match['rotation'])
         self.w.match_rotation.add_callback('activated',
                                            self.set_match_cb, 'rotation')
-        self.w.match_rotation.set_tooltip("Match rotation of reference image")
+        self.w.match_rotation.set_tooltip(_tr("Match rotation of reference image"))
 
         fr.set_widget(w)
         vbox.add_widget(fr, stretch=0)
@@ -112,10 +113,10 @@ class WCSMatch(GingaPlugin.GlobalPlugin):
         btns = Widgets.HBox()
         btns.set_spacing(3)
 
-        btn = Widgets.Button("Close")
+        btn = Widgets.Button(_tr("Close"))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
-        btn = Widgets.Button("Help")
+        btn = Widgets.Button(_tr("Help"))
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)

@@ -57,6 +57,7 @@ from ginga.table.AstroTable import AstroTable
 from ginga.plot.Plotable import Plotable
 from ginga.canvas.CanvasObject import get_canvas_types
 from ginga.util.toolbox import calc_float_strings
+from ginga.locale.localize import _tr
 
 __all__ = ['Info', 'Info_Ginga_Image',
            'Info_Ginga_Plot', 'Info_Ginga_Table']
@@ -142,7 +143,7 @@ class Info_Ginga_Image(Info_Common):
         col.add_widget(Widgets.Label(''), stretch=1)
         sw2 = Widgets.ScrollArea()
         sw2.set_widget(col)
-        fr = Widgets.Frame(title="Content Info")
+        fr = Widgets.Frame(title=_tr("Content Info"))
         fr.set_widget(sw2)
         vbox.add_widget(fr, stretch=1)
 
@@ -163,15 +164,15 @@ class Info_Ginga_Image(Info_Common):
 
         w, b = Widgets.build_info(captions)
         self.w.update(b)
-        b.cut_levels.set_tooltip("Set cut levels manually")
+        b.cut_levels.set_tooltip(_tr("Set cut levels manually"))
         loval, hival = self.fitsimage.get_cut_levels()
         lo_str, hi_str = calc_float_strings(loval, hival)
-        b.auto_levels.set_tooltip("Set cut levels by algorithm")
-        b.cut_low.set_tooltip("Set low cut level (press Enter)")
+        b.auto_levels.set_tooltip(_tr("Set cut levels by algorithm"))
+        b.cut_low.set_tooltip(_tr("Set low cut level (press Enter)"))
         b.cut_low.set_length(9)
         b.cut_low.set_text(lo_str)
         b.cut_low_value.set_text(lo_str)
-        b.cut_high.set_tooltip("Set high cut level (press Enter)")
+        b.cut_high.set_tooltip(_tr("Set high cut level (press Enter)"))
         b.cut_high.set_length(9)
         b.cut_high.set_text(hi_str)
         b.cut_high_value.set_text(hi_str)
@@ -179,25 +180,25 @@ class Info_Ginga_Image(Info_Common):
         combobox = b.color_dist
         for name in ColorDist.get_dist_names():
             combobox.append_text(name)
-        b.color_dist.set_tooltip("Set distribution (stretching) algorithm")
+        b.color_dist.set_tooltip(_tr("Set distribution (stretching) algorithm"))
 
         combobox = b.cut_new
         for name in self.autocut_options:
             combobox.append_text(name)
-        b.cut_new.set_tooltip("Automatically set cut levels when switching images")
+        b.cut_new.set_tooltip(_tr("Automatically set cut levels when switching images"))
 
         combobox = b.zoom_new
         for name in self.autozoom_options:
             combobox.append_text(name)
-        b.zoom_new.set_tooltip("Automatically fit image to window when switching images")
+        b.zoom_new.set_tooltip(_tr("Automatically fit image to window when switching images"))
 
         combobox = b.center_new
         for name in self.autocenter_options:
             combobox.append_text(name)
-        b.center_new.set_tooltip("Automatically center image in window when switching images")
+        b.center_new.set_tooltip(_tr("Automatically center image in window when switching images"))
 
-        b.follow_new.set_tooltip("Automatically switch to new images in channel")
-        b.raise_new.set_tooltip("Automatically raise channel viewer for new images")
+        b.follow_new.set_tooltip(_tr("Automatically switch to new images in channel"))
+        b.raise_new.set_tooltip(_tr("Automatically raise channel viewer for new images"))
 
         row = Widgets.HBox()
         row.set_spacing(0)
@@ -552,7 +553,7 @@ class Info_Ginga_Plot(Info_Common):
         if self.x_col in self.cols:
             combobox.set_text(self.x_col)
         combobox.add_callback('activated', self.x_select_cb)
-        combobox.set_tooltip('Select a column to plot on X-axis')
+        combobox.set_tooltip(_tr('Select a column to plot on X-axis'))
 
         # Controls for Y-axis column listing
         combobox = b.y_col
@@ -562,7 +563,7 @@ class Info_Ginga_Plot(Info_Common):
         if self.y_col in self.cols:
             combobox.set_text(self.y_col)
         combobox.add_callback('activated', self.y_select_cb)
-        combobox.set_tooltip('Select a column to plot on Y-axis')
+        combobox.set_tooltip(_tr('Select a column to plot on Y-axis'))
 
         # Button and dialog to select color
         self.w.colorselect = Widgets.ColorDialog(parent=b.color,
@@ -571,19 +572,19 @@ class Info_Ginga_Plot(Info_Common):
         hex_color = colors.lookup_color(self._next_color, format='hex')
         self.w.colorselect.set_color(hex_color)
         b.color.add_callback('activated', lambda w: self.w.colorselect.popup())
-        b.color.set_tooltip("Set the color of the line to be added")
+        b.color.set_tooltip(_tr("Set the color of the line to be added"))
         b.color.set_color(bg=hex_color, fg='white')
 
         # Button to clear plot
-        b.clear_plot.set_tooltip("Clear the current plot")
+        b.clear_plot.set_tooltip(_tr("Clear the current plot"))
         b.clear_plot.add_callback('activated', self.clear_plot_cb)
 
         # Button to save plot
-        b.add_to_plot.set_tooltip("Add selected columns to plot")
+        b.add_to_plot.set_tooltip(_tr("Add selected columns to plot"))
         b.add_to_plot.add_callback('activated', self.add_to_plot_cb)
         b.add_to_plot.set_enabled(False)
 
-        fr = Widgets.Expander(title="Plot from Table")
+        fr = Widgets.Expander(title=_tr("Plot from Table"))
         self.w.plot_tbl_expand = fr
         row = Widgets.HBox()
         row.set_spacing(0)
@@ -608,7 +609,7 @@ class Info_Ginga_Plot(Info_Common):
         combobox = b.x_dist
         for name in ['linear', 'log']:
             combobox.append_text(name)
-        combobox.set_tooltip('Select a mapping to plot on X-axis')
+        combobox.set_tooltip(_tr('Select a mapping to plot on X-axis'))
         combobox.set_text(t_['plot_dist_axis'][0])
         combobox.add_callback('activated', self.x_dist_cb)
 
@@ -616,7 +617,7 @@ class Info_Ginga_Plot(Info_Common):
         combobox = b.y_dist
         for name in ['linear', 'log']:
             combobox.append_text(name)
-        combobox.set_tooltip('Select a mapping to plot on Y-axis')
+        combobox.set_tooltip(_tr('Select a mapping to plot on Y-axis'))
         combobox.set_text(t_['plot_dist_axis'][1])
         combobox.add_callback('activated', self.y_dist_cb)
 
@@ -624,27 +625,27 @@ class Info_Ginga_Plot(Info_Common):
         self.set_ylimits_widgets()
 
         b.x_lo.add_callback('activated', lambda w: self.set_xlim_lo_cb())
-        b.x_lo.set_tooltip('Set X lower limit')
+        b.x_lo.set_tooltip(_tr('Set X lower limit'))
 
         b.x_hi.add_callback('activated', lambda w: self.set_xlim_hi_cb())
-        b.x_hi.set_tooltip('Set X upper limit')
+        b.x_hi.set_tooltip(_tr('Set X upper limit'))
 
         b.y_lo.add_callback('activated', lambda w: self.set_ylim_lo_cb())
-        b.y_lo.set_tooltip('Set Y lower limit')
+        b.y_lo.set_tooltip(_tr('Set Y lower limit'))
 
         b.y_hi.add_callback('activated', lambda w: self.set_ylim_hi_cb())
-        b.y_hi.set_tooltip('Set Y upper limit')
+        b.y_hi.set_tooltip(_tr('Set Y upper limit'))
 
         b.show_marker.set_state(t_.get('plot_show_marker', False))
         b.show_marker.add_callback('activated', self.set_marker_cb)
-        b.show_marker.set_tooltip('Mark data points')
+        b.show_marker.set_tooltip(_tr('Mark data points'))
 
         # Button to save plot
-        b.save_plot.set_tooltip("Save plot to file")
+        b.save_plot.set_tooltip(_tr("Save plot to file"))
         b.save_plot.add_callback('activated', lambda w: self.save_cb())
         b.save_plot.set_enabled(True)
 
-        fr = Widgets.Expander(title="Plot Controls")
+        fr = Widgets.Expander(title=_tr("Plot Controls"))
         row = Widgets.HBox()
         row.set_spacing(0)
         row.set_border_width(0)
@@ -1029,10 +1030,10 @@ class Info_Ginga_Table(Info_Common):
         w, b = Widgets.build_info(captions)
         self.w.update(b)
 
-        b.new_plot.set_tooltip("Create new plot for this table")
+        b.new_plot.set_tooltip(_tr("Create new plot for this table"))
         b.new_plot.add_callback('activated', self.new_plot_cb)
 
-        fr = Widgets.Frame("Plot")
+        fr = Widgets.Frame(_tr("Plot"))
         row = Widgets.HBox()
         row.set_spacing(0)
         row.set_border_width(0)

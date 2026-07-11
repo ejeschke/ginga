@@ -79,7 +79,7 @@ class WCSAxes(LocalPlugin):
         vbox.set_border_width(4)
         vbox.set_spacing(2)
 
-        fr = Widgets.Frame('General')
+        fr = Widgets.Frame(_tr('General'))
         captions = (('Line color:', 'label', 'Line colors', 'combobox'),
                     ('Alpha:', 'label', 'Alpha', 'entryset'))
         w, b = Widgets.build_info(captions, orientation=orientation)
@@ -92,13 +92,13 @@ class WCSAxes(LocalPlugin):
         combobox.add_callback('activated', self.set_linecolor_cb)
 
         b.alpha.set_text(str(self.axes.alpha))
-        b.alpha.set_tooltip('Line transparency (alpha)')
+        b.alpha.set_tooltip(_tr('Line transparency (alpha)'))
         b.alpha.add_callback('activated', lambda *args: self.set_alpha())
 
         fr.set_widget(w)
         vbox.add_widget(fr, stretch=0)
 
-        fr = Widgets.Frame('Lines')
+        fr = Widgets.Frame(_tr('Lines'))
         captions = (('Line style:', 'label', 'Line styles', 'combobox'),
                     ('# RA lines:', 'label', 'Num RA', 'entryset'),
                     ('# DEC lines:', 'label', 'Num DEC', 'entryset'))
@@ -112,17 +112,17 @@ class WCSAxes(LocalPlugin):
         combobox.add_callback('activated', self.set_linestyle_cb)
 
         b.num_ra.set_text(str(self.axes.num_ra))
-        b.num_ra.set_tooltip('Number of lines drawn for RA')
+        b.num_ra.set_tooltip(_tr('Number of lines drawn for RA'))
         b.num_ra.add_callback('activated', lambda *args: self.set_num_ra())
 
         b.num_dec.set_text(str(self.axes.num_dec))
-        b.num_dec.set_tooltip('Number of lines drawn for DEC')
+        b.num_dec.set_tooltip(_tr('Number of lines drawn for DEC'))
         b.num_dec.add_callback('activated', lambda *args: self.set_num_dec())
 
         fr.set_widget(w)
         vbox.add_widget(fr, stretch=0)
 
-        fr = Widgets.Frame('Labels')
+        fr = Widgets.Frame(_tr('Labels'))
         captions = (('Show label', 'checkbutton'),
                     ('Font size:', 'label', 'Font size', 'entryset'),
                     ('Text offset:', 'label', 'Text offset', 'entryset'),
@@ -132,25 +132,25 @@ class WCSAxes(LocalPlugin):
         self.w.update(b)
 
         b.show_label.set_state(self.axes.show_label)
-        b.show_label.set_tooltip('Show/hide label')
+        b.show_label.set_tooltip(_tr('Show/hide label'))
         b.show_label.add_callback('activated', self.toggle_label_cb)
 
         b.font_size.set_text(str(self.axes.fontsize))
-        b.font_size.set_tooltip('Labels font size')
+        b.font_size.set_tooltip(_tr('Labels font size'))
         b.font_size.add_callback(
             'activated', lambda *args: self.set_fontsize())
 
         b.text_offset.set_text(str(self.axes.txt_off))
-        b.text_offset.set_tooltip('Labels text offset in pixels')
+        b.text_offset.set_tooltip(_tr('Labels text offset in pixels'))
         b.text_offset.add_callback(
             'activated', lambda *args: self.set_txt_off())
 
         b.ra_angle.set_text(str(self.axes.ra_angle))
-        b.ra_angle.set_tooltip('Orientation in deg of RA labels')
+        b.ra_angle.set_tooltip(_tr('Orientation in deg of RA labels'))
         b.ra_angle.add_callback('activated', lambda *args: self.set_ra_angle())
 
         b.dec_angle.set_text(str(self.axes.dec_angle))
-        b.dec_angle.set_tooltip('Orientation in deg of DEC labels')
+        b.dec_angle.set_tooltip(_tr('Orientation in deg of DEC labels'))
         b.dec_angle.add_callback(
             'activated', lambda *args: self.set_dec_angle())
 
@@ -163,10 +163,10 @@ class WCSAxes(LocalPlugin):
         btns = Widgets.HBox()
         btns.set_spacing(3)
 
-        btn = Widgets.Button("Close")
+        btn = Widgets.Button(_tr("Close"))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
-        btn = Widgets.Button("Help")
+        btn = Widgets.Button(_tr("Help"))
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
@@ -342,6 +342,7 @@ class WCSAxes(LocalPlugin):
 
 # Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
+from ginga.locale.localize import _tr
 if __doc__ is not None:
     __doc__ += generate_cfg_example('plugin_WCSAxes', package='ginga')
 

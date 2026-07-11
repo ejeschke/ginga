@@ -25,6 +25,8 @@ from ginga.modes import modeinfo
 # GUI imports
 from ginga.gw import Widgets, Viewers, GwHelp
 from ginga.fonts import font_asst
+from ginga.locale import localize
+from ginga.locale.localize import _tr, N_
 from ginga.util.paths import icondir as icon_dir
 
 # Version
@@ -37,6 +39,15 @@ from ginga.rv.rvmode import RVMode
 
 
 pluginconfpfx = None
+
+# Canonical workspace-type values, in the order they are presented in the
+# "Add Workspace" dialog's type combo box.  The combo box shows translated
+# labels, so callbacks must map the *index* back to these canonical values
+# rather than comparing the (possibly translated) displayed text.
+wstype_values = ['tabs', 'grid', 'mdi', 'stack']
+# marked for translation; rendered with _tr() at display time (values above
+# are the canonical strings recovered by index)
+wstype_labels = [N_('Tabs'), N_('Grid'), N_('MDI'), N_('Stack')]
 
 
 class ControlError(Exception):
@@ -76,8 +87,15 @@ class GingaShell(GenericShell):
                               confirm_shutdown=True,
                               download_folder=None,
                               save_layout=False,
-                              channel_prefix="Image")
+                              channel_prefix="Image",
+                              # UI language; None honors the environment
+                              # (LANGUAGE/LC_ALL/LC_MESSAGES/LANG)
+                              language=None)
         settings.load(onError='silent')
+
+        # Apply the UI language before any UI is built.  The 'language'
+        # preference overrides the environment; None honors the environment.
+        localize.set_language(settings.get('language', None))
 
         GenericShell.__init__(self, logger, thread_pool, module_manager,
                               preferences, ev_quit=ev_quit, ws_sock=ws_sock)
@@ -1563,11 +1581,11 @@ class GingaShell(GenericShell):
 
     def add_dialogs(self):
         if self.is_web_backend():
-            self.filesel = Widgets.BrowserFileDialog(title="Load File")
+            self.filesel = Widgets.BrowserFileDialog(title=_tr("Load File"))
             self.filesel.add_callback('activated', self.load_blobs_cb)
 
         elif hasattr(Widgets, 'FileDialog'):
-            self.filesel = Widgets.FileDialog(title="Load File",
+            self.filesel = Widgets.FileDialog(title=_tr("Load File"),
                                               parent=self.w.root)
             self.filesel.add_callback('activated', self.load_file_cb)
 
@@ -1808,9 +1826,9 @@ class GingaShell(GenericShell):
         b.workspace.set_index(idx)
 
         # build dialog
-        dialog = Widgets.Dialog(title="Add Channel",
+        dialog = Widgets.Dialog(title=_tr("Add Channel"),
                                 flags=0,
-                                buttons=[['Cancel', 0], ['Ok', 1]],
+                                buttons=[[_tr('Cancel'), 0], [_tr('Ok'), 1]],
                                 parent=self.w.root)
         dialog.add_callback('activated',
                             lambda w, rsp: self.add_channel_cb(w, rsp, b, names))  # noqa
@@ -1843,9 +1861,9 @@ class GingaShell(GenericShell):
         for name in names:
             b.workspace.append_text(name)
         b.workspace.set_index(idx)
-        dialog = Widgets.Dialog(title="Add Channels",
+        dialog = Widgets.Dialog(title=_tr("Add Channels"),
                                 flags=0,
-                                buttons=[['Cancel', 0], ['Ok', 1]],
+                                buttons=[[_tr('Cancel'), 0], [_tr('Ok'), 1]],
                                 parent=self.w.root)
         dialog.add_callback('activated',
                             lambda w, rsp: self.add_channels_cb(w, rsp, b, names))  # noqa
@@ -1864,10 +1882,10 @@ class GingaShell(GenericShell):
 
             chname = channel.name
 
-        lbl = Widgets.Label("Really delete channel '%s' ?" % (chname))
-        dialog = Widgets.Dialog(title="Delete Channel",
+        lbl = Widgets.Label(_tr("Really delete channel '%s' ?") % (chname))
+        dialog = Widgets.Dialog(title=_tr("Delete Channel"),
                                 flags=0,
-                                buttons=[['Cancel', 0], ['Ok', 1]],
+                                buttons=[[_tr('Cancel'), 0], [_tr('Ok'), 1]],
                                 parent=self.w.root)
         dialog.add_callback('activated',
                             lambda w, rsp: self.delete_channel_cb(w, rsp, chname))  # noqa
@@ -1887,10 +1905,10 @@ class GingaShell(GenericShell):
         self.ds.show_dialog(dialog)
 
     def gui_delete_window(self, tabname):
-        lbl = Widgets.Label("Really delete window '%s' ?" % (tabname))
-        dialog = Widgets.Dialog(title="Delete Window",
+        lbl = Widgets.Label(_tr("Really delete window '%s' ?") % (tabname))
+        dialog = Widgets.Dialog(title=_tr("Delete Window"),
                                 flags=0,
-                                buttons=[['Cancel', 0], ['Ok', 1]],
+                                buttons=[[_tr('Cancel'), 0], [_tr('Ok'), 1]],
                                 parent=self.w.root)
         dialog.add_callback('activated',
                             lambda w, rsp: self.delete_tab_cb(w, rsp, tabname))
@@ -1946,10 +1964,10 @@ class GingaShell(GenericShell):
         #b.share_settings.set_length(60)
 
         cbox = b.workspace_type
-        cbox.append_text("Tabs")
-        cbox.append_text("Grid")
-        cbox.append_text("MDI")
-        cbox.append_text("Stack")
+        # NOTE: display labels are translated, but the canonical values are
+        # recovered by index in add_ws_cb() (see wstype_values)
+        for label in wstype_labels:
+            cbox.append_text(_tr(label))
         cbox.set_index(0)
 
         cbox = b.workspace
@@ -1968,9 +1986,9 @@ class GingaShell(GenericShell):
         spnbtn.set_limits(0, 36, incr_value=1)
         spnbtn.set_value(0)
 
-        dialog = Widgets.Dialog(title="Add Workspace",
+        dialog = Widgets.Dialog(title=_tr("Add Workspace"),
                                 flags=0,
-                                buttons=[['Cancel', 0], ['Ok', 1]],
+                                buttons=[[_tr('Cancel'), 0], [_tr('Ok'), 1]],
                                 parent=self.w.root)
         dialog.add_callback('activated',
                             lambda w, rsp: self.add_ws_cb(w, rsp, b, names))
@@ -1990,8 +2008,8 @@ class GingaShell(GenericShell):
         wgts = Bunch.Bunch()
         wgts.table = Widgets.TreeView(auto_expand=True,
                                       use_alt_row_color=True)
-        columns = [('Name', 'name'),
-                   ('Note', 'note'),
+        columns = [(_tr('Name'), 'name'),
+                   (_tr('Note'), 'note'),
                    ]
         wgts.table.setup_table(columns, 1, 'name')
 
@@ -2006,10 +2024,10 @@ class GingaShell(GenericShell):
             path = [openers[0].name]
             wgts.table.select_path(path)
 
-        dialog = Widgets.Dialog(title="Choose File Opener",
+        dialog = Widgets.Dialog(title=_tr("Choose File Opener"),
                                 flags=0,
                                 modal=False,
-                                buttons=[['Cancel', 0], ['Ok', 1]],
+                                buttons=[[_tr('Cancel'), 0], [_tr('Ok'), 1]],
                                 parent=self.w.root)
         dialog.add_callback('activated',
                             lambda w, rsp: self.choose_opener_cb(w, rsp, wgts,
@@ -2024,7 +2042,7 @@ class GingaShell(GenericShell):
 
         if mimetype is not None:
             hbox = Widgets.HBox()
-            wgts.choice = Widgets.CheckBox("Remember choice for session")
+            wgts.choice = Widgets.CheckBox(_tr("Remember choice for session"))
             hbox.add_widget(wgts.choice)
             box.add_widget(hbox, stretch=0)
         else:
@@ -2037,7 +2055,7 @@ class GingaShell(GenericShell):
         wgts = Bunch.Bunch()
         wgts.table = Widgets.TreeView(auto_expand=True,
                                       use_alt_row_color=True)
-        columns = [('Name', 'name'),
+        columns = [(_tr('Name'), 'name'),
                    #('Note', 'note'),
                    ]
         wgts.table.setup_table(columns, 1, 'name')
@@ -2065,10 +2083,10 @@ class GingaShell(GenericShell):
         wgts.descr.set_text(text)
         wgts.table.select_path(path)
 
-        dialog = Widgets.Dialog(title="Choose viewer",
+        dialog = Widgets.Dialog(title=_tr("Choose viewer"),
                                 flags=0,
                                 modal=False,
-                                buttons=[['Cancel', 0], ['Ok', 1]],
+                                buttons=[[_tr('Cancel'), 0], [_tr('Ok'), 1]],
                                 parent=self.w.root)
         dialog.add_callback('activated',
                             lambda w, rsp: self.choose_viewer_cb(w, rsp, wgts,
@@ -2083,7 +2101,7 @@ class GingaShell(GenericShell):
         box.add_widget(wgts.descr, stretch=1)
 
         hbox = Widgets.HBox()
-        wgts.choice = Widgets.CheckBox("Remember choice for session")
+        wgts.choice = Widgets.CheckBox(_tr("Remember choice for session"))
         hbox.add_widget(wgts.choice)
         box.add_widget(hbox, stretch=0)
 
@@ -2301,7 +2319,8 @@ class GingaShell(GenericShell):
     def add_ws_cb(self, w, rsp, b, names):
         try:
             wsname = str(b.workspace_name.get_text())
-            wstype = b.workspace_type.get_text().lower()
+            # recover the canonical wstype by index (labels are translated)
+            wstype = wstype_values[b.workspace_type.get_index()]
             if rsp != 1:
                 self.ds.remove_dialog(w)
                 return
@@ -2394,11 +2413,13 @@ class GingaShell(GenericShell):
         self.logger.debug("workspace requests close")
 
         # TODO: this will prompt the user if we should close the workspace
-        lbl = Widgets.Label(f"Really delete workspace '{ws.name}' ?\n\n"
-                            "This will close all open channels in that workspace.")
-        dialog = Widgets.Dialog(title="Delete Workspace",
+        lbl = Widgets.Label(
+            _tr("Really delete workspace '%s' ?\n\n"
+                "This will close all open channels in that workspace.")
+            % ws.name)
+        dialog = Widgets.Dialog(title=_tr("Delete Workspace"),
                                 flags=0,
-                                buttons=[['Cancel', 0], ['Ok', 1]],
+                                buttons=[[_tr('Cancel'), 0], [_tr('Ok'), 1]],
                                 parent=self.w.root)
         dialog.add_callback('activated',
                             lambda w, rsp: self.delete_workspace_cb(w, rsp,

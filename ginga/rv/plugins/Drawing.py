@@ -41,6 +41,7 @@ from ginga.gw import Widgets
 from ginga.misc import ParamSet, Bunch
 from ginga.util import dp, ap_region
 from ginga.canvas.CanvasObject import coord_names
+from ginga.locale.localize import _tr
 
 __all__ = ['Drawing']
 
@@ -105,7 +106,7 @@ class Drawing(GingaPlugin.LocalPlugin):
         vbox.set_border_width(4)
         vbox.set_spacing(2)
 
-        fr = Widgets.Frame("Drawing")
+        fr = Widgets.Frame(_tr("Drawing"))
 
         captions = (("Draw type:", 'label', "Draw type", 'combobox'),
                     )
@@ -125,26 +126,26 @@ class Drawing(GingaPlugin.LocalPlugin):
 
         mode = self.canvas.get_draw_mode()
         hbox = Widgets.HBox()
-        btn1 = Widgets.RadioButton("Draw")
+        btn1 = Widgets.RadioButton(_tr("Draw"))
         btn1.set_state(mode == 'draw')
         btn1.add_callback(
             'activated', lambda w, val: self.set_mode_cb('draw', val))
-        btn1.set_tooltip("Choose this to draw")
+        btn1.set_tooltip(_tr("Choose this to draw"))
         self.w.btn_draw = btn1
         hbox.add_widget(btn1)
 
-        btn2 = Widgets.RadioButton("Edit", group=btn1)
+        btn2 = Widgets.RadioButton(_tr("Edit"), group=btn1)
         btn2.set_state(mode == 'edit')
         btn2.add_callback(
             'activated', lambda w, val: self.set_mode_cb('edit', val))
-        btn2.set_tooltip("Choose this to edit")
+        btn2.set_tooltip(_tr("Choose this to edit"))
         self.w.btn_edit = btn2
         hbox.add_widget(btn2)
 
         hbox.add_widget(Widgets.Label(''), stretch=1)
         vbox.add_widget(hbox, stretch=0)
 
-        fr = Widgets.Frame("Attributes")
+        fr = Widgets.Frame(_tr("Attributes"))
         vbox2 = Widgets.VBox()
         self.w.attrlbl = Widgets.Label()
         vbox2.add_widget(self.w.attrlbl, stretch=0)
@@ -162,27 +163,27 @@ class Drawing(GingaPlugin.LocalPlugin):
         w, b = Widgets.build_info(captions)
         self.w.update(b)
         b.delete_obj.add_callback('activated', lambda w: self.delete_object())
-        b.delete_obj.set_tooltip("Delete selected object in edit mode")
+        b.delete_obj.set_tooltip(_tr("Delete selected object in edit mode"))
         b.delete_obj.set_enabled(False)
 
         b.copy_obj.add_callback('activated', lambda w: self.copy_object())
-        b.copy_obj.set_tooltip("Copy selected object in edit mode")
+        b.copy_obj.set_tooltip(_tr("Copy selected object in edit mode"))
         b.copy_obj.set_enabled(False)
 
         b.scale_by.add_callback('activated', self.scale_object)
         b.scale_by.set_text('0.9')
-        b.scale_by.set_tooltip("Scale selected object in edit mode")
+        b.scale_by.set_tooltip(_tr("Scale selected object in edit mode"))
         b.scale_by.set_enabled(False)
 
         b.rotate_by.add_callback('activated', self.rotate_object)
         b.rotate_by.set_text('90.0')
-        b.rotate_by.set_tooltip("Rotate selected object in edit mode")
+        b.rotate_by.set_tooltip(_tr("Rotate selected object in edit mode"))
         b.rotate_by.set_enabled(False)
 
         b.create_mask.add_callback('activated', lambda w: self.create_mask())
-        b.create_mask.set_tooltip("Create boolean mask from drawing")
+        b.create_mask.set_tooltip(_tr("Create boolean mask from drawing"))
         b.clear_canvas.add_callback('activated', lambda w: self.clear_canvas())
-        b.clear_canvas.set_tooltip("Delete all drawing objects")
+        b.clear_canvas.set_tooltip(_tr("Delete all drawing objects"))
 
         vbox.add_widget(w, stretch=0)
 
@@ -192,10 +193,10 @@ class Drawing(GingaPlugin.LocalPlugin):
         w, b = Widgets.build_info(captions)
         self.w.update(b)
         b.import_regions.add_callback('activated', self.import_regions_cb)
-        b.import_regions.set_tooltip("Load a regions file")
+        b.import_regions.set_tooltip(_tr("Load a regions file"))
         b.import_regions.set_enabled(ap_region.HAVE_REGIONS)
         b.export_regions.add_callback('activated', self.export_regions_cb)
-        b.export_regions.set_tooltip("Save a regions file")
+        b.export_regions.set_tooltip(_tr("Save a regions file"))
         b.export_regions.set_enabled(ap_region.HAVE_REGIONS)
 
         if ap_region.HAVE_REGIONS:
@@ -219,7 +220,7 @@ class Drawing(GingaPlugin.LocalPlugin):
                 b.reg_format.append_text(fmt)
         else:
             b.reg_format.set_enabled(False)
-        b.reg_format.set_tooltip("Select format for regions output file")
+        b.reg_format.set_tooltip(_tr("Select format for regions output file"))
 
         vbox.add_widget(w, stretch=0)
 
@@ -231,10 +232,10 @@ class Drawing(GingaPlugin.LocalPlugin):
         btns = Widgets.HBox()
         btns.set_spacing(4)
 
-        btn = Widgets.Button("Close")
+        btn = Widgets.Button(_tr("Close"))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
-        btn = Widgets.Button("Help")
+        btn = Widgets.Button(_tr("Help"))
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)

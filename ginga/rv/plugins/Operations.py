@@ -62,21 +62,21 @@ class Operations(GingaPlugin.GlobalPlugin):
 
         cbox1 = Widgets.ComboBox()
         self.w.channel = cbox1
-        cbox1.set_tooltip("Select a channel")
+        cbox1.set_tooltip(_tr("Select a channel"))
         cbox1.add_callback('activated', self.channel_select_cb)
         if self.settings.get('show_channel_control', True):
             hbox.add_widget(cbox1, stretch=0)
 
         self.use_popup = self.settings.get('use_popup_menu', True)
         opmenu = Widgets.Menu()
-        btn = Widgets.Button("Operation")
-        btn.set_tooltip("Invoke operation")
+        btn = Widgets.Button(_tr("Operation"))
+        btn.set_tooltip(_tr("Invoke operation"))
         btn.add_callback('activated', self.invoke_popup_cb)
         if not self.use_popup:
             hbox.add_widget(btn, stretch=0)
             self.w.opname = Widgets.Label('')
             hbox.add_widget(self.w.opname, stretch=0)
-            btn = Widgets.Button("Go")
+            btn = Widgets.Button(_tr("Go"))
             btn.add_callback('activated', self.invoke_op_cb)
 
         self.w.operation = opmenu
@@ -218,20 +218,20 @@ class Operations(GingaPlugin.GlobalPlugin):
 
         lname = bnch.p_info.name.lower()
         menu = Widgets.Menu()
-        item = menu.add_name("Focus")
+        item = menu.add_name(_tr("Focus"))
         item.add_callback('activated', lambda *args: pl_mgr.set_focus(lname))
-        item = menu.add_name("Unfocus")
+        item = menu.add_name(_tr("Unfocus"))
         item.add_callback('activated', lambda *args: pl_mgr.clear_focus(lname))
-        item = menu.add_name("Stop")
+        item = menu.add_name(_tr("Stop"))
         item.add_callback('activated', lambda *args: pl_mgr.deactivate(lname))
-        item = menu.add_name("Reload")
+        item = menu.add_name(_tr("Reload"))
         item.add_callback('activated',
                           lambda *args: pl_mgr.stop_reload_start(lname))
 
         lblname = bnch.lblname
         lbl = Widgets.Label(lblname, halign='center', style='clickable',
                             menu=menu)
-        lbl.set_tooltip("Right click for menu")
+        lbl.set_tooltip(_tr("Right click for menu"))
         # don't let this widget expand to fill the bar
         lbl.cfg_expand(horizontal='fixed', vertical='expanding')
         self.w.optray.remove(self.spacer)
@@ -283,6 +283,7 @@ class Operations(GingaPlugin.GlobalPlugin):
 
 # Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
+from ginga.locale.localize import _tr
 if __doc__ is not None:
     __doc__ += generate_cfg_example('plugin_Operations', package='ginga')
 

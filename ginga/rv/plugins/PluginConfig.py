@@ -54,6 +54,7 @@ import yaml
 from ginga import GingaPlugin
 from ginga.util.paths import ginga_home
 from ginga.gw import Widgets
+from ginga.locale.localize import _tr
 
 __all__ = ['PluginConfig']
 
@@ -92,17 +93,17 @@ class PluginConfig(GingaPlugin.GlobalPlugin):
         btns.set_border_width(4)
         btns.set_spacing(4)
 
-        btn = Widgets.Button("Close")
+        btn = Widgets.Button(_tr("Close"))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn)
-        btn = Widgets.Button("Help")
+        btn = Widgets.Button(_tr("Help"))
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
-        btn = Widgets.Button("Edit")
+        btn = Widgets.Button(_tr("Edit"))
         btn.add_callback('activated', self.edit_plugin_selections_cb)
-        btn.set_tooltip("Edit configuration of selected plugins")
+        btn.set_tooltip(_tr("Edit configuration of selected plugins"))
         btns.add_widget(btn, stretch=0)
-        btn = Widgets.Button("Save")
+        btn = Widgets.Button(_tr("Save"))
         btn.add_callback('activated', lambda w: self.save_plugins_cb())
         btn.set_tooltip("Save configuration of plugins\n"
                         "(restart Ginga to see changes to menus)")
@@ -157,16 +158,16 @@ class PluginConfig(GingaPlugin.GlobalPlugin):
 
         w, b = Widgets.build_info(captions, orientation='vertical')
         self.w.update(b)
-        b.enabled.set_tooltip("Enable plugin(s)")
+        b.enabled.set_tooltip(_tr("Enable plugin(s)"))
         b.enabled.set_enabled(False)
-        b.category.set_tooltip("Edit menu category of plugin(s)")
+        b.category.set_tooltip(_tr("Edit menu category of plugin(s)"))
         b.category.set_enabled(False)
-        b.workspace.set_tooltip("Edit workspace of plugin(s)")
+        b.workspace.set_tooltip(_tr("Edit workspace of plugin(s)"))
         b.workspace.set_enabled(False)
         b.auto_start.set_tooltip("Start plugin(s) at program startup (for global plugins)\n"
                                  "or channel creation (local plugins)")
         # b.auto_start.set_enabled(False)
-        b.hidden.set_tooltip("Hide plugin(s) names from program menus")
+        b.hidden.set_tooltip(_tr("Hide plugin(s) names from program menus"))
         b.hidden.set_enabled(False)
 
         dialog = Widgets.Dialog(title="Edit Plugin Configuration",

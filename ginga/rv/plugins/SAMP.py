@@ -89,17 +89,17 @@ class SAMP(GingaPlugin.GlobalPlugin):
         vbox.set_border_width(4)
         vbox.set_spacing(2)
 
-        fr = Widgets.Frame("SAMP")
+        fr = Widgets.Frame(_tr("SAMP"))
 
         captions = [('Start hub', 'checkbutton'),
                     ('Connect client', 'checkbutton'),
                     ]
         w, b = Widgets.build_info(captions)
         self.w.update(b)
-        b.start_hub.set_tooltip("Start a SAMP hub")
+        b.start_hub.set_tooltip(_tr("Start a SAMP hub"))
         b.start_hub.set_state(self.settings.get('start_hub', True))
         b.start_hub.add_callback('activated', self.start_hub_cb)
-        b.connect_client.set_tooltip("Register with a SAMP hub")
+        b.connect_client.set_tooltip(_tr("Register with a SAMP hub"))
         b.connect_client.set_state(self.settings.get('default_connect',
                                                      True))
         b.connect_client.add_callback('activated', self.connect_client_cb)
@@ -114,10 +114,10 @@ class SAMP(GingaPlugin.GlobalPlugin):
         btns.set_border_width(4)
         btns.set_spacing(4)
 
-        btn = Widgets.Button("Close")
+        btn = Widgets.Button(_tr("Close"))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn)
-        btn = Widgets.Button("Help")
+        btn = Widgets.Button(_tr("Help"))
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
@@ -340,6 +340,7 @@ class GingaWrapper:
 
 # Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
+from ginga.locale.localize import _tr
 if __doc__ is not None:
     __doc__ += generate_cfg_example('plugin_SAMP', package='ginga')
 

@@ -70,7 +70,7 @@ class Blink(GingaPlugin.LocalPlugin):
         vbox.set_border_width(4)
         vbox.set_spacing(2)
 
-        fr = Widgets.Frame("Blink")
+        fr = Widgets.Frame(_tr("Blink"))
         vbox2 = Widgets.VBox()
 
         captions = (("Interval:", 'label', 'Interval', 'entry'),
@@ -80,7 +80,7 @@ class Blink(GingaPlugin.LocalPlugin):
 
         b.interval.set_text(str(self.interval))
         b.interval.add_callback('activated', lambda w: self._set_interval_cb())
-        b.interval.set_tooltip("Interval in seconds between changing images")
+        b.interval.set_tooltip(_tr("Interval in seconds between changing images"))
         vbox2.add_widget(w, stretch=0)
 
         captions = (("Start Blink", 'button', "Stop Blink", 'button'),
@@ -121,10 +121,10 @@ class Blink(GingaPlugin.LocalPlugin):
         btns = Widgets.HBox()
         btns.set_spacing(3)
 
-        btn = Widgets.Button("Close")
+        btn = Widgets.Button(_tr("Close"))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
-        btn = Widgets.Button("Help")
+        btn = Widgets.Button(_tr("Help"))
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
@@ -202,6 +202,7 @@ class Blink(GingaPlugin.LocalPlugin):
 
 # Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
+from ginga.locale.localize import _tr
 if __doc__ is not None:
     __doc__ += generate_cfg_example('plugin_Blink', package='ginga')
 

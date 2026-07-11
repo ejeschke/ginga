@@ -1,0 +1,3536 @@
+# German translations for ginga.
+# Copyright (C) 2026 ORGANIZATION
+# This file is distributed under the same license as the ginga project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: ginga 6.1.0.dev23+gce10e1afd.d20260710\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-07-10 15:07-1000\n"
+"PO-Revision-Date: 2026-07-10 09:16-1000\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: de\n"
+"Language-Team: de <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.17.0\n"
+
+#: ginga/examples/gtk3/example2.py:111 ginga/examples/gtk4/example2.py:129
+#: ginga/examples/qt/example2.py:102
+msgid "Fill"
+msgstr "Füllen"
+
+#: ginga/examples/gtk3/example2.py:123 ginga/examples/gtk4/example2.py:141
+#: ginga/examples/gw/example2.py:156 ginga/examples/qt/example2.py:113
+msgid "Clear Canvas"
+msgstr "Leinwand leeren"
+
+#: ginga/examples/gtk3/example2.py:126 ginga/examples/gtk4/example2.py:144
+#: ginga/examples/gw/example2.py:158 ginga/examples/qt/example2.py:115
+msgid "Open File"
+msgstr "Datei öffnen"
+
+#: ginga/examples/gtk3/example2.py:128 ginga/examples/gtk4/example2.py:146
+#: ginga/examples/gw/example2.py:160 ginga/examples/qt/example2.py:117
+#: ginga/rv/plugins/Menubar.py:98
+msgid "Quit"
+msgstr "Beenden"
+
+#: ginga/examples/gtk3/example2.py:131 ginga/examples/gtk4/example2.py:149
+#: ginga/examples/gw/example2.py:168 ginga/examples/qt/example2.py:122
+msgid "Alpha"
+msgstr "Alpha"
+
+#: ginga/examples/gtk3/example2.py:170 ginga/examples/gtk4/example2.py:197
+#: ginga/examples/qt/example2.py:188
+msgid "Open FITS file"
+msgstr "FITS-Datei öffnen"
+
+#: ginga/examples/gtk3/example2.py:201 ginga/examples/gtk4/example2.py:228
+#: ginga/examples/gw/example2.py:282
+msgid "Bad coordinate conversion"
+msgstr "Fehlerhafte Koordinatenumrechnung"
+
+#: ginga/examples/gtk3/example2.py:203 ginga/examples/gtk3/example2.py:204
+#: ginga/examples/gtk4/example2.py:230 ginga/examples/gtk4/example2.py:231
+#: ginga/examples/gw/example2.py:284 ginga/examples/gw/example2.py:285
+#: ginga/examples/qt/example2.py:228 ginga/examples/qt/example2.py:229
+msgid "BAD WCS"
+msgstr "Fehlerhaftes WCS"
+
+#: ginga/examples/gw/example2.py:34
+msgid "Ginga example2"
+msgstr "Ginga Beispiel2"
+
+#: ginga/examples/gw/example2.py:186 ginga/examples/qt/example2.py:133
+#: ginga/rv/plugins/Catalogs.py:373 ginga/rv/plugins/Cuts.py:315
+#: ginga/rv/plugins/Drawing.py:129 ginga/rv/plugins/Histogram.py:233
+#: ginga/rv/plugins/LineProfile.py:179 ginga/rv/plugins/Pick.py:1084
+#: ginga/rv/plugins/PixTable.py:318 ginga/rv/plugins/Ruler.py:202
+msgid "Draw"
+msgstr "Zeichnen"
+
+#: ginga/examples/gw/example2.py:189 ginga/examples/qt/example2.py:136
+msgid "Choose this to draw on the canvas"
+msgstr "Wählen, um auf der Leinwand zu zeichnen"
+
+#: ginga/examples/gw/example2.py:192 ginga/examples/qt/example2.py:139
+#: ginga/rv/plugins/Catalogs.py:381 ginga/rv/plugins/Cuts.py:323
+#: ginga/rv/plugins/Drawing.py:137 ginga/rv/plugins/Histogram.py:241
+#: ginga/rv/plugins/LineProfile.py:180 ginga/rv/plugins/Pick.py:1092
+#: ginga/rv/plugins/PixTable.py:326 ginga/rv/plugins/PluginConfig.py:102
+#: ginga/rv/plugins/Ruler.py:210 ginga/rv/plugins/SlideShow.py:183
+msgid "Edit"
+msgstr "Bearbeiten"
+
+#: ginga/examples/gw/example2.py:195 ginga/examples/qt/example2.py:142
+msgid "Choose this to edit things on the canvas"
+msgstr "Wählen, um Objekte auf der Leinwand zu bearbeiten"
+
+#: ginga/examples/gw/example2.py:198 ginga/examples/qt/example2.py:145
+msgid "Pick"
+msgstr "Auswählen"
+
+#: ginga/examples/gw/example2.py:201 ginga/examples/qt/example2.py:148
+msgid "Choose this to pick things on the canvas"
+msgstr "Wählen, um Objekte auf der Leinwand auszuwählen"
+
+#: ginga/examples/gw/example2.py:211
+msgid "Open FITS File"
+msgstr "FITS-Datei öffnen"
+
+#: ginga/gtk3w/Widgets.py:285 ginga/gtk4w/Widgets.py:291
+#: ginga/qtw/Widgets.py:273 ginga/web/pgw/Widgets.py:408
+msgid "Set"
+msgstr "Setzen"
+
+#: ginga/gw/Desktop.py:864 ginga/gw/Desktop.py:895 ginga/rv/Control.py:50
+msgid "MDI"
+msgstr "MDI"
+
+#: ginga/gw/Desktop.py:864 ginga/rv/Control.py:50
+msgid "Grid"
+msgstr "Gitter"
+
+#: ginga/gw/Desktop.py:864 ginga/rv/Control.py:50
+msgid "Stack"
+msgstr "Stapel"
+
+#: ginga/gw/Desktop.py:864 ginga/rv/Control.py:50
+msgid "Tabs"
+msgstr "Reiter"
+
+#: ginga/gw/Desktop.py:878 ginga/rv/plugins/Menubar.py:114
+msgid "Workspace"
+msgstr "Arbeitsbereich"
+
+#: ginga/gw/Desktop.py:879 ginga/rv/GenericControl.py:356
+#: ginga/rv/plugins/AutoLoad.py:115 ginga/rv/plugins/Blink.py:124
+#: ginga/rv/plugins/Catalogs.py:428 ginga/rv/plugins/ChangeHistory.py:140
+#: ginga/rv/plugins/Collage.py:225 ginga/rv/plugins/ColorMapPicker.py:115
+#: ginga/rv/plugins/Command.py:91 ginga/rv/plugins/Compose.py:215
+#: ginga/rv/plugins/Contents.py:164 ginga/rv/plugins/Crosshair.py:255
+#: ginga/rv/plugins/Cuts.py:383 ginga/rv/plugins/Downloads.py:85
+#: ginga/rv/plugins/Drawing.py:235 ginga/rv/plugins/Errors.py:66
+#: ginga/rv/plugins/FBrowser.py:141 ginga/rv/plugins/Header.py:63
+#: ginga/rv/plugins/Histogram.py:262 ginga/rv/plugins/LineProfile.py:220
+#: ginga/rv/plugins/LoaderConfig.py:96 ginga/rv/plugins/Log.py:102
+#: ginga/rv/plugins/Mosaic.py:231 ginga/rv/plugins/MultiDim.py:209
+#: ginga/rv/plugins/Overlays.py:133 ginga/rv/plugins/Pan.py:75
+#: ginga/rv/plugins/Pick.py:1106 ginga/rv/plugins/Pipeline.py:153
+#: ginga/rv/plugins/PixTable.py:341 ginga/rv/plugins/PlotTable.py:178
+#: ginga/rv/plugins/PluginConfig.py:96 ginga/rv/plugins/Preferences.py:1307
+#: ginga/rv/plugins/RC.py:257 ginga/rv/plugins/Ruler.py:229
+#: ginga/rv/plugins/SAMP.py:117 ginga/rv/plugins/SaveImage.py:158
+#: ginga/rv/plugins/ScreenShot.py:237 ginga/rv/plugins/SlideShow.py:202
+#: ginga/rv/plugins/TVMark.py:273 ginga/rv/plugins/TVMask.py:189
+#: ginga/rv/plugins/Thumbs.py:249 ginga/rv/plugins/WCSAxes.py:166
+#: ginga/rv/plugins/WCSMatch.py:116 ginga/rv/plugins/Zoom.py:191
+msgid "Close"
+msgstr "Schließen"
+
+#: ginga/gw/Desktop.py:892
+msgid "Set workspace type"
+msgstr "Arbeitsbereichstyp festlegen"
+
+#: ginga/gw/Desktop.py:897
+msgid "Tile Panes"
+msgstr "Fenster nebeneinander"
+
+#: ginga/gw/Desktop.py:901
+msgid "Cascade Panes"
+msgstr "Fenster kaskadieren"
+
+#: ginga/rv/Control.py:1584 ginga/rv/Control.py:1588
+msgid "Load File"
+msgstr "Datei laden"
+
+#: ginga/rv/Control.py:1811
+msgid "New channel name:"
+msgstr "Neuer Kanalname:"
+
+#: ginga/rv/Control.py:1812 ginga/rv/Control.py:1848 ginga/rv/Control.py:1953
+msgid "In workspace:"
+msgstr "Im Arbeitsbereich:"
+
+#: ginga/rv/Control.py:1829 ginga/rv/plugins/Menubar.py:104
+msgid "Add Channel"
+msgstr "Kanal hinzufügen"
+
+#: ginga/rv/Control.py:1831 ginga/rv/Control.py:1866 ginga/rv/Control.py:1888
+#: ginga/rv/Control.py:1911 ginga/rv/Control.py:1991 ginga/rv/Control.py:2030
+#: ginga/rv/Control.py:2089 ginga/rv/Control.py:2422
+#: ginga/rv/GenericControl.py:297 ginga/rv/GenericControl.py:564
+#: ginga/rv/plugins/Catalogs.py:436
+msgid "Cancel"
+msgstr "Abbrechen"
+
+#: ginga/rv/Control.py:1831 ginga/rv/Control.py:1866 ginga/rv/Control.py:1888
+#: ginga/rv/Control.py:1911 ginga/rv/Control.py:1991 ginga/rv/Control.py:2030
+#: ginga/rv/Control.py:2089 ginga/rv/Control.py:2422
+#: ginga/rv/GenericControl.py:595 ginga/rv/plugins/Catalogs.py:433
+msgid "Ok"
+msgstr "OK"
+
+#: ginga/rv/Control.py:1846
+msgid "Prefix:"
+msgstr "Präfix:"
+
+#: ginga/rv/Control.py:1847
+msgid "Number:"
+msgstr "Anzahl:"
+
+#: ginga/rv/Control.py:1864 ginga/rv/plugins/Menubar.py:107
+msgid "Add Channels"
+msgstr "Kanäle hinzufügen"
+
+#: ginga/rv/Control.py:1885
+#, python-format
+msgid "Really delete channel '%s' ?"
+msgstr "Kanal '%s' wirklich löschen?"
+
+#: ginga/rv/Control.py:1886 ginga/rv/plugins/Menubar.py:110
+msgid "Delete Channel"
+msgstr "Kanal löschen"
+
+#: ginga/rv/Control.py:1908
+#, python-format
+msgid "Really delete window '%s' ?"
+msgstr "Fenster '%s' wirklich löschen?"
+
+#: ginga/rv/Control.py:1909
+msgid "Delete Window"
+msgstr "Fenster löschen"
+
+#: ginga/rv/Control.py:1951
+msgid "Workspace name:"
+msgstr "Name des Arbeitsbereichs:"
+
+#: ginga/rv/Control.py:1952
+msgid "Workspace type:"
+msgstr "Typ des Arbeitsbereichs:"
+
+#: ginga/rv/Control.py:1954
+msgid "Channel prefix:"
+msgstr "Kanalpräfix:"
+
+#: ginga/rv/Control.py:1955
+msgid "Number of channels:"
+msgstr "Anzahl der Kanäle:"
+
+#: ginga/rv/Control.py:1957
+msgid "Share settings:"
+msgstr "Einstellungen teilen:"
+
+#: ginga/rv/Control.py:1989 ginga/rv/plugins/Menubar.py:116
+msgid "Add Workspace"
+msgstr "Arbeitsbereich hinzufügen"
+
+#: ginga/rv/Control.py:2011 ginga/rv/Control.py:2058
+msgid "Name"
+msgstr "Name"
+
+#: ginga/rv/Control.py:2012
+msgid "Note"
+msgstr "Notiz"
+
+#: ginga/rv/Control.py:2027
+msgid "Choose File Opener"
+msgstr "Datei-Öffner wählen"
+
+#: ginga/rv/Control.py:2045 ginga/rv/Control.py:2104
+msgid "Remember choice for session"
+msgstr "Auswahl für die Sitzung merken"
+
+#: ginga/rv/Control.py:2086
+msgid "Choose viewer"
+msgstr "Betrachter wählen"
+
+#: ginga/rv/Control.py:2417
+#, python-format
+msgid ""
+"Really delete workspace '%s' ?\n"
+"\n"
+"This will close all open channels in that workspace."
+msgstr ""
+"Arbeitsbereich '%s' wirklich löschen?\n"
+"\n"
+"Dadurch werden alle offenen Kanäle in diesem Arbeitsbereich geschlossen."
+
+#: ginga/rv/Control.py:2420
+msgid "Delete Workspace"
+msgstr "Arbeitsbereich löschen"
+
+#: ginga/rv/GenericControl.py:294
+msgid "Show documentation"
+msgstr "Dokumentation anzeigen"
+
+#: ginga/rv/GenericControl.py:298
+msgid "Skip help"
+msgstr "Hilfe überspringen"
+
+#: ginga/rv/GenericControl.py:300
+msgid "Show RST text"
+msgstr "RST-Text anzeigen"
+
+#: ginga/rv/GenericControl.py:301
+msgid "Show local docstring for plugin help"
+msgstr "Lokalen Docstring für die Plugin-Hilfe anzeigen"
+
+#: ginga/rv/GenericControl.py:303
+msgid "Use external browser"
+msgstr "Externen Browser verwenden"
+
+#: ginga/rv/GenericControl.py:304
+msgid "Show online web documentation in external browser"
+msgstr "Online-Webdokumentation im externen Browser anzeigen"
+
+#: ginga/rv/GenericControl.py:308
+msgid "How would you like to see help?"
+msgstr "Wie möchten Sie die Hilfe anzeigen?"
+
+#: ginga/rv/GenericControl.py:310
+msgid "Remember my choice for session"
+msgstr "Meine Auswahl für die Sitzung merken"
+
+#: ginga/rv/GenericControl.py:562
+msgid "Confirm Quit"
+msgstr "Beenden bestätigen"
+
+#: ginga/rv/GenericControl.py:565
+msgid "Confirm"
+msgstr "Bestätigen"
+
+#: ginga/rv/GenericControl.py:568
+msgid "Do you really want to quit?"
+msgstr "Möchten Sie wirklich beenden?"
+
+#: ginga/rv/GenericControl.py:593
+msgid "Language"
+msgstr "Sprache"
+
+#: ginga/rv/GenericControl.py:599
+msgid "Please restart Ginga for the new language to take effect."
+msgstr "Bitte starten Sie Ginga neu, damit die neue Sprache wirksam wird."
+
+#: ginga/rv/plugins/AutoLoad.py:85
+msgid "Watched folder:"
+msgstr "Überwachter Ordner:"
+
+#: ginga/rv/plugins/AutoLoad.py:86
+msgid "Match regex:"
+msgstr "Regex-Muster:"
+
+#: ginga/rv/plugins/AutoLoad.py:87
+msgid "Pause"
+msgstr "Pause"
+
+#: ginga/rv/plugins/AutoLoad.py:92
+msgid "Folder to monitor for new files"
+msgstr "Ordner auf neue Dateien überwachen"
+
+#: ginga/rv/plugins/AutoLoad.py:96
+msgid "Regular expression to match file name"
+msgstr "Regulärer Ausdruck zum Abgleich des Dateinamens"
+
+#: ginga/rv/plugins/AutoLoad.py:100
+msgid "Pause auto loading"
+msgstr "Automatisches Laden pausieren"
+
+#: ginga/rv/plugins/AutoLoad.py:118 ginga/rv/plugins/Blink.py:127
+#: ginga/rv/plugins/Catalogs.py:440 ginga/rv/plugins/ChangeHistory.py:143
+#: ginga/rv/plugins/Collage.py:228 ginga/rv/plugins/ColorMapPicker.py:118
+#: ginga/rv/plugins/Command.py:94 ginga/rv/plugins/Compose.py:218
+#: ginga/rv/plugins/Contents.py:167 ginga/rv/plugins/Crosshair.py:258
+#: ginga/rv/plugins/Cuts.py:386 ginga/rv/plugins/Drawing.py:238
+#: ginga/rv/plugins/Errors.py:69 ginga/rv/plugins/FBrowser.py:145
+#: ginga/rv/plugins/Header.py:66 ginga/rv/plugins/Histogram.py:265
+#: ginga/rv/plugins/LineProfile.py:223 ginga/rv/plugins/LoaderConfig.py:99
+#: ginga/rv/plugins/Log.py:105 ginga/rv/plugins/Menubar.py:138
+#: ginga/rv/plugins/Mosaic.py:234 ginga/rv/plugins/MultiDim.py:212
+#: ginga/rv/plugins/Overlays.py:136 ginga/rv/plugins/Pan.py:78
+#: ginga/rv/plugins/Pick.py:1109 ginga/rv/plugins/Pipeline.py:156
+#: ginga/rv/plugins/PixTable.py:344 ginga/rv/plugins/PlotTable.py:181
+#: ginga/rv/plugins/PluginConfig.py:99 ginga/rv/plugins/Preferences.py:1310
+#: ginga/rv/plugins/RC.py:260 ginga/rv/plugins/Ruler.py:232
+#: ginga/rv/plugins/SAMP.py:120 ginga/rv/plugins/SaveImage.py:161
+#: ginga/rv/plugins/ScreenShot.py:240 ginga/rv/plugins/SlideShow.py:205
+#: ginga/rv/plugins/TVMark.py:276 ginga/rv/plugins/TVMask.py:192
+#: ginga/rv/plugins/Thumbs.py:252 ginga/rv/plugins/WCSAxes.py:169
+#: ginga/rv/plugins/WCSMatch.py:119 ginga/rv/plugins/Zoom.py:194
+msgid "Help"
+msgstr "Hilfe"
+
+#: ginga/rv/plugins/Blink.py:73
+msgid "Blink"
+msgstr "Blinken"
+
+#: ginga/rv/plugins/Blink.py:76 ginga/rv/plugins/MultiDim.py:154
+msgid "Interval:"
+msgstr "Intervall:"
+
+#: ginga/rv/plugins/Blink.py:83
+msgid "Interval in seconds between changing images"
+msgstr "Intervall in Sekunden zwischen den Bildwechseln"
+
+#: ginga/rv/plugins/Blink.py:86
+msgid "Start Blink"
+msgstr "Blinken starten"
+
+#: ginga/rv/plugins/Blink.py:86
+msgid "Stop Blink"
+msgstr "Blinken stoppen"
+
+#: ginga/rv/plugins/Blink.py:87 ginga/rv/plugins/Info.py:131
+msgid "Max:"
+msgstr "Max:"
+
+#: ginga/rv/plugins/Blink.py:88 ginga/rv/plugins/Info.py:130
+msgid "Min:"
+msgstr "Min:"
+
+#: ginga/rv/plugins/Blink.py:101
+msgid "Mode:"
+msgstr "Modus:"
+
+#: ginga/rv/plugins/Catalogs.py:234
+msgid " Image Server "
+msgstr " Bildserver "
+
+#: ginga/rv/plugins/Catalogs.py:242
+msgid "Get Image"
+msgstr "Bild abrufen"
+
+#: ginga/rv/plugins/Catalogs.py:249
+msgid "Optional channel for result"
+msgstr "Optionaler Kanal für das Ergebnis"
+
+#: ginga/rv/plugins/Catalogs.py:268
+msgid "Choose the image source"
+msgstr "Bildquelle wählen"
+
+#: ginga/rv/plugins/Catalogs.py:273
+msgid " Catalog Server "
+msgstr " Katalogserver "
+
+#: ginga/rv/plugins/Catalogs.py:279
+msgid "Limit stars to area"
+msgstr "Sterne auf Bereich begrenzen"
+
+#: ginga/rv/plugins/Catalogs.py:280
+msgid "Search catalog"
+msgstr "Katalog durchsuchen"
+
+#: ginga/rv/plugins/Catalogs.py:287
+msgid "Filter out objects objects outside the shape"
+msgstr "Objekte außerhalb der Form ausfiltern"
+
+#: ginga/rv/plugins/Catalogs.py:306
+msgid "Choose the catalog source"
+msgstr "Katalogquelle wählen"
+
+#: ginga/rv/plugins/Catalogs.py:312
+msgid " Name Server "
+msgstr " Namensserver "
+
+#: ginga/rv/plugins/Catalogs.py:318
+msgid "Search name"
+msgstr "Namen suchen"
+
+#: ginga/rv/plugins/Catalogs.py:323
+msgid "Lookup name and populate ra/dec coordinates"
+msgstr "Namen nachschlagen und RA/DEC-Koordinaten ausfüllen"
+
+#: ginga/rv/plugins/Catalogs.py:336
+msgid "Choose the object name resolver"
+msgstr "Objektnamens-Auflöser wählen"
+
+#: ginga/rv/plugins/Catalogs.py:346
+msgid "Rectangle"
+msgstr "Rechteck"
+
+#: ginga/rv/plugins/Catalogs.py:351
+msgid "Circle"
+msgstr "Kreis"
+
+#: ginga/rv/plugins/Catalogs.py:356
+msgid "Entire image"
+msgstr "Gesamtes Bild"
+
+#: ginga/rv/plugins/Catalogs.py:365
+msgid "Select"
+msgstr "Auswählen"
+
+#: ginga/rv/plugins/Catalogs.py:369
+msgid "Choose this to highlight selection on table"
+msgstr "Wählen, um die Auswahl in der Tabelle hervorzuheben"
+
+#: ginga/rv/plugins/Catalogs.py:377
+msgid "Choose this to define search region"
+msgstr "Wählen, um den Suchbereich festzulegen"
+
+#: ginga/rv/plugins/Catalogs.py:384
+msgid "Choose this to edit or move a region"
+msgstr "Wählen, um einen Bereich zu bearbeiten oder zu verschieben"
+
+#: ginga/rv/plugins/Catalogs.py:396
+msgid "Params"
+msgstr "Parameter"
+
+#: ginga/rv/plugins/Catalogs.py:406
+msgid "Choose subset of stars plotted"
+msgstr "Teilmenge der dargestellten Sterne wählen"
+
+#: ginga/rv/plugins/Catalogs.py:416
+msgid "Adjust size of subset of stars plotted"
+msgstr "Größe der dargestellten Sternteilmenge anpassen"
+
+#: ginga/rv/plugins/Catalogs.py:422
+msgid "Listing"
+msgstr "Liste"
+
+#: ginga/rv/plugins/Catalogs.py:1341
+msgid "Do it"
+msgstr "Ausführen"
+
+#: ginga/rv/plugins/ChangeHistory.py:101
+msgid "Selected History"
+msgstr "Ausgewählter Verlauf"
+
+#: ginga/rv/plugins/ChangeHistory.py:103 ginga/rv/plugins/Info.py:118
+#: ginga/rv/plugins/Info.py:516 ginga/rv/plugins/Info.py:1005
+#: ginga/rv/plugins/SaveImage.py:99
+msgid "Channel:"
+msgstr "Kanal:"
+
+#: ginga/rv/plugins/ChangeHistory.py:104
+msgid "Image:"
+msgstr "Bild:"
+
+#: ginga/rv/plugins/ChangeHistory.py:105
+msgid "Timestamp:"
+msgstr "Zeitstempel:"
+
+#: ginga/rv/plugins/ChangeHistory.py:110
+msgid "Channel name"
+msgstr "Kanalname"
+
+#: ginga/rv/plugins/ChangeHistory.py:113
+msgid "Image name"
+msgstr "Bildname"
+
+#: ginga/rv/plugins/ChangeHistory.py:116
+msgid "Timestamp (UTC)"
+msgstr "Zeitstempel (UTC)"
+
+#: ginga/rv/plugins/ChangeHistory.py:125
+msgid "Displays selected history entry"
+msgstr "Zeigt den ausgewählten Verlaufseintrag an"
+
+#: ginga/rv/plugins/Collage.py:138
+msgid "Collage"
+msgstr "Collage"
+
+#: ginga/rv/plugins/Collage.py:141
+msgid "Method:"
+msgstr "Methode:"
+
+#: ginga/rv/plugins/Collage.py:141
+msgid "New Collage"
+msgstr "Neue Collage"
+
+#: ginga/rv/plugins/Collage.py:142
+msgid "Collage HDUs"
+msgstr "HDUs zusammenfügen"
+
+#: ginga/rv/plugins/Collage.py:142 ginga/rv/plugins/Mosaic.py:126
+msgid "Label images"
+msgstr "Bilder beschriften"
+
+#: ginga/rv/plugins/Collage.py:143 ginga/rv/plugins/Mosaic.py:126
+msgid "Match bg"
+msgstr "Hintergrund angleichen"
+
+#: ginga/rv/plugins/Collage.py:144 ginga/rv/plugins/Mosaic.py:129
+msgid "Num Threads:"
+msgstr "Anzahl Threads:"
+
+#: ginga/rv/plugins/Collage.py:162
+msgid "Collage data HDUs in each file"
+msgstr "Daten-HDUs jeder Datei zu einer Collage zusammenfügen"
+
+#: ginga/rv/plugins/Collage.py:168
+msgid "Label tiles with their names"
+msgstr "Kacheln mit ihren Namen beschriften"
+
+#: ginga/rv/plugins/Collage.py:172 ginga/rv/plugins/Mosaic.py:161
+msgid "Try to match background levels"
+msgstr "Hintergrundpegel anzugleichen versuchen"
+
+#: ginga/rv/plugins/Collage.py:180 ginga/rv/plugins/Mosaic.py:174
+msgid "Number of threads to use for mosaicing"
+msgstr "Anzahl der Threads für die Mosaik-Erstellung"
+
+#: ginga/rv/plugins/Collage.py:201 ginga/rv/plugins/Mosaic.py:207
+#: ginga/rv/plugins/Operations.py:225 ginga/rv/plugins/Pick.py:690
+#: ginga/rv/plugins/SlideShow.py:152
+msgid "Stop"
+msgstr "Stopp"
+
+#: ginga/rv/plugins/Command.py:67
+msgid "Output:"
+msgstr "Ausgabe:"
+
+#: ginga/rv/plugins/Command.py:80
+msgid "Type command here:"
+msgstr "Befehl hier eingeben:"
+
+#: ginga/rv/plugins/Compose.py:137
+msgid "Compositing"
+msgstr "Zusammensetzen"
+
+#: ginga/rv/plugins/Compose.py:139
+msgid "Compose Type:"
+msgstr "Kompositionstyp:"
+
+#: ginga/rv/plugins/Compose.py:140
+msgid "Insert from Channel"
+msgstr "Aus Kanal einfügen"
+
+#: ginga/rv/plugins/Compose.py:140
+msgid "New Image"
+msgstr "Neues Bild"
+
+#: ginga/rv/plugins/Compose.py:156
+msgid "Start a new composite image"
+msgstr "Neues zusammengesetztes Bild beginnen"
+
+#: ginga/rv/plugins/Compose.py:158
+msgid "Insert channel image as layer"
+msgstr "Kanalbild als Ebene einfügen"
+
+#: ginga/rv/plugins/Compose.py:182
+msgid "Preview"
+msgstr "Vorschau"
+
+#: ginga/rv/plugins/Compose.py:191
+msgid "Layers"
+msgstr "Ebenen"
+
+#: ginga/rv/plugins/Compose.py:198
+msgid "Save Image As"
+msgstr "Bild speichern unter"
+
+#: ginga/rv/plugins/Compose.py:199
+msgid "Save to Channel"
+msgstr "In Kanal speichern"
+
+#: ginga/rv/plugins/Compose.py:204
+msgid "Save composite image to channel"
+msgstr "Zusammengesetztes Bild in Kanal speichern"
+
+#: ginga/rv/plugins/Contents.py:132
+msgid "Display"
+msgstr "Anzeigen"
+
+#: ginga/rv/plugins/Contents.py:134
+msgid "Display the selected object in its channel viewer"
+msgstr "Das ausgewählte Objekt in seinem Kanalbetrachter anzeigen"
+
+#: ginga/rv/plugins/Contents.py:137 ginga/rv/plugins/Cuts.py:307
+#: ginga/rv/plugins/Histogram.py:225 ginga/rv/plugins/LineProfile.py:179
+#: ginga/rv/plugins/Pick.py:1076 ginga/rv/plugins/PixTable.py:310
+msgid "Move"
+msgstr "Verschieben"
+
+#: ginga/rv/plugins/Contents.py:139
+msgid "Move the selected objects to a channel"
+msgstr "Die ausgewählten Objekte in einen Kanal verschieben"
+
+#: ginga/rv/plugins/Contents.py:142
+msgid "Copy"
+msgstr "Kopieren"
+
+#: ginga/rv/plugins/Contents.py:144
+msgid "Copy the selected objects to a channel"
+msgstr "Die ausgewählten Objekte in einen Kanal kopieren"
+
+#: ginga/rv/plugins/Contents.py:147 ginga/rv/plugins/Errors.py:110
+msgid "Remove"
+msgstr "Entfernen"
+
+#: ginga/rv/plugins/Contents.py:149
+msgid "Remove the selected objects from a channel"
+msgstr "Die ausgewählten Objekte aus einem Kanal entfernen"
+
+#: ginga/rv/plugins/Contents.py:560
+msgid "To channel: "
+msgstr "In Kanal: "
+
+#: ginga/rv/plugins/Crosshair.py:165 ginga/rv/plugins/Crosshair.py:192
+msgid "Cuts"
+msgstr "Schnitte"
+
+#: ginga/rv/plugins/Crosshair.py:166
+msgid "Line index"
+msgstr "Linienindex"
+
+#: ginga/rv/plugins/Crosshair.py:167 ginga/rv/plugins/Histogram.py:377
+#: ginga/rv/plugins/Histogram.py:394
+msgid "Pixel value"
+msgstr "Pixelwert"
+
+#: ginga/rv/plugins/Crosshair.py:194
+msgid "Crosshair"
+msgstr "Fadenkreuz"
+
+#: ginga/rv/plugins/Crosshair.py:196
+msgid "Format:"
+msgstr "Format:"
+
+#: ginga/rv/plugins/Crosshair.py:197
+msgid "Drag only"
+msgstr "Nur ziehen"
+
+#: ginga/rv/plugins/Crosshair.py:209
+msgid "Must click and drag to update"
+msgstr "Zum Aktualisieren klicken und ziehen"
+
+#: ginga/rv/plugins/Crosshair.py:216 ginga/rv/plugins/Crosshair.py:218
+msgid "Quick Cuts"
+msgstr "Schnellschnitte"
+
+#: ginga/rv/plugins/Crosshair.py:219 ginga/rv/plugins/Pick.py:706
+#: ginga/util/stages/sharpen.py:33
+msgid "Radius:"
+msgstr "Radius:"
+
+#: ginga/rv/plugins/Crosshair.py:220
+msgid "Warn Level:"
+msgstr "Warnstufe:"
+
+#: ginga/rv/plugins/Crosshair.py:221
+msgid "Alert Level:"
+msgstr "Alarmstufe:"
+
+#: ginga/rv/plugins/Crosshair.py:226
+msgid "Do quick cuts plots"
+msgstr "Schnellschnitt-Diagramme erstellen"
+
+#: ginga/rv/plugins/Crosshair.py:231
+msgid "Pixel radius for quick mode cuts"
+msgstr "Pixelradius für Schnittе im Schnellmodus"
+
+#: ginga/rv/plugins/Crosshair.py:234
+msgid "Warning level for quick mode cuts"
+msgstr "Warnstufe für Schnitte im Schnellmodus"
+
+#: ginga/rv/plugins/Crosshair.py:235
+msgid "Alert level for quick mode cuts"
+msgstr "Alarmstufe für Schnitte im Schnellmodus"
+
+#: ginga/rv/plugins/Cuts.py:221
+msgid "Cut:"
+msgstr "Schnitt:"
+
+#: ginga/rv/plugins/Cuts.py:222
+msgid "New Cut Type:"
+msgstr "Neuer Schnitttyp:"
+
+#: ginga/rv/plugins/Cuts.py:223
+msgid "Delete Cut"
+msgstr "Schnitt löschen"
+
+#: ginga/rv/plugins/Cuts.py:223 ginga/rv/plugins/LineProfile.py:144
+#: ginga/rv/plugins/PixTable.py:260
+msgid "Delete All"
+msgstr "Alle löschen"
+
+#: ginga/rv/plugins/Cuts.py:224
+msgid "Copy Cut"
+msgstr "Schnitt kopieren"
+
+#: ginga/rv/plugins/Cuts.py:224 ginga/rv/plugins/Cuts.py:340
+#: ginga/rv/plugins/LoaderConfig.py:102 ginga/rv/plugins/PlotTable.py:119
+#: ginga/rv/plugins/PluginConfig.py:106 ginga/rv/plugins/SaveImage.py:151
+#: ginga/rv/plugins/ScreenShot.py:215 ginga/util/stages/output.py:42
+msgid "Save"
+msgstr "Speichern"
+
+#: ginga/rv/plugins/Cuts.py:236
+msgid "Select a cut to redraw or delete"
+msgstr "Einen Schnitt zum Neuzeichnen oder Löschen wählen"
+
+#: ginga/rv/plugins/Cuts.py:246
+msgid "Choose the cut type to draw"
+msgstr "Zu zeichnenden Schnitttyp wählen"
+
+#: ginga/rv/plugins/Cuts.py:249
+msgid "Save cuts plot and data"
+msgstr "Schnittdiagramm und -daten speichern"
+
+#: ginga/rv/plugins/Cuts.py:256
+msgid "Copy selected cut"
+msgstr "Ausgewählten Schnitt kopieren"
+
+#: ginga/rv/plugins/Cuts.py:260
+msgid "Delete selected cut"
+msgstr "Ausgewählten Schnitt löschen"
+
+#: ginga/rv/plugins/Cuts.py:264
+msgid "Clear all cuts"
+msgstr "Alle Schnitte löschen"
+
+#: ginga/rv/plugins/Cuts.py:271
+msgid "Cut Width"
+msgstr "Schnittbreite"
+
+#: ginga/rv/plugins/Cuts.py:273
+msgid "Width Type:"
+msgstr "Breitentyp:"
+
+#: ginga/rv/plugins/Cuts.py:274
+msgid "Width radius:"
+msgstr "Breitenradius:"
+
+#: ginga/rv/plugins/Cuts.py:286
+msgid "Direction of summation orthogonal to cut"
+msgstr "Summationsrichtung orthogonal zum Schnitt"
+
+#: ginga/rv/plugins/Cuts.py:290
+msgid "Radius of cut width"
+msgstr "Radius der Schnittbreite"
+
+#: ginga/rv/plugins/Cuts.py:311
+msgid "Choose this to position cuts"
+msgstr "Wählen, um Schnitte zu positionieren"
+
+#: ginga/rv/plugins/Cuts.py:319
+msgid "Choose this to draw a new or replacement cut"
+msgstr "Wählen, um einen neuen oder ersetzenden Schnitt zu zeichnen"
+
+#: ginga/rv/plugins/Cuts.py:327
+msgid "Choose this to edit a cut"
+msgstr "Wählen, um einen Schnitt zu bearbeiten"
+
+#: ginga/rv/plugins/Cuts.py:339
+msgid "Enable Slit"
+msgstr "Spalt aktivieren"
+
+#: ginga/rv/plugins/Cuts.py:340
+msgid "Transpose Plot"
+msgstr "Diagramm transponieren"
+
+#: ginga/rv/plugins/Cuts.py:351
+msgid "Enable the slit function"
+msgstr "Spaltfunktion aktivieren"
+
+#: ginga/rv/plugins/Cuts.py:355
+msgid "Flip the plot"
+msgstr "Diagramm spiegeln"
+
+#: ginga/rv/plugins/Cuts.py:360
+msgid "Save slit plot and data"
+msgstr "Spaltdiagramm und -daten speichern"
+
+#: ginga/rv/plugins/Cuts.py:366 ginga/rv/plugins/LineProfile.py:133
+msgid "Axes controls"
+msgstr "Achsensteuerung"
+
+#: ginga/rv/plugins/Cuts.py:377
+msgid "Slit"
+msgstr "Spalt"
+
+#: ginga/rv/plugins/Cuts.py:652
+msgid "Line Index"
+msgstr "Linienindex"
+
+#: ginga/rv/plugins/Cuts.py:652
+msgid "Pixel Value"
+msgstr "Pixelwert"
+
+#: ginga/rv/plugins/Cuts.py:1152 ginga/rv/plugins/Cuts.py:1155
+msgid "Position along slit"
+msgstr "Position entlang des Spalts"
+
+#: ginga/rv/plugins/Downloads.py:72
+msgid "Downloads"
+msgstr "Downloads"
+
+#: ginga/rv/plugins/Downloads.py:88
+msgid "Clear All"
+msgstr "Alle löschen"
+
+#: ginga/rv/plugins/Downloads.py:110 ginga/rv/plugins/Log.py:70
+#: ginga/rv/plugins/Ruler.py:138 ginga/rv/plugins/ScreenShot.py:174
+#: ginga/rv/plugins/Thumbs.py:232
+msgid "Clear"
+msgstr "Löschen"
+
+#: ginga/rv/plugins/Drawing.py:109
+msgid "Drawing"
+msgstr "Zeichnen"
+
+#: ginga/rv/plugins/Drawing.py:111 ginga/rv/plugins/Pick.py:704
+msgid "Draw type:"
+msgstr "Zeichentyp:"
+
+#: ginga/rv/plugins/Drawing.py:133
+msgid "Choose this to draw"
+msgstr "Wählen, um zu zeichnen"
+
+#: ginga/rv/plugins/Drawing.py:141
+msgid "Choose this to edit"
+msgstr "Wählen, um zu bearbeiten"
+
+#: ginga/rv/plugins/Drawing.py:148
+msgid "Attributes"
+msgstr "Attribute"
+
+#: ginga/rv/plugins/Drawing.py:158
+msgid "Rotate By:"
+msgstr "Drehen um:"
+
+#: ginga/rv/plugins/Drawing.py:159
+msgid "Scale By:"
+msgstr "Skalieren um:"
+
+#: ginga/rv/plugins/Drawing.py:160
+msgid "Copy Obj"
+msgstr "Objekt kopieren"
+
+#: ginga/rv/plugins/Drawing.py:160
+msgid "Delete Obj"
+msgstr "Objekt löschen"
+
+#: ginga/rv/plugins/Drawing.py:161
+msgid "Clear canvas"
+msgstr "Leinwand leeren"
+
+#: ginga/rv/plugins/Drawing.py:161
+msgid "Create mask"
+msgstr "Maske erstellen"
+
+#: ginga/rv/plugins/Drawing.py:166
+msgid "Delete selected object in edit mode"
+msgstr "Ausgewähltes Objekt im Bearbeitungsmodus löschen"
+
+#: ginga/rv/plugins/Drawing.py:170
+msgid "Copy selected object in edit mode"
+msgstr "Ausgewähltes Objekt im Bearbeitungsmodus kopieren"
+
+#: ginga/rv/plugins/Drawing.py:175
+msgid "Scale selected object in edit mode"
+msgstr "Ausgewähltes Objekt im Bearbeitungsmodus skalieren"
+
+#: ginga/rv/plugins/Drawing.py:180
+msgid "Rotate selected object in edit mode"
+msgstr "Ausgewähltes Objekt im Bearbeitungsmodus drehen"
+
+#: ginga/rv/plugins/Drawing.py:184
+msgid "Create boolean mask from drawing"
+msgstr "Boolesche Maske aus Zeichnung erstellen"
+
+#: ginga/rv/plugins/Drawing.py:186
+msgid "Delete all drawing objects"
+msgstr "Alle Zeichenobjekte löschen"
+
+#: ginga/rv/plugins/Drawing.py:190
+msgid "Export regions"
+msgstr "Regionen exportieren"
+
+#: ginga/rv/plugins/Drawing.py:190
+msgid "Import regions"
+msgstr "Regionen importieren"
+
+#: ginga/rv/plugins/Drawing.py:196
+msgid "Load a regions file"
+msgstr "Regionen-Datei laden"
+
+#: ginga/rv/plugins/Drawing.py:199
+msgid "Save a regions file"
+msgstr "Regionen-Datei speichern"
+
+#: ginga/rv/plugins/Drawing.py:223
+msgid "Select format for regions output file"
+msgstr "Format für Regionen-Ausgabedatei wählen"
+
+#: ginga/rv/plugins/Errors.py:73
+msgid "Remove All"
+msgstr "Alle entfernen"
+
+#: ginga/rv/plugins/FBrowser.py:143
+msgid "Close this plugin"
+msgstr "Dieses Plugin schließen"
+
+#: ginga/rv/plugins/FBrowser.py:147
+msgid "Show documentation for this plugin"
+msgstr "Dokumentation für dieses Plugin anzeigen"
+
+#: ginga/rv/plugins/FBrowser.py:149
+msgid "Refresh"
+msgstr "Aktualisieren"
+
+#: ginga/rv/plugins/FBrowser.py:151
+msgid "Refresh the file list from the directory"
+msgstr "Dateiliste aus dem Verzeichnis aktualisieren"
+
+#: ginga/rv/plugins/FBrowser.py:153 ginga/rv/plugins/SlideShow.py:116
+#: ginga/rv/plugins/SlideShow.py:147
+msgid "Load"
+msgstr "Laden"
+
+#: ginga/rv/plugins/FBrowser.py:155
+msgid "Load files selected in file pane"
+msgstr "Im Dateibereich ausgewählte Dateien laden"
+
+#: ginga/rv/plugins/FBrowser.py:157
+msgid "Make Thumbs"
+msgstr "Miniaturbilder erstellen"
+
+#: ginga/rv/plugins/FBrowser.py:159
+msgid "Make thumbnails for files in directory"
+msgstr "Miniaturbilder für Dateien im Verzeichnis erstellen"
+
+#: ginga/rv/plugins/Header.py:117
+msgid "Sortable"
+msgstr "Sortierbar"
+
+#: ginga/rv/plugins/Header.py:121
+msgid "Include primary header"
+msgstr "Primären Header einschließen"
+
+#: ginga/rv/plugins/Histogram.py:180 ginga/rv/plugins/Info.py:152
+#: ginga/rv/plugins/Preferences.py:749 ginga/util/stages/cuts.py:35
+msgid "Cut Low:"
+msgstr "Schnitt unten:"
+
+#: ginga/rv/plugins/Histogram.py:181 ginga/rv/plugins/Info.py:154
+#: ginga/rv/plugins/Preferences.py:751 ginga/util/stages/cuts.py:36
+msgid "Cut High:"
+msgstr "Schnitt oben:"
+
+#: ginga/rv/plugins/Histogram.py:182 ginga/rv/plugins/Info.py:157
+#: ginga/rv/plugins/Preferences.py:754
+msgid "Cut Levels"
+msgstr "Schnittwerte"
+
+#: ginga/rv/plugins/Histogram.py:183 ginga/rv/plugins/Info.py:156
+#: ginga/rv/plugins/Preferences.py:756
+msgid "Auto Levels"
+msgstr "Auto-Werte"
+
+#: ginga/rv/plugins/Histogram.py:184
+msgid "Log Histogram"
+msgstr "Log-Histogramm"
+
+#: ginga/rv/plugins/Histogram.py:185
+msgid "Plot By Cuts"
+msgstr "Nach Schnitten darstellen"
+
+#: ginga/rv/plugins/Histogram.py:186
+msgid "NumBins:"
+msgstr "Anz. Klassen:"
+
+#: ginga/rv/plugins/Histogram.py:187
+msgid "Full Image"
+msgstr "Vollbild"
+
+#: ginga/rv/plugins/Histogram.py:192 ginga/rv/plugins/Info.py:167
+#: ginga/rv/plugins/Preferences.py:761
+msgid "Set cut levels manually"
+msgstr "Schnittwerte manuell festlegen"
+
+#: ginga/rv/plugins/Histogram.py:193 ginga/rv/plugins/Info.py:170
+#: ginga/rv/plugins/Preferences.py:762
+msgid "Set cut levels by algorithm"
+msgstr "Schnittwerte per Algorithmus festlegen"
+
+#: ginga/rv/plugins/Histogram.py:194 ginga/rv/plugins/Info.py:171
+#: ginga/rv/plugins/Preferences.py:763
+msgid "Set low cut level (press Enter)"
+msgstr "Unteren Schnittwert festlegen (Eingabetaste drücken)"
+
+#: ginga/rv/plugins/Histogram.py:195 ginga/rv/plugins/Info.py:175
+#: ginga/rv/plugins/Preferences.py:766
+msgid "Set high cut level (press Enter)"
+msgstr "Oberen Schnittwert festlegen (Eingabetaste drücken)"
+
+#: ginga/rv/plugins/Histogram.py:200
+msgid "Number of bins for the histogram"
+msgstr "Anzahl der Klassen für das Histogramm"
+
+#: ginga/rv/plugins/Histogram.py:229
+msgid "Choose this to position box"
+msgstr "Wählen, um das Rechteck zu positionieren"
+
+#: ginga/rv/plugins/Histogram.py:237
+msgid "Choose this to draw a replacement box"
+msgstr "Wählen, um ein ersetzendes Rechteck zu zeichnen"
+
+#: ginga/rv/plugins/Histogram.py:245
+msgid "Choose this to edit a box"
+msgstr "Wählen, um ein Rechteck zu bearbeiten"
+
+#: ginga/rv/plugins/Histogram.py:377 ginga/rv/plugins/Histogram.py:394
+msgid "Number"
+msgstr "Anzahl"
+
+#: ginga/rv/plugins/Histogram.py:378 ginga/rv/plugins/Histogram.py:395
+msgid "Pixel Value Distribution"
+msgstr "Pixelwertverteilung"
+
+#: ginga/rv/plugins/Info.py:119 ginga/rv/plugins/Info.py:517
+#: ginga/rv/plugins/Info.py:1006 ginga/rv/plugins/ScreenShot.py:214
+msgid "Name:"
+msgstr "Name:"
+
+#: ginga/rv/plugins/Info.py:120
+msgid "Object:"
+msgstr "Objekt:"
+
+#: ginga/rv/plugins/Info.py:121 ginga/rv/plugins/Info.py:518
+#: ginga/rv/plugins/PlotTable.py:111
+msgid "X:"
+msgstr "X:"
+
+#: ginga/rv/plugins/Info.py:122 ginga/rv/plugins/Info.py:519
+#: ginga/rv/plugins/PlotTable.py:112
+msgid "Y:"
+msgstr "Y:"
+
+#: ginga/rv/plugins/Info.py:123
+msgid "Image-X:"
+msgstr "Bild-X:"
+
+#: ginga/rv/plugins/Info.py:124
+msgid "Image-Y:"
+msgstr "Bild-Y:"
+
+#: ginga/rv/plugins/Info.py:125
+msgid "Value:"
+msgstr "Wert:"
+
+#: ginga/rv/plugins/Info.py:126 ginga/rv/plugins/Pick.py:634
+msgid "RA:"
+msgstr "RA:"
+
+#: ginga/rv/plugins/Info.py:127 ginga/rv/plugins/Pick.py:635
+msgid "DEC:"
+msgstr "DEC:"
+
+#: ginga/rv/plugins/Info.py:128 ginga/rv/plugins/Pick.py:636
+msgid "Equinox:"
+msgstr "Äquinoktium:"
+
+#: ginga/rv/plugins/Info.py:129
+msgid "Dimensions:"
+msgstr "Abmessungen:"
+
+#: ginga/rv/plugins/Info.py:146
+msgid "Content Info"
+msgstr "Inhaltsinformationen"
+
+#: ginga/rv/plugins/Info.py:150 ginga/rv/plugins/Pick.py:631
+#: ginga/rv/plugins/Zoom.py:153
+msgid "Zoom:"
+msgstr "Zoom:"
+
+#: ginga/rv/plugins/Info.py:158 ginga/rv/plugins/Preferences.py:1154
+msgid "Cut New:"
+msgstr "Schnitt (neu):"
+
+#: ginga/rv/plugins/Info.py:159 ginga/rv/plugins/Preferences.py:1155
+msgid "Zoom New:"
+msgstr "Zoom (neu):"
+
+#: ginga/rv/plugins/Info.py:160 ginga/rv/plugins/Preferences.py:1157
+msgid "Follow New"
+msgstr "Neuen folgen"
+
+#: ginga/rv/plugins/Info.py:161 ginga/rv/plugins/Preferences.py:1156
+msgid "Center New:"
+msgstr "Zentrieren (neu):"
+
+#: ginga/rv/plugins/Info.py:162 ginga/rv/plugins/Preferences.py:1157
+msgid "Raise New"
+msgstr "Neuen anzeigen"
+
+#: ginga/rv/plugins/Info.py:183
+msgid "Set distribution (stretching) algorithm"
+msgstr "Verteilungsalgorithmus (Streckung) festlegen"
+
+#: ginga/rv/plugins/Info.py:188 ginga/rv/plugins/Preferences.py:1173
+msgid "Automatically set cut levels when switching images"
+msgstr "Schnittwerte beim Bildwechsel automatisch festlegen"
+
+#: ginga/rv/plugins/Info.py:193 ginga/rv/plugins/Preferences.py:1184
+msgid "Automatically fit image to window when switching images"
+msgstr "Bild beim Wechsel automatisch an Fenster anpassen"
+
+#: ginga/rv/plugins/Info.py:198 ginga/rv/plugins/Preferences.py:1199
+msgid "Automatically center image in window when switching images"
+msgstr "Bild beim Wechsel automatisch im Fenster zentrieren"
+
+#: ginga/rv/plugins/Info.py:200
+msgid "Automatically switch to new images in channel"
+msgstr "Automatisch zu neuen Bildern im Kanal wechseln"
+
+#: ginga/rv/plugins/Info.py:201
+msgid "Automatically raise channel viewer for new images"
+msgstr "Kanalbetrachter bei neuen Bildern automatisch in den Vordergrund holen"
+
+#: ginga/rv/plugins/Info.py:539
+msgid "Col:"
+msgstr "Spalte:"
+
+#: ginga/rv/plugins/Info.py:541
+msgid "Add to plot"
+msgstr "Zum Diagramm hinzufügen"
+
+#: ginga/rv/plugins/Info.py:541
+msgid "Color"
+msgstr "Farbe"
+
+#: ginga/rv/plugins/Info.py:543
+msgid "Clear Plot"
+msgstr "Diagramm löschen"
+
+#: ginga/rv/plugins/Info.py:556 ginga/rv/plugins/PlotTable.py:127
+msgid "Select a column to plot on X-axis"
+msgstr "Spalte für die X-Achse wählen"
+
+#: ginga/rv/plugins/Info.py:566 ginga/rv/plugins/PlotTable.py:133
+msgid "Select a column to plot on Y-axis"
+msgstr "Spalte für die Y-Achse wählen"
+
+#: ginga/rv/plugins/Info.py:575
+msgid "Set the color of the line to be added"
+msgstr "Farbe der hinzuzufügenden Linie festlegen"
+
+#: ginga/rv/plugins/Info.py:579
+msgid "Clear the current plot"
+msgstr "Aktuelles Diagramm löschen"
+
+#: ginga/rv/plugins/Info.py:583
+msgid "Add selected columns to plot"
+msgstr "Ausgewählte Spalten zum Diagramm hinzufügen"
+
+#: ginga/rv/plugins/Info.py:587
+msgid "Plot from Table"
+msgstr "Diagramm aus Tabelle"
+
+#: ginga/rv/plugins/Info.py:598
+msgid "Dist:"
+msgstr "Vert.:"
+
+#: ginga/rv/plugins/Info.py:600
+msgid "Low:"
+msgstr "Unten:"
+
+#: ginga/rv/plugins/Info.py:601
+msgid "High:"
+msgstr "Oben:"
+
+#: ginga/rv/plugins/Info.py:602
+msgid "Show marker"
+msgstr "Markierung anzeigen"
+
+#: ginga/rv/plugins/Info.py:603
+msgid "Save Plot"
+msgstr "Diagramm speichern"
+
+#: ginga/rv/plugins/Info.py:612
+msgid "Select a mapping to plot on X-axis"
+msgstr "Abbildung für die X-Achse wählen"
+
+#: ginga/rv/plugins/Info.py:620
+msgid "Select a mapping to plot on Y-axis"
+msgstr "Abbildung für die Y-Achse wählen"
+
+#: ginga/rv/plugins/Info.py:628 ginga/rv/plugins/PlotTable.py:144
+msgid "Set X lower limit"
+msgstr "Untere X-Grenze festlegen"
+
+#: ginga/rv/plugins/Info.py:631 ginga/rv/plugins/PlotTable.py:147
+msgid "Set X upper limit"
+msgstr "Obere X-Grenze festlegen"
+
+#: ginga/rv/plugins/Info.py:634 ginga/rv/plugins/PlotTable.py:150
+msgid "Set Y lower limit"
+msgstr "Untere Y-Grenze festlegen"
+
+#: ginga/rv/plugins/Info.py:637 ginga/rv/plugins/PlotTable.py:153
+msgid "Set Y upper limit"
+msgstr "Obere Y-Grenze festlegen"
+
+#: ginga/rv/plugins/Info.py:641 ginga/rv/plugins/PlotTable.py:157
+msgid "Mark data points"
+msgstr "Datenpunkte markieren"
+
+#: ginga/rv/plugins/Info.py:644
+msgid "Save plot to file"
+msgstr "Diagramm in Datei speichern"
+
+#: ginga/rv/plugins/Info.py:648
+msgid "Plot Controls"
+msgstr "Diagrammsteuerung"
+
+#: ginga/rv/plugins/Info.py:1028
+msgid "New Plot"
+msgstr "Neues Diagramm"
+
+#: ginga/rv/plugins/Info.py:1033
+msgid "Create new plot for this table"
+msgstr "Neues Diagramm für diese Tabelle erstellen"
+
+#: ginga/rv/plugins/Info.py:1036
+msgid "Plot"
+msgstr "Diagramm"
+
+#: ginga/rv/plugins/LineProfile.py:123
+msgid "Plot All"
+msgstr "Alle darstellen"
+
+#: ginga/rv/plugins/LineProfile.py:129
+msgid "Plot all marks"
+msgstr "Alle Markierungen darstellen"
+
+#: ginga/rv/plugins/LineProfile.py:142
+msgid "New Mark Type:"
+msgstr "Neuer Markierungstyp:"
+
+#: ginga/rv/plugins/LineProfile.py:143 ginga/rv/plugins/PixTable.py:275
+msgid "Pan to mark"
+msgstr "Zur Markierung verschieben"
+
+#: ginga/rv/plugins/LineProfile.py:144 ginga/rv/plugins/PixTable.py:253
+#: ginga/rv/plugins/SlideShow.py:171
+msgid "Delete"
+msgstr "Löschen"
+
+#: ginga/rv/plugins/LineProfile.py:155 ginga/rv/plugins/PixTable.py:250
+msgid "Select a mark"
+msgstr "Eine Markierung wählen"
+
+#: ginga/rv/plugins/LineProfile.py:164
+msgid "Choose the mark type to draw"
+msgstr "Zu zeichnenden Markierungstyp wählen"
+
+#: ginga/rv/plugins/LineProfile.py:167 ginga/rv/plugins/PixTable.py:278
+msgid "Pan follows selected mark"
+msgstr "Verschiebung folgt der ausgewählten Markierung"
+
+#: ginga/rv/plugins/LineProfile.py:170 ginga/rv/plugins/PixTable.py:255
+msgid "Delete selected mark"
+msgstr "Ausgewählte Markierung löschen"
+
+#: ginga/rv/plugins/LineProfile.py:173 ginga/rv/plugins/PixTable.py:262
+msgid "Clear all marks"
+msgstr "Alle Markierungen löschen"
+
+#: ginga/rv/plugins/LineProfile.py:187
+msgid "Choose this to position marks"
+msgstr "Wählen, um Markierungen zu positionieren"
+
+#: ginga/rv/plugins/LineProfile.py:193
+msgid "Choose this to draw a new mark"
+msgstr "Wählen, um eine neue Markierung zu zeichnen"
+
+#: ginga/rv/plugins/LineProfile.py:199 ginga/rv/plugins/PixTable.py:330
+msgid "Choose this to edit a mark"
+msgstr "Wählen, um eine Markierung zu bearbeiten"
+
+#: ginga/rv/plugins/LineProfile.py:204
+msgid "Mark controls"
+msgstr "Markierungssteuerung"
+
+#: ginga/rv/plugins/LineProfile.py:266
+msgid "No NAXIS info"
+msgstr "Keine NAXIS-Information"
+
+#: ginga/rv/plugins/LineProfile.py:400
+msgid "Index"
+msgstr "Index"
+
+#: ginga/rv/plugins/LoaderConfig.py:81
+msgid "Priority:"
+msgstr "Priorität:"
+
+#: ginga/rv/plugins/LoaderConfig.py:83
+msgid "Edit priority of loader (lower=better, negative numbers ok)"
+msgstr ""
+"Priorität des Laders bearbeiten (niedriger=besser, negative Zahlen "
+"erlaubt)"
+
+#: ginga/rv/plugins/LoaderConfig.py:104
+msgid "Save configuration of loaders"
+msgstr "Konfiguration der Lader speichern"
+
+#: ginga/rv/plugins/Log.py:70 ginga/rv/plugins/Thumbs.py:232
+msgid "Auto scroll"
+msgstr "Auto-Bildlauf"
+
+#: ginga/rv/plugins/Log.py:80
+msgid "Set the logging level"
+msgstr "Protokollierungsstufe festlegen"
+
+#: ginga/rv/plugins/Log.py:86
+msgid "Set the logging history line limit"
+msgstr "Zeilenlimit des Protokollverlaufs festlegen"
+
+#: ginga/rv/plugins/Log.py:90
+msgid "Scroll the log window automatically"
+msgstr "Protokollfenster automatisch scrollen"
+
+#: ginga/rv/plugins/Log.py:95
+msgid "Clear the log history"
+msgstr "Protokollverlauf löschen"
+
+#: ginga/rv/plugins/Menubar.py:87
+msgid "File"
+msgstr "Datei"
+
+#: ginga/rv/plugins/Menubar.py:89
+msgid "Load Image"
+msgstr "Bild laden"
+
+#: ginga/rv/plugins/Menubar.py:92
+msgid "Remove Image"
+msgstr "Bild entfernen"
+
+#: ginga/rv/plugins/Menubar.py:102
+msgid "Channel"
+msgstr "Kanal"
+
+#: ginga/rv/plugins/Menubar.py:123
+msgid "Plugins"
+msgstr "Plugins"
+
+#: ginga/rv/plugins/Menubar.py:140
+msgid "About"
+msgstr "Über"
+
+#: ginga/rv/plugins/Menubar.py:144
+msgid "Documentation"
+msgstr "Dokumentation"
+
+#: ginga/rv/plugins/Mosaic.py:121
+msgid "Mosaic"
+msgstr "Mosaik"
+
+#: ginga/rv/plugins/Mosaic.py:124
+msgid "FOV (deg):"
+msgstr "FOV (Grad):"
+
+#: ginga/rv/plugins/Mosaic.py:125
+msgid "Allow expansion"
+msgstr "Erweiterung zulassen"
+
+#: ginga/rv/plugins/Mosaic.py:125
+msgid "New Mosaic"
+msgstr "Neues Mosaik"
+
+#: ginga/rv/plugins/Mosaic.py:127
+msgid "Trim Pixels:"
+msgstr "Pixel beschneiden:"
+
+#: ginga/rv/plugins/Mosaic.py:131
+msgid "Drop new"
+msgstr "Neue ablegen"
+
+#: ginga/rv/plugins/Mosaic.py:131
+msgid "Merge data"
+msgstr "Daten zusammenführen"
+
+#: ginga/rv/plugins/Mosaic.py:133
+msgid "Mosaic HDUs"
+msgstr "HDUs zu Mosaik"
+
+#: ginga/rv/plugins/Mosaic.py:148
+msgid "Set size of mosaic FOV (deg)"
+msgstr "Größe des Mosaik-FOV festlegen (Grad)"
+
+#: ginga/rv/plugins/Mosaic.py:149
+msgid "Allow image to expand the FOV"
+msgstr "Bild darf das FOV erweitern"
+
+#: ginga/rv/plugins/Mosaic.py:156
+msgid "Label tiles with their names (only if allow_expand=False)"
+msgstr "Kacheln mit ihren Namen beschriften (nur wenn allow_expand=False)"
+
+#: ginga/rv/plugins/Mosaic.py:164
+msgid "Set number of pixels to trim from each edge"
+msgstr "Anzahl der an jeder Kante zu beschneidenden Pixel festlegen"
+
+#: ginga/rv/plugins/Mosaic.py:177
+msgid "Merge data instead of overlay"
+msgstr "Daten zusammenführen statt überlagern"
+
+#: ginga/rv/plugins/Mosaic.py:181
+msgid "Dropping files on image starts a new mosaic"
+msgstr "Dateien auf das Bild ziehen startet ein neues Mosaik"
+
+#: ginga/rv/plugins/Mosaic.py:185
+msgid "Mosaic data HDUs in each file"
+msgstr "Daten-HDUs jeder Datei zu einem Mosaik zusammenfügen"
+
+#: ginga/rv/plugins/MultiDim.py:112
+msgid "HDU"
+msgstr "HDU"
+
+#: ginga/rv/plugins/MultiDim.py:115
+msgid "Num HDUs:"
+msgstr "Anz. HDUs:"
+
+#: ginga/rv/plugins/MultiDim.py:128
+msgid "Choose which HDU to view"
+msgstr "Anzuzeigende HDU wählen"
+
+#: ginga/rv/plugins/MultiDim.py:134
+msgid "NAXIS (data cubes)"
+msgstr "NAXIS (Datenwürfel)"
+
+#: ginga/rv/plugins/MultiDim.py:168
+msgid "Slice:"
+msgstr "Schicht:"
+
+#: ginga/rv/plugins/MultiDim.py:170
+msgid "Save Slice"
+msgstr "Schicht speichern"
+
+#: ginga/rv/plugins/MultiDim.py:177
+msgid "Save current slice as RGB image"
+msgstr "Aktuelle Schicht als RGB-Bild speichern"
+
+#: ginga/rv/plugins/MultiDim.py:180
+msgid "Movie"
+msgstr "Film"
+
+#: ginga/rv/plugins/MultiDim.py:182
+msgid "Start:"
+msgstr "Anfang:"
+
+#: ginga/rv/plugins/MultiDim.py:183
+msgid "End:"
+msgstr "Ende:"
+
+#: ginga/rv/plugins/MultiDim.py:184
+msgid "Save Movie"
+msgstr "Film speichern"
+
+#: ginga/rv/plugins/MultiDim.py:187
+msgid "Starting slice"
+msgstr "Anfangsschicht"
+
+#: ginga/rv/plugins/MultiDim.py:188
+msgid "Ending slice"
+msgstr "Endschicht"
+
+#: ginga/rv/plugins/MultiDim.py:242
+msgid "NAXIS1:"
+msgstr "NAXIS1:"
+
+#: ginga/rv/plugins/MultiDim.py:243
+msgid "NAXIS2:"
+msgstr "NAXIS2:"
+
+#: ginga/rv/plugins/Operations.py:65
+msgid "Select a channel"
+msgstr "Einen Kanal wählen"
+
+#: ginga/rv/plugins/Operations.py:72
+msgid "Operation"
+msgstr "Operation"
+
+#: ginga/rv/plugins/Operations.py:73
+msgid "Invoke operation"
+msgstr "Operation ausführen"
+
+#: ginga/rv/plugins/Operations.py:79
+msgid "Go"
+msgstr "Los"
+
+#: ginga/rv/plugins/Operations.py:221
+msgid "Focus"
+msgstr "Fokussieren"
+
+#: ginga/rv/plugins/Operations.py:223
+msgid "Unfocus"
+msgstr "Fokus entfernen"
+
+#: ginga/rv/plugins/Operations.py:227 ginga/rv/plugins/SlideShow.py:117
+msgid "Reload"
+msgstr "Neu laden"
+
+#: ginga/rv/plugins/Operations.py:234
+msgid "Right click for menu"
+msgstr "Rechtsklick für Menü"
+
+#: ginga/rv/plugins/Overlays.py:80
+msgid "Limits"
+msgstr "Grenzen"
+
+#: ginga/rv/plugins/Overlays.py:82
+msgid "Opacity:"
+msgstr "Deckkraft:"
+
+#: ginga/rv/plugins/Overlays.py:83
+msgid "Hi color:"
+msgstr "Farbe oben:"
+
+#: ginga/rv/plugins/Overlays.py:84
+msgid "Hi limit:"
+msgstr "Grenze oben:"
+
+#: ginga/rv/plugins/Overlays.py:85
+msgid "Lo color:"
+msgstr "Farbe unten:"
+
+#: ginga/rv/plugins/Overlays.py:86
+msgid "Lo limit:"
+msgstr "Grenze unten:"
+
+#: ginga/rv/plugins/Overlays.py:87
+msgid "Redo"
+msgstr "Wiederholen"
+
+#: ginga/rv/plugins/Pick.py:530
+msgid "Image"
+msgstr "Bild"
+
+#: ginga/rv/plugins/Pick.py:582 ginga/rv/plugins/Pick.py:599
+msgid "Contour"
+msgstr "Kontur"
+
+#: ginga/rv/plugins/Pick.py:607 ginga/util/plots.py:310 ginga/util/plots.py:357
+msgid "FWHM"
+msgstr "FWHM"
+
+#: ginga/rv/plugins/Pick.py:615
+msgid "Radial"
+msgstr "Radial"
+
+#: ginga/rv/plugins/Pick.py:623 ginga/util/plots.py:452
+msgid "EE"
+msgstr "EE"
+
+#: ginga/rv/plugins/Pick.py:632
+msgid "Object_X:"
+msgstr "Objekt_X:"
+
+#: ginga/rv/plugins/Pick.py:633
+msgid "Object_Y:"
+msgstr "Objekt_Y:"
+
+#: ginga/rv/plugins/Pick.py:637
+msgid "Background:"
+msgstr "Hintergrund:"
+
+#: ginga/rv/plugins/Pick.py:638
+msgid "Sky Level:"
+msgstr "Himmelspegel:"
+
+#: ginga/rv/plugins/Pick.py:639 ginga/rv/plugins/Preferences.py:715
+#: ginga/util/stages/rgbmap.py:155
+msgid "Brightness:"
+msgstr "Helligkeit:"
+
+#: ginga/rv/plugins/Pick.py:640
+msgid "FWHM X:"
+msgstr "FWHM X:"
+
+#: ginga/rv/plugins/Pick.py:641
+msgid "FWHM Y:"
+msgstr "FWHM Y:"
+
+#: ginga/rv/plugins/Pick.py:642
+msgid "FWHM:"
+msgstr "FWHM:"
+
+#: ginga/rv/plugins/Pick.py:643
+msgid "Star Size:"
+msgstr "Sterngröße:"
+
+#: ginga/rv/plugins/Pick.py:644
+msgid "EE (circ):"
+msgstr "EE (Kreis):"
+
+#: ginga/rv/plugins/Pick.py:645
+msgid "EE (sq):"
+msgstr "EE (Quadrat):"
+
+#: ginga/rv/plugins/Pick.py:646
+msgid "Sample Area:"
+msgstr "Stichprobenbereich:"
+
+#: ginga/rv/plugins/Pick.py:647
+msgid "Default Region"
+msgstr "Standardbereich"
+
+#: ginga/rv/plugins/Pick.py:647
+msgid "Pan to pick"
+msgstr "Zur Auswahl verschieben"
+
+#: ginga/rv/plugins/Pick.py:649
+msgid "Center on pick"
+msgstr "Auf Auswahl zentrieren"
+
+#: ginga/rv/plugins/Pick.py:656
+msgid "Encircled energy"
+msgstr "Eingekreiste Energie"
+
+#: ginga/rv/plugins/Pick.py:657
+msgid "Ensquared energy"
+msgstr "Eingequadrierte Energie"
+
+#: ginga/rv/plugins/Pick.py:660
+msgid "Reset region size to default"
+msgstr "Bereichsgröße auf Standard zurücksetzen"
+
+#: ginga/rv/plugins/Pick.py:663
+msgid "Pan image to pick center"
+msgstr "Bild zum Auswahlzentrum verschieben"
+
+#: ginga/rv/plugins/Pick.py:700
+msgid "Readout"
+msgstr "Anzeige"
+
+#: ginga/rv/plugins/Pick.py:703
+msgid "Show Candidates"
+msgstr "Kandidaten anzeigen"
+
+#: ginga/rv/plugins/Pick.py:708
+msgid "Threshold:"
+msgstr "Schwellenwert:"
+
+#: ginga/rv/plugins/Pick.py:710
+msgid "Min FWHM:"
+msgstr "Min. FWHM:"
+
+#: ginga/rv/plugins/Pick.py:712
+msgid "Max FWHM:"
+msgstr "Max. FWHM:"
+
+#: ginga/rv/plugins/Pick.py:714
+msgid "Ellipticity:"
+msgstr "Elliptizität:"
+
+#: ginga/rv/plugins/Pick.py:716
+msgid "Edge:"
+msgstr "Rand:"
+
+#: ginga/rv/plugins/Pick.py:718
+msgid "Max side:"
+msgstr "Max. Seite:"
+
+#: ginga/rv/plugins/Pick.py:720
+msgid "Coordinate Base:"
+msgstr "Koordinatenbasis:"
+
+#: ginga/rv/plugins/Pick.py:723
+msgid "Calc center:"
+msgstr "Zentrum berechnen:"
+
+#: ginga/rv/plugins/Pick.py:725
+msgid "FWHM fitting:"
+msgstr "FWHM-Anpassung:"
+
+#: ginga/rv/plugins/Pick.py:727
+msgid "Contour Interpolation:"
+msgstr "Kontur-Interpolation:"
+
+#: ginga/rv/plugins/Pick.py:729
+msgid "EE total radius:"
+msgstr "EE-Gesamtradius:"
+
+#: ginga/rv/plugins/Pick.py:731
+msgid "EE sampling radius:"
+msgstr "EE-Stichprobenradius:"
+
+#: ginga/rv/plugins/Pick.py:737
+msgid "Radius for peak detection"
+msgstr "Radius für die Spitzenerkennung"
+
+#: ginga/rv/plugins/Pick.py:738
+msgid "Threshold for peak detection (blank=default)"
+msgstr "Schwellenwert für die Spitzenerkennung (leer=Standard)"
+
+#: ginga/rv/plugins/Pick.py:739
+msgid "Minimum FWHM for selection"
+msgstr "Minimales FWHM für die Auswahl"
+
+#: ginga/rv/plugins/Pick.py:740
+msgid "Maximum FWHM for selection"
+msgstr "Maximales FWHM für die Auswahl"
+
+#: ginga/rv/plugins/Pick.py:741
+msgid "Minimum ellipticity for selection"
+msgstr "Minimale Elliptizität für die Auswahl"
+
+#: ginga/rv/plugins/Pick.py:742
+msgid "Minimum edge distance for selection"
+msgstr "Minimaler Randabstand für die Auswahl"
+
+#: ginga/rv/plugins/Pick.py:743
+msgid "Show all peak candidates"
+msgstr "Alle Spitzenkandidaten anzeigen"
+
+#: ginga/rv/plugins/Pick.py:744
+msgid "Maximum dimension to search for peaks"
+msgstr "Maximale Dimension für die Spitzensuche"
+
+#: ginga/rv/plugins/Pick.py:745
+msgid "Base of pixel coordinate system"
+msgstr "Basis des Pixelkoordinatensystems"
+
+#: ginga/rv/plugins/Pick.py:746
+msgid "How to calculate the center of object"
+msgstr "Wie das Objektzentrum berechnet wird"
+
+#: ginga/rv/plugins/Pick.py:747
+msgid "Function for fitting the FWHM"
+msgstr "Funktion zur Anpassung des FWHM"
+
+#: ginga/rv/plugins/Pick.py:748
+msgid "Interpolation for use in contour plot"
+msgstr "Interpolation für das Konturdiagramm"
+
+#: ginga/rv/plugins/Pick.py:749
+msgid "Radius where EE fraction is 1"
+msgstr "Radius, bei dem der EE-Anteil 1 ist"
+
+#: ginga/rv/plugins/Pick.py:750
+msgid "Radius for EE sampling"
+msgstr "Radius für die EE-Stichprobe"
+
+#: ginga/rv/plugins/Pick.py:939
+msgid "Redo Pick"
+msgstr "Auswahl wiederholen"
+
+#: ginga/rv/plugins/Pick.py:944
+msgid "Settings"
+msgstr "Einstellungen"
+
+#: ginga/rv/plugins/Pick.py:949
+msgid "Bg cut"
+msgstr "Hintergrundschnitt"
+
+#: ginga/rv/plugins/Pick.py:949
+msgid "Delta bg:"
+msgstr "Delta Hintergrund:"
+
+#: ginga/rv/plugins/Pick.py:951
+msgid "Delta sky:"
+msgstr "Delta Himmel:"
+
+#: ginga/rv/plugins/Pick.py:951
+msgid "Sky cut"
+msgstr "Himmelsschnitt"
+
+#: ginga/rv/plugins/Pick.py:953
+msgid "Bright cut"
+msgstr "Helligkeitsschnitt"
+
+#: ginga/rv/plugins/Pick.py:953
+msgid "Delta bright:"
+msgstr "Delta Helligkeit:"
+
+#: ginga/rv/plugins/Pick.py:959
+msgid "Set image low cut to Background Level"
+msgstr "Unteren Bildschnitt auf Hintergrundpegel setzen"
+
+#: ginga/rv/plugins/Pick.py:960 ginga/rv/plugins/Pick.py:962
+#: ginga/rv/plugins/Pick.py:964
+msgid "Delta to apply to this cut"
+msgstr "Auf diesen Schnitt anzuwendendes Delta"
+
+#: ginga/rv/plugins/Pick.py:961
+msgid "Set image low cut to Sky Level"
+msgstr "Unteren Bildschnitt auf Himmelspegel setzen"
+
+#: ginga/rv/plugins/Pick.py:963
+msgid "Set image high cut to Sky Level+Brightness"
+msgstr "Oberen Bildschnitt auf Himmelspegel+Helligkeit setzen"
+
+#: ginga/rv/plugins/Pick.py:1023
+msgid "Controls"
+msgstr "Steuerung"
+
+#: ginga/rv/plugins/Pick.py:1035
+msgid "Add Pick"
+msgstr "Auswahl hinzufügen"
+
+#: ginga/rv/plugins/Pick.py:1038
+msgid "Record Picks automatically"
+msgstr "Auswahlen automatisch aufzeichnen"
+
+#: ginga/rv/plugins/Pick.py:1042
+msgid "Clear Log"
+msgstr "Protokoll löschen"
+
+#: ginga/rv/plugins/Pick.py:1050
+msgid "Save table"
+msgstr "Tabelle speichern"
+
+#: ginga/rv/plugins/Pick.py:1053
+msgid "File:"
+msgstr "Datei:"
+
+#: ginga/rv/plugins/Pick.py:1059
+msgid "File type determined by extension"
+msgstr "Dateityp wird durch die Erweiterung bestimmt"
+
+#: ginga/rv/plugins/Pick.py:1064
+msgid "Report"
+msgstr "Bericht"
+
+#: ginga/rv/plugins/Pick.py:1080
+msgid "Choose this to position pick"
+msgstr "Wählen, um die Auswahl zu positionieren"
+
+#: ginga/rv/plugins/Pick.py:1088
+msgid "Choose this to draw a replacement pick"
+msgstr "Wählen, um eine ersetzende Auswahl zu zeichnen"
+
+#: ginga/rv/plugins/Pick.py:1096
+msgid "Choose this to edit or move a pick"
+msgstr "Wählen, um eine Auswahl zu bearbeiten oder zu verschieben"
+
+#: ginga/rv/plugins/Pipeline.py:61
+msgid "Operation on pipeline"
+msgstr "Operation auf der Pipeline"
+
+#: ginga/rv/plugins/Pipeline.py:63
+msgid "Load a new pipeline"
+msgstr "Neue Pipeline laden"
+
+#: ginga/rv/plugins/Pipeline.py:66
+msgid "Save this pipeline"
+msgstr "Diese Pipeline speichern"
+
+#: ginga/rv/plugins/Pipeline.py:70
+msgid "Edit on pipeline"
+msgstr "Pipeline bearbeiten"
+
+#: ginga/rv/plugins/Pipeline.py:72
+msgid "Undo last action"
+msgstr "Letzte Aktion rückgängig machen"
+
+#: ginga/rv/plugins/Pipeline.py:75
+msgid "Redo last action"
+msgstr "Letzte Aktion wiederholen"
+
+#: ginga/rv/plugins/Pipeline.py:113
+msgid "Delete selected stages"
+msgstr "Ausgewählte Stufen löschen"
+
+#: ginga/rv/plugins/Pipeline.py:116
+msgid "Insert above selected stage"
+msgstr "Über der ausgewählten Stufe einfügen"
+
+#: ginga/rv/plugins/Pipeline.py:120
+msgid "Move selected stage up"
+msgstr "Ausgewählte Stufe nach oben verschieben"
+
+#: ginga/rv/plugins/Pipeline.py:124
+msgid "Move selected stage down"
+msgstr "Ausgewählte Stufe nach unten verschieben"
+
+#: ginga/rv/plugins/Pipeline.py:128
+msgid "Clear selection"
+msgstr "Auswahl aufheben"
+
+#: ginga/rv/plugins/Pipeline.py:136
+msgid "Run entire pipeline"
+msgstr "Gesamte Pipeline ausführen"
+
+#: ginga/rv/plugins/Pipeline.py:140
+msgid "Enable pipeline"
+msgstr "Pipeline aktivieren"
+
+#: ginga/rv/plugins/Pipeline.py:175
+msgid "Bypass this stage"
+msgstr "Diese Stufe überspringen"
+
+#: ginga/rv/plugins/Pipeline.py:178
+msgid "Select this stage"
+msgstr "Diese Stufe auswählen"
+
+#: ginga/rv/plugins/Pipeline.py:182
+msgid "Configure this stage"
+msgstr "Diese Stufe konfigurieren"
+
+#: ginga/rv/plugins/Pipeline.py:186
+msgid "Rename this stage"
+msgstr "Diese Stufe umbenennen"
+
+#: ginga/rv/plugins/PixTable.py:191
+msgid "Pixel Values"
+msgstr "Pixelwerte"
+
+#: ginga/rv/plugins/PixTable.py:205
+msgid "Summary"
+msgstr "Zusammenfassung"
+
+#: ginga/rv/plugins/PixTable.py:237
+msgid "Select size of pixel table"
+msgstr "Größe der Pixeltabelle wählen"
+
+#: ginga/rv/plugins/PixTable.py:285 ginga/rv/plugins/WCSAxes.py:127
+msgid "Font size:"
+msgstr "Schriftgröße:"
+
+#: ginga/rv/plugins/PixTable.py:286
+msgid "Caption:"
+msgstr "Beschriftung:"
+
+#: ginga/rv/plugins/PixTable.py:292
+msgid "Set font size for pixel display"
+msgstr "Schriftgröße für die Pixelanzeige festlegen"
+
+#: ginga/rv/plugins/PixTable.py:298
+msgid "Text to append to the marker"
+msgstr "An die Markierung anzuhängender Text"
+
+#: ginga/rv/plugins/PixTable.py:314
+msgid "Choose this to add or move a mark"
+msgstr "Wählen, um eine Markierung hinzuzufügen oder zu verschieben"
+
+#: ginga/rv/plugins/PixTable.py:322
+msgid "Choose this to draw a new or replacement mark"
+msgstr "Wählen, um eine neue oder ersetzende Markierung zu zeichnen"
+
+#: ginga/rv/plugins/PlotTable.py:113
+msgid "Log X"
+msgstr "Log X"
+
+#: ginga/rv/plugins/PlotTable.py:113
+msgid "Log Y"
+msgstr "Log Y"
+
+#: ginga/rv/plugins/PlotTable.py:114
+msgid "Show Marker"
+msgstr "Markierung anzeigen"
+
+#: ginga/rv/plugins/PlotTable.py:115
+msgid "X Low:"
+msgstr "X unten:"
+
+#: ginga/rv/plugins/PlotTable.py:116
+msgid "X High:"
+msgstr "X oben:"
+
+#: ginga/rv/plugins/PlotTable.py:117
+msgid "Y Low:"
+msgstr "Y unten:"
+
+#: ginga/rv/plugins/PlotTable.py:118
+msgid "Y High:"
+msgstr "Y oben:"
+
+#: ginga/rv/plugins/PlotTable.py:137
+msgid "Plot X-axis in log scale"
+msgstr "X-Achse logarithmisch darstellen"
+
+#: ginga/rv/plugins/PlotTable.py:141
+msgid "Plot Y-axis in log scale"
+msgstr "Y-Achse logarithmisch darstellen"
+
+#: ginga/rv/plugins/PlotTable.py:161
+msgid "Save table plot"
+msgstr "Tabellendiagramm speichern"
+
+#: ginga/rv/plugins/PluginConfig.py:104
+msgid "Edit configuration of selected plugins"
+msgstr "Konfiguration der ausgewählten Plugins bearbeiten"
+
+#: ginga/rv/plugins/PluginConfig.py:153
+msgid "Enabled"
+msgstr "Aktiviert"
+
+#: ginga/rv/plugins/PluginConfig.py:154
+msgid "Category:"
+msgstr "Kategorie:"
+
+#: ginga/rv/plugins/PluginConfig.py:155
+msgid "Workspace:"
+msgstr "Arbeitsbereich:"
+
+#: ginga/rv/plugins/PluginConfig.py:156
+msgid "Auto start"
+msgstr "Auto-Start"
+
+#: ginga/rv/plugins/PluginConfig.py:156
+msgid "Hidden"
+msgstr "Ausgeblendet"
+
+#: ginga/rv/plugins/PluginConfig.py:161
+msgid "Enable plugin(s)"
+msgstr "Plugin(s) aktivieren"
+
+#: ginga/rv/plugins/PluginConfig.py:163
+msgid "Edit menu category of plugin(s)"
+msgstr "Menükategorie der Plugin(s) bearbeiten"
+
+#: ginga/rv/plugins/PluginConfig.py:165
+msgid "Edit workspace of plugin(s)"
+msgstr "Arbeitsbereich der Plugin(s) bearbeiten"
+
+#: ginga/rv/plugins/PluginConfig.py:170
+msgid "Hide plugin(s) names from program menus"
+msgstr "Plugin-Namen in den Programmmenüs ausblenden"
+
+#: ginga/rv/plugins/Preferences.py:614
+msgid "Color Distribution"
+msgstr "Farbverteilung"
+
+#: ginga/rv/plugins/Preferences.py:616 ginga/util/stages/rgbmap.py:61
+msgid "Algorithm:"
+msgstr "Algorithmus:"
+
+#: ginga/rv/plugins/Preferences.py:618 ginga/util/stages/rgbmap.py:63
+msgid "Dist Defaults"
+msgstr "Verteilungs-Standardwerte"
+
+#: ginga/rv/plugins/Preferences.py:624
+msgid "Choose a color distribution algorithm"
+msgstr "Einen Farbverteilungsalgorithmus wählen"
+
+#: ginga/rv/plugins/Preferences.py:626
+msgid "Restore color distribution defaults"
+msgstr "Standardwerte der Farbverteilung wiederherstellen"
+
+#: ginga/rv/plugins/Preferences.py:649
+msgid "Color Mapping"
+msgstr "Farbzuordnung"
+
+#: ginga/rv/plugins/Preferences.py:651 ginga/util/stages/rgbmap.py:93
+msgid "Colormap:"
+msgstr "Farbkarte:"
+
+#: ginga/rv/plugins/Preferences.py:652 ginga/util/stages/rgbmap.py:94
+msgid "Intensity:"
+msgstr "Intensität:"
+
+#: ginga/rv/plugins/Preferences.py:653 ginga/rv/plugins/Preferences.py:801
+#: ginga/util/stages/rgbmap.py:95 ginga/util/stages/rotate.py:50
+msgid "Rotate:"
+msgstr "Drehen:"
+
+#: ginga/rv/plugins/Preferences.py:654 ginga/util/stages/rgbmap.py:96
+msgid "Invert CMap"
+msgstr "Farbkarte umkehren"
+
+#: ginga/rv/plugins/Preferences.py:654 ginga/util/stages/rgbmap.py:96
+msgid "Unrotate CMap"
+msgstr "Farbkartendrehung aufheben"
+
+#: ginga/rv/plugins/Preferences.py:655 ginga/util/stages/rgbmap.py:97
+msgid "Color Defaults"
+msgstr "Farb-Standardwerte"
+
+#: ginga/rv/plugins/Preferences.py:661
+msgid "Invert color map"
+msgstr "Farbkarte umkehren"
+
+#: ginga/rv/plugins/Preferences.py:669
+msgid "Rotate the colormap"
+msgstr "Farbkarte drehen"
+
+#: ginga/rv/plugins/Preferences.py:671
+msgid "Choose a color map for this image"
+msgstr "Eine Farbkarte für dieses Bild wählen"
+
+#: ginga/rv/plugins/Preferences.py:672
+msgid "Choose an intensity map for this image"
+msgstr "Eine Intensitätskarte für dieses Bild wählen"
+
+#: ginga/rv/plugins/Preferences.py:673
+msgid "Undo cmap rotation"
+msgstr "Farbkartendrehung rückgängig machen"
+
+#: ginga/rv/plugins/Preferences.py:675
+msgid "Restore all color map settings to defaults"
+msgstr "Alle Farbkarteneinstellungen auf Standard zurücksetzen"
+
+#: ginga/rv/plugins/Preferences.py:712
+msgid "Contrast and Brightness (Bias)"
+msgstr "Kontrast und Helligkeit (Bias)"
+
+#: ginga/rv/plugins/Preferences.py:714 ginga/util/stages/rgbmap.py:154
+msgid "Contrast:"
+msgstr "Kontrast:"
+
+#: ginga/rv/plugins/Preferences.py:724
+msgid "Set contrast for the viewer"
+msgstr "Kontrast für den Betrachter festlegen"
+
+#: ginga/rv/plugins/Preferences.py:730
+msgid "Set brightness/bias for the viewer"
+msgstr "Helligkeit/Bias für den Betrachter festlegen"
+
+#: ginga/rv/plugins/Preferences.py:732
+msgid "Default Contrast"
+msgstr "Standardkontrast"
+
+#: ginga/rv/plugins/Preferences.py:733
+msgid "Reset contrast to default"
+msgstr "Kontrast auf Standard zurücksetzen"
+
+#: ginga/rv/plugins/Preferences.py:736
+msgid "Default Brightness"
+msgstr "Standardhelligkeit"
+
+#: ginga/rv/plugins/Preferences.py:737
+msgid "Reset brightness to default"
+msgstr "Helligkeit auf Standard zurücksetzen"
+
+#: ginga/rv/plugins/Preferences.py:745
+msgid "Auto Cuts"
+msgstr "Auto-Schnitte"
+
+#: ginga/rv/plugins/Preferences.py:755 ginga/util/stages/cuts.py:74
+msgid "Auto Method:"
+msgstr "Auto-Methode:"
+
+#: ginga/rv/plugins/Preferences.py:788
+msgid "Choose algorithm for auto levels"
+msgstr "Algorithmus für automatische Werte wählen"
+
+#: ginga/rv/plugins/Preferences.py:797
+msgid "Transform"
+msgstr "Transformieren"
+
+#: ginga/rv/plugins/Preferences.py:799
+msgid "Flip X"
+msgstr "X spiegeln"
+
+#: ginga/rv/plugins/Preferences.py:799
+msgid "Flip Y"
+msgstr "Y spiegeln"
+
+#: ginga/rv/plugins/Preferences.py:800
+msgid "Swap XY"
+msgstr "XY tauschen"
+
+#: ginga/rv/plugins/Preferences.py:802
+msgid "Restore"
+msgstr "Wiederherstellen"
+
+#: ginga/rv/plugins/Preferences.py:810
+msgid "Flip the image around the X axis"
+msgstr "Bild um die X-Achse spiegeln"
+
+#: ginga/rv/plugins/Preferences.py:811
+msgid "Flip the image around the Y axis"
+msgstr "Bild um die Y-Achse spiegeln"
+
+#: ginga/rv/plugins/Preferences.py:812
+msgid "Swap the X and Y axes in the image"
+msgstr "X- und Y-Achse im Bild vertauschen"
+
+#: ginga/rv/plugins/Preferences.py:813
+msgid "Rotate the image around the pan position"
+msgstr "Bild um die Verschiebeposition drehen"
+
+#: ginga/rv/plugins/Preferences.py:814
+msgid "Clear any transforms and center image"
+msgstr "Alle Transformationen aufheben und Bild zentrieren"
+
+#: ginga/rv/plugins/Preferences.py:826
+msgid "WCS"
+msgstr "WCS"
+
+#: ginga/rv/plugins/Preferences.py:828
+msgid "WCS Coords:"
+msgstr "WCS-Koordinaten:"
+
+#: ginga/rv/plugins/Preferences.py:829
+msgid "WCS Display:"
+msgstr "WCS-Anzeige:"
+
+#: ginga/rv/plugins/Preferences.py:834
+msgid "Set WCS coordinate system"
+msgstr "WCS-Koordinatensystem festlegen"
+
+#: ginga/rv/plugins/Preferences.py:835
+msgid "Set WCS display format"
+msgstr "WCS-Anzeigeformat festlegen"
+
+#: ginga/rv/plugins/Preferences.py:869 ginga/rv/plugins/Zoom.py:153
+msgid "Zoom"
+msgstr "Zoom"
+
+#: ginga/rv/plugins/Preferences.py:871
+msgid "Zoom Alg:"
+msgstr "Zoom-Alg.:"
+
+#: ginga/rv/plugins/Preferences.py:872
+msgid "Zoom Rate:"
+msgstr "Zoomrate:"
+
+#: ginga/rv/plugins/Preferences.py:873
+msgid "Stretch XY:"
+msgstr "Streckung XY:"
+
+#: ginga/rv/plugins/Preferences.py:874
+msgid "Stretch Factor:"
+msgstr "Streckungsfaktor:"
+
+#: ginga/rv/plugins/Preferences.py:875
+msgid "Scale X:"
+msgstr "Skalierung X:"
+
+#: ginga/rv/plugins/Preferences.py:876
+msgid "Scale Y:"
+msgstr "Skalierung Y:"
+
+#: ginga/rv/plugins/Preferences.py:877
+msgid "Scale Min:"
+msgstr "Skalierung min.:"
+
+#: ginga/rv/plugins/Preferences.py:878
+msgid "Scale Max:"
+msgstr "Skalierung max.:"
+
+#: ginga/rv/plugins/Preferences.py:879 ginga/util/stages/scale.py:44
+msgid "Interpolation:"
+msgstr "Interpolation:"
+
+#: ginga/rv/plugins/Preferences.py:880
+msgid "Zoom Defaults"
+msgstr "Zoom-Standardwerte"
+
+#: ginga/rv/plugins/Preferences.py:894
+msgid "Choose Zoom algorithm"
+msgstr "Zoom-Algorithmus wählen"
+
+#: ginga/rv/plugins/Preferences.py:902
+msgid "Stretch pixels in X or Y"
+msgstr "Pixel in X oder Y strecken"
+
+#: ginga/rv/plugins/Preferences.py:909
+msgid "Length of pixel relative to 1 on other side"
+msgstr "Pixellänge relativ zu 1 auf der anderen Seite"
+
+#: ginga/rv/plugins/Preferences.py:917
+msgid "Step rate of increase/decrease per zoom level"
+msgstr "Schrittrate der Zunahme/Abnahme pro Zoomstufe"
+
+#: ginga/rv/plugins/Preferences.py:923
+msgid "Set the scale in X axis"
+msgstr "Skalierung der X-Achse festlegen"
+
+#: ginga/rv/plugins/Preferences.py:926
+msgid "Set the scale in Y axis"
+msgstr "Skalierung der Y-Achse festlegen"
+
+#: ginga/rv/plugins/Preferences.py:933
+msgid "Set the minimum allowed scale in any axis"
+msgstr "Minimal zulässige Skalierung für jede Achse festlegen"
+
+#: ginga/rv/plugins/Preferences.py:937
+msgid "Set the maximum allowed scale in any axis"
+msgstr "Maximal zulässige Skalierung für jede Achse festlegen"
+
+#: ginga/rv/plugins/Preferences.py:952
+msgid "Choose interpolation method"
+msgstr "Interpolationsmethode wählen"
+
+#: ginga/rv/plugins/Preferences.py:959
+msgid "Panning"
+msgstr "Verschieben"
+
+#: ginga/rv/plugins/Preferences.py:961
+msgid "Pan X:"
+msgstr "Verschieben X:"
+
+#: ginga/rv/plugins/Preferences.py:962
+msgid "WCS sexagesimal"
+msgstr "WCS sexagesimal"
+
+#: ginga/rv/plugins/Preferences.py:963
+msgid "Pan Y:"
+msgstr "Verschieben Y:"
+
+#: ginga/rv/plugins/Preferences.py:964
+msgid "Apply Pan"
+msgstr "Verschiebung anwenden"
+
+#: ginga/rv/plugins/Preferences.py:965
+msgid "Pan Coord:"
+msgstr "Verschiebe-Koord.:"
+
+#: ginga/rv/plugins/Preferences.py:966
+msgid "Center Image"
+msgstr "Bild zentrieren"
+
+#: ginga/rv/plugins/Preferences.py:966
+msgid "Mark Center"
+msgstr "Zentrum markieren"
+
+#: ginga/rv/plugins/Preferences.py:976
+msgid "Coordinate for the pan position in X axis"
+msgstr "Koordinate der Verschiebeposition auf der X-Achse"
+
+#: ginga/rv/plugins/Preferences.py:979
+msgid "Coordinate for the pan position in Y axis"
+msgstr "Koordinate der Verschiebeposition auf der Y-Achse"
+
+#: ginga/rv/plugins/Preferences.py:983
+msgid "Set the pan position"
+msgstr "Verschiebeposition festlegen"
+
+#: ginga/rv/plugins/Preferences.py:984
+msgid "Display pan position in sexagesimal"
+msgstr "Verschiebeposition in Sexagesimalform anzeigen"
+
+#: ginga/rv/plugins/Preferences.py:994
+msgid "Pan coordinates type"
+msgstr "Typ der Verschiebekoordinaten"
+
+#: ginga/rv/plugins/Preferences.py:997
+msgid "Set the pan position to center of the image"
+msgstr "Verschiebeposition auf die Bildmitte setzen"
+
+#: ginga/rv/plugins/Preferences.py:999
+msgid "Mark the center (pan locator)"
+msgstr "Das Zentrum markieren (Verschiebe-Fadenkreuz)"
+
+#: ginga/rv/plugins/Preferences.py:1005 ginga/rv/plugins/WCSAxes.py:82
+msgid "General"
+msgstr "Allgemein"
+
+#: ginga/rv/plugins/Preferences.py:1007
+msgid "Num Images:"
+msgstr "Anz. Bilder:"
+
+#: ginga/rv/plugins/Preferences.py:1008
+msgid "Sort Order:"
+msgstr "Sortierreihenfolge:"
+
+#: ginga/rv/plugins/Preferences.py:1009
+msgid "Use scrollbars"
+msgstr "Bildlaufleisten verwenden"
+
+#: ginga/rv/plugins/Preferences.py:1014
+msgid "Maximum number of in memory images in channel (0==unlimited)"
+msgstr "Maximale Anzahl im Speicher gehaltener Bilder pro Kanal (0==unbegrenzt)"
+
+#: ginga/rv/plugins/Preferences.py:1028
+msgid "Sort order for images in channel"
+msgstr "Sortierreihenfolge für Bilder im Kanal"
+
+#: ginga/rv/plugins/Preferences.py:1033
+msgid "Use scrollbars around viewer"
+msgstr "Bildlaufleisten um den Betrachter verwenden"
+
+#: ginga/rv/plugins/Preferences.py:1040
+msgid "Reset (Viewer)"
+msgstr "Zurücksetzen (Betrachter)"
+
+#: ginga/rv/plugins/Preferences.py:1042
+msgid "Reset Scale"
+msgstr "Skalierung zurücksetzen"
+
+#: ginga/rv/plugins/Preferences.py:1043
+msgid "Reset Pan"
+msgstr "Verschiebung zurücksetzen"
+
+#: ginga/rv/plugins/Preferences.py:1044
+msgid "Reset Transform"
+msgstr "Transformation zurücksetzen"
+
+#: ginga/rv/plugins/Preferences.py:1045
+msgid "Reset Rotation"
+msgstr "Drehung zurücksetzen"
+
+#: ginga/rv/plugins/Preferences.py:1046
+msgid "Reset Cuts"
+msgstr "Schnittwerte zurücksetzen"
+
+#: ginga/rv/plugins/Preferences.py:1047
+msgid "Reset Distribution"
+msgstr "Verteilung zurücksetzen"
+
+#: ginga/rv/plugins/Preferences.py:1048
+msgid "Reset Contrast"
+msgstr "Kontrast zurücksetzen"
+
+#: ginga/rv/plugins/Preferences.py:1049
+msgid "Reset Color Map"
+msgstr "Farbkarte zurücksetzen"
+
+#: ginga/rv/plugins/Preferences.py:1056
+msgid "Reset scale between images"
+msgstr "Skalierung zwischen Bildern zurücksetzen"
+
+#: ginga/rv/plugins/Preferences.py:1059
+msgid "Reset pan position between images"
+msgstr "Verschiebeposition zwischen Bildern zurücksetzen"
+
+#: ginga/rv/plugins/Preferences.py:1063
+msgid "Reset transform between images"
+msgstr "Transformation zwischen Bildern zurücksetzen"
+
+#: ginga/rv/plugins/Preferences.py:1067
+msgid "Reset rotation between images"
+msgstr "Drehung zwischen Bildern zurücksetzen"
+
+#: ginga/rv/plugins/Preferences.py:1070
+msgid "Reset cut levels between images"
+msgstr "Schnittwerte zwischen Bildern zurücksetzen"
+
+#: ginga/rv/plugins/Preferences.py:1074
+msgid "Reset color distribution between images"
+msgstr "Farbverteilung zwischen Bildern zurücksetzen"
+
+#: ginga/rv/plugins/Preferences.py:1078
+msgid "Reset contrast/bias between images"
+msgstr "Kontrast/Bias zwischen Bildern zurücksetzen"
+
+#: ginga/rv/plugins/Preferences.py:1082
+msgid "Reset color map between images"
+msgstr "Farbkarte zwischen Bildern zurücksetzen"
+
+#: ginga/rv/plugins/Preferences.py:1096
+msgid "Remember (Image)"
+msgstr "Merken (Bild)"
+
+#: ginga/rv/plugins/Preferences.py:1098
+msgid "Remember Scale"
+msgstr "Skalierung merken"
+
+#: ginga/rv/plugins/Preferences.py:1099
+msgid "Remember Pan"
+msgstr "Verschiebung merken"
+
+#: ginga/rv/plugins/Preferences.py:1100
+msgid "Remember Transform"
+msgstr "Transformation merken"
+
+#: ginga/rv/plugins/Preferences.py:1101
+msgid "Remember Rotation"
+msgstr "Drehung merken"
+
+#: ginga/rv/plugins/Preferences.py:1102
+msgid "Remember Cuts"
+msgstr "Schnittwerte merken"
+
+#: ginga/rv/plugins/Preferences.py:1103
+msgid "Remember Distribution"
+msgstr "Verteilung merken"
+
+#: ginga/rv/plugins/Preferences.py:1104
+msgid "Remember Contrast"
+msgstr "Kontrast merken"
+
+#: ginga/rv/plugins/Preferences.py:1105
+msgid "Remember Color Map"
+msgstr "Farbkarte merken"
+
+#: ginga/rv/plugins/Preferences.py:1112
+msgid "Remember scale with image"
+msgstr "Skalierung mit dem Bild merken"
+
+#: ginga/rv/plugins/Preferences.py:1115
+msgid "Remember pan position with image"
+msgstr "Verschiebeposition mit dem Bild merken"
+
+#: ginga/rv/plugins/Preferences.py:1119
+msgid "Remember transform with image"
+msgstr "Transformation mit dem Bild merken"
+
+#: ginga/rv/plugins/Preferences.py:1123
+msgid "Remember rotation with image"
+msgstr "Drehung mit dem Bild merken"
+
+#: ginga/rv/plugins/Preferences.py:1126
+msgid "Remember cut levels with image"
+msgstr "Schnittwerte mit dem Bild merken"
+
+#: ginga/rv/plugins/Preferences.py:1130
+msgid "Remember color distribution algorithm with image"
+msgstr "Farbverteilungsalgorithmus mit dem Bild merken"
+
+#: ginga/rv/plugins/Preferences.py:1134
+msgid "Remember contrast/bias with image"
+msgstr "Kontrast/Bias mit dem Bild merken"
+
+#: ginga/rv/plugins/Preferences.py:1138
+msgid "Remember color map with image"
+msgstr "Farbkarte mit dem Bild merken"
+
+#: ginga/rv/plugins/Preferences.py:1152
+msgid "New Images"
+msgstr "Neue Bilder"
+
+#: ginga/rv/plugins/Preferences.py:1158
+msgid "Create thumbnail"
+msgstr "Miniaturbild erstellen"
+
+#: ginga/rv/plugins/Preferences.py:1159
+msgid "Auto Orient"
+msgstr "Auto-Ausrichtung"
+
+#: ginga/rv/plugins/Preferences.py:1201
+msgid "View new images as they arrive"
+msgstr "Neue Bilder beim Eintreffen anzeigen"
+
+#: ginga/rv/plugins/Preferences.py:1202
+msgid "Raise and focus tab for new images"
+msgstr "Reiter für neue Bilder in den Vordergrund holen und fokussieren"
+
+#: ginga/rv/plugins/Preferences.py:1203
+msgid "Create thumbnail for new images"
+msgstr "Miniaturbild für neue Bilder erstellen"
+
+#: ginga/rv/plugins/Preferences.py:1204
+msgid "Auto orient new (RGB) images"
+msgstr "Neue (RGB-)Bilder automatisch ausrichten"
+
+#: ginga/rv/plugins/Preferences.py:1220
+msgid "ICC Profiles"
+msgstr "ICC-Profile"
+
+#: ginga/rv/plugins/Preferences.py:1222 ginga/util/stages/iccprof.py:38
+msgid "Output ICC profile:"
+msgstr "Ausgabe-ICC-Profil:"
+
+#: ginga/rv/plugins/Preferences.py:1224 ginga/util/stages/iccprof.py:40
+msgid "Rendering intent:"
+msgstr "Rendering-Absicht:"
+
+#: ginga/rv/plugins/Preferences.py:1226 ginga/util/stages/iccprof.py:42
+msgid "Proof ICC profile:"
+msgstr "Proof-ICC-Profil:"
+
+#: ginga/rv/plugins/Preferences.py:1228 ginga/util/stages/iccprof.py:44
+msgid "Proof intent:"
+msgstr "Proof-Absicht:"
+
+#: ginga/rv/plugins/Preferences.py:1229 ginga/util/stages/iccprof.py:45
+msgid "Black point compensation"
+msgstr "Schwarzpunktkompensation"
+
+#: ginga/rv/plugins/Preferences.py:1246
+msgid "ICC profile for the viewer display"
+msgstr "ICC-Profil für die Betrachteranzeige"
+
+#: ginga/rv/plugins/Preferences.py:1260
+msgid "Rendering intent for the viewer display"
+msgstr "Rendering-Absicht für die Betrachteranzeige"
+
+#: ginga/rv/plugins/Preferences.py:1274
+msgid "ICC profile for soft proofing"
+msgstr "ICC-Profil für Softproofing"
+
+#: ginga/rv/plugins/Preferences.py:1288
+msgid "Rendering intent for soft proofing"
+msgstr "Rendering-Absicht für Softproofing"
+
+#: ginga/rv/plugins/Preferences.py:1294
+msgid "Use black point compensation"
+msgstr "Schwarzpunktkompensation verwenden"
+
+#: ginga/rv/plugins/Preferences.py:1313
+msgid "Save Settings"
+msgstr "Einstellungen speichern"
+
+#: ginga/rv/plugins/Preferences.py:1315
+msgid "Save current settings for channel (across restarts)"
+msgstr "Aktuelle Einstellungen für den Kanal speichern (über Neustarts hinweg)"
+
+#: ginga/rv/plugins/Preferences.py:1317
+msgid "Update Viewer Profile"
+msgstr "Betrachterprofil aktualisieren"
+
+#: ginga/rv/plugins/Preferences.py:1319
+msgid ""
+"Update viewer profile from current settings (click 'Save Settings' to "
+"make persistent)"
+msgstr ""
+"Betrachterprofil aus den aktuellen Einstellungen aktualisieren (zum "
+"dauerhaften Speichern auf 'Einstellungen speichern' klicken)"
+
+#: ginga/rv/plugins/RC.py:229
+msgid "Remote Control"
+msgstr "Fernsteuerung"
+
+#: ginga/rv/plugins/RC.py:232
+msgid "Addr:"
+msgstr "Adresse:"
+
+#: ginga/rv/plugins/RC.py:232
+msgid "Restart"
+msgstr "Neu starten"
+
+#: ginga/rv/plugins/RC.py:233
+msgid "Set Addr:"
+msgstr "Adresse setzen:"
+
+#: ginga/rv/plugins/RC.py:239
+msgid "Restart the server"
+msgstr "Server neu starten"
+
+#: ginga/rv/plugins/RC.py:244
+msgid "Set address to run remote control server"
+msgstr "Adresse für den Fernsteuerungsserver festlegen"
+
+#: ginga/rv/plugins/Ruler.py:133
+msgid "Ruler"
+msgstr "Lineal"
+
+#: ginga/rv/plugins/Ruler.py:135
+msgid "Units:"
+msgstr "Einheiten:"
+
+#: ginga/rv/plugins/Ruler.py:136
+msgid "Show ends"
+msgstr "Endpunkte anzeigen"
+
+#: ginga/rv/plugins/Ruler.py:136
+msgid "Show plumb"
+msgstr "Lotlinien anzeigen"
+
+#: ginga/rv/plugins/Ruler.py:137
+msgid "Pan to dst"
+msgstr "Zum Ziel verschieben"
+
+#: ginga/rv/plugins/Ruler.py:137
+msgid "Pan to src"
+msgstr "Zum Ursprung verschieben"
+
+#: ginga/rv/plugins/Ruler.py:138
+msgid "Pan to ctr"
+msgstr "Zur Mitte verschieben"
+
+#: ginga/rv/plugins/Ruler.py:148
+msgid "What units to show the measurements"
+msgstr "In welchen Einheiten die Messungen angezeigt werden"
+
+#: ginga/rv/plugins/Ruler.py:152
+msgid "Show end points on ruler"
+msgstr "Endpunkte auf dem Lineal anzeigen"
+
+#: ginga/rv/plugins/Ruler.py:155
+msgid "Show plumb lines on ruler"
+msgstr "Lotlinien auf dem Lineal anzeigen"
+
+#: ginga/rv/plugins/Ruler.py:160
+msgid "Pan to start position"
+msgstr "Zur Anfangsposition verschieben"
+
+#: ginga/rv/plugins/Ruler.py:163
+msgid "Pan to end position"
+msgstr "Zur Endposition verschieben"
+
+#: ginga/rv/plugins/Ruler.py:166
+msgid "Pan to center position"
+msgstr "Zur Mittelposition verschieben"
+
+#: ginga/rv/plugins/Ruler.py:169
+msgid "Clear the ruler"
+msgstr "Lineal löschen"
+
+#: ginga/rv/plugins/Ruler.py:174
+msgid "Result"
+msgstr "Ergebnis"
+
+#: ginga/rv/plugins/Ruler.py:176
+msgid "X1:"
+msgstr "X1:"
+
+#: ginga/rv/plugins/Ruler.py:177
+msgid "Y1:"
+msgstr "Y1:"
+
+#: ginga/rv/plugins/Ruler.py:178
+msgid "X2:"
+msgstr "X2:"
+
+#: ginga/rv/plugins/Ruler.py:179
+msgid "Y2:"
+msgstr "Y2:"
+
+#: ginga/rv/plugins/Ruler.py:180
+msgid "dx:"
+msgstr "dx:"
+
+#: ginga/rv/plugins/Ruler.py:181
+msgid "dy:"
+msgstr "dy:"
+
+#: ginga/rv/plugins/Ruler.py:182
+msgid "dh:"
+msgstr "dh:"
+
+#: ginga/rv/plugins/Ruler.py:184
+msgid "θ:"
+msgstr "θ:"
+
+#: ginga/rv/plugins/Ruler.py:194
+msgid "What units to show the angle"
+msgstr "In welchen Einheiten der Winkel angezeigt wird"
+
+#: ginga/rv/plugins/Ruler.py:206
+msgid "Choose this to draw a ruler"
+msgstr "Wählen, um ein Lineal zu zeichnen"
+
+#: ginga/rv/plugins/Ruler.py:214
+msgid "Choose this to edit a ruler"
+msgstr "Wählen, um ein Lineal zu bearbeiten"
+
+#: ginga/rv/plugins/SAMP.py:92
+msgid "SAMP"
+msgstr "SAMP"
+
+#: ginga/rv/plugins/SAMP.py:94
+msgid "Start hub"
+msgstr "Hub starten"
+
+#: ginga/rv/plugins/SAMP.py:95
+msgid "Connect client"
+msgstr "Client verbinden"
+
+#: ginga/rv/plugins/SAMP.py:99
+msgid "Start a SAMP hub"
+msgstr "Einen SAMP-Hub starten"
+
+#: ginga/rv/plugins/SAMP.py:102
+msgid "Register with a SAMP hub"
+msgstr "Bei einem SAMP-Hub registrieren"
+
+#: ginga/rv/plugins/SaveImage.py:100
+msgid "Modified only"
+msgstr "Nur geänderte"
+
+#: ginga/rv/plugins/SaveImage.py:104
+msgid "Channel for locating images to save"
+msgstr "Kanal zum Auffinden zu speichernder Bilder"
+
+#: ginga/rv/plugins/SaveImage.py:110
+msgid "Show only locally modified images"
+msgstr "Nur lokal geänderte Bilder anzeigen"
+
+#: ginga/rv/plugins/SaveImage.py:114
+msgid "Browse"
+msgstr "Durchsuchen"
+
+#: ginga/rv/plugins/SaveImage.py:120
+msgid "Output directory"
+msgstr "Ausgabeverzeichnis"
+
+#: ginga/rv/plugins/SaveImage.py:123
+msgid "Browse for output directory"
+msgstr "Nach Ausgabeverzeichnis suchen"
+
+#: ginga/rv/plugins/SaveImage.py:127
+msgid "Suffix to append to filename"
+msgstr "An den Dateinamen anzuhängendes Suffix"
+
+#: ginga/rv/plugins/SaveImage.py:144
+msgid "Status message"
+msgstr "Statusmeldung"
+
+#: ginga/rv/plugins/SaveImage.py:152
+msgid "Save selected image(s)"
+msgstr "Ausgewählte(s) Bild(er) speichern"
+
+#: ginga/rv/plugins/ScreenShot.py:129
+msgid "Screen size"
+msgstr "Bildschirmgröße"
+
+#: ginga/rv/plugins/ScreenShot.py:130 ginga/rv/plugins/TVMark.py:176
+msgid "Width:"
+msgstr "Breite:"
+
+#: ginga/rv/plugins/ScreenShot.py:131
+msgid "Height:"
+msgstr "Höhe:"
+
+#: ginga/rv/plugins/ScreenShot.py:132
+msgid "Lock aspect"
+msgstr "Seitenverhältnis sperren"
+
+#: ginga/rv/plugins/ScreenShot.py:133 ginga/util/stages/crop.py:39
+msgid "Aspect:"
+msgstr "Seitenverhältnis:"
+
+#: ginga/rv/plugins/ScreenShot.py:144
+msgid "From screen viewer actual size"
+msgstr "Von der tatsächlichen Größe des Bildschirmbetrachters"
+
+#: ginga/rv/plugins/ScreenShot.py:148
+msgid "Lock aspect ratio of screen shot"
+msgstr "Seitenverhältnis des Screenshots sperren"
+
+#: ginga/rv/plugins/ScreenShot.py:172
+msgid "Type:"
+msgstr "Typ:"
+
+#: ginga/rv/plugins/ScreenShot.py:173
+msgid "Snap"
+msgstr "Schnappschuss"
+
+#: ginga/rv/plugins/ScreenShot.py:174
+msgid "Center"
+msgstr "Zentrieren"
+
+#: ginga/rv/plugins/ScreenShot.py:174
+msgid "Fit"
+msgstr "Anpassen"
+
+#: ginga/rv/plugins/ScreenShot.py:175
+msgid "Full"
+msgstr "Voll"
+
+#: ginga/rv/plugins/ScreenShot.py:185
+msgid "Set the format of the snap image"
+msgstr "Format des Schnappschussbildes festlegen"
+
+#: ginga/rv/plugins/ScreenShot.py:187
+msgid "Click to grab a snapshot of this channel viewer image"
+msgstr "Klicken, um einen Schnappschuss dieses Kanalbetrachterbildes aufzunehmen"
+
+#: ginga/rv/plugins/ScreenShot.py:189
+msgid "Clear the snap image"
+msgstr "Schnappschussbild löschen"
+
+#: ginga/rv/plugins/ScreenShot.py:191
+msgid "Center the snap image"
+msgstr "Schnappschussbild zentrieren"
+
+#: ginga/rv/plugins/ScreenShot.py:193
+msgid "Fit snap image to window"
+msgstr "Schnappschussbild an Fenster anpassen"
+
+#: ginga/rv/plugins/ScreenShot.py:195
+msgid "View at 100% (1:1)"
+msgstr "Bei 100 % anzeigen (1:1)"
+
+#: ginga/rv/plugins/ScreenShot.py:200
+msgid "Screenshot"
+msgstr "Screenshot"
+
+#: ginga/rv/plugins/ScreenShot.py:211
+msgid "Save File"
+msgstr "Datei speichern"
+
+#: ginga/rv/plugins/ScreenShot.py:213
+msgid "Folder:"
+msgstr "Ordner:"
+
+#: ginga/rv/plugins/ScreenShot.py:221
+msgid "Set the folder path for the snap image"
+msgstr "Ordnerpfad für das Schnappschussbild festlegen"
+
+#: ginga/rv/plugins/ScreenShot.py:223
+msgid "Set the name for the snap image"
+msgstr "Namen für das Schnappschussbild festlegen"
+
+#: ginga/rv/plugins/ScreenShot.py:224
+msgid "Click to save the last snap"
+msgstr "Klicken, um den letzten Schnappschuss zu speichern"
+
+#: ginga/rv/plugins/SlideShow.py:118
+msgid "Save As"
+msgstr "Speichern unter"
+
+#: ginga/rv/plugins/SlideShow.py:126
+msgid "Load a slideshow file"
+msgstr "Eine Diashow-Datei laden"
+
+#: ginga/rv/plugins/SlideShow.py:128
+msgid "Path for slideshow file"
+msgstr "Pfad zur Diashow-Datei"
+
+#: ginga/rv/plugins/SlideShow.py:130
+msgid "Reload slideshow file"
+msgstr "Diashow-Datei neu laden"
+
+#: ginga/rv/plugins/SlideShow.py:136
+msgid "Set the default duration if none found for a slide"
+msgstr "Standarddauer festlegen, falls für ein Bild keine gefunden wird"
+
+#: ginga/rv/plugins/SlideShow.py:151
+msgid "Next"
+msgstr "Weiter"
+
+#: ginga/rv/plugins/SlideShow.py:151
+msgid "Prev"
+msgstr "Zurück"
+
+#: ginga/rv/plugins/SlideShow.py:152
+msgid "Start"
+msgstr "Start"
+
+#: ginga/rv/plugins/SlideShow.py:165
+msgid "Play"
+msgstr "Abspielen"
+
+#: ginga/rv/plugins/SlideShow.py:169
+msgid "Move Down"
+msgstr "Nach unten"
+
+#: ginga/rv/plugins/SlideShow.py:169
+msgid "Move Up"
+msgstr "Nach oben"
+
+#: ginga/rv/plugins/SlideShow.py:170
+msgid "Get Index"
+msgstr "Index abrufen"
+
+#: ginga/rv/plugins/SlideShow.py:170
+msgid "Move To"
+msgstr "Verschieben nach"
+
+#: ginga/rv/plugins/SlideShow.py:171
+msgid "Unhide"
+msgstr "Einblenden"
+
+#: ginga/rv/plugins/SlideShow.py:171 ginga/rv/plugins/TVMark.py:247
+#: ginga/rv/plugins/TVMask.py:167
+msgid "Hide"
+msgstr "Ausblenden"
+
+#: ginga/rv/plugins/TVMark.py:173
+msgid "Mark:"
+msgstr "Markierung:"
+
+#: ginga/rv/plugins/TVMark.py:174 ginga/rv/plugins/TVMask.py:140
+msgid "Color:"
+msgstr "Farbe:"
+
+#: ginga/rv/plugins/TVMark.py:175
+msgid "Size:"
+msgstr "Größe:"
+
+#: ginga/rv/plugins/TVMark.py:192
+msgid "Size/radius of the marking"
+msgstr "Größe/Radius der Markierung"
+
+#: ginga/rv/plugins/TVMark.py:196
+msgid "Line width of the marking"
+msgstr "Linienbreite der Markierung"
+
+#: ginga/rv/plugins/TVMark.py:213
+msgid "Shown"
+msgstr "Angezeigt"
+
+#: ginga/rv/plugins/TVMark.py:220
+msgid "Selected"
+msgstr "Ausgewählt"
+
+#: ginga/rv/plugins/TVMark.py:227
+msgid "Outliers"
+msgstr "Ausreißer"
+
+#: ginga/rv/plugins/TVMark.py:235
+msgid "Number of objects read from tables"
+msgstr "Anzahl der aus Tabellen gelesenen Objekte"
+
+#: ginga/rv/plugins/TVMark.py:238
+msgid "Number of objects shown on image"
+msgstr "Anzahl der im Bild angezeigten Objekte"
+
+#: ginga/rv/plugins/TVMark.py:241
+msgid "Number of objects selected"
+msgstr "Anzahl der ausgewählten Objekte"
+
+#: ginga/rv/plugins/TVMark.py:246
+msgid "Load Coords"
+msgstr "Koordinaten laden"
+
+#: ginga/rv/plugins/TVMark.py:246
+msgid "Use RADEC"
+msgstr "RA/DEC verwenden"
+
+#: ginga/rv/plugins/TVMark.py:247 ginga/rv/plugins/TVMask.py:167
+msgid "Forget"
+msgstr "Verwerfen"
+
+#: ginga/rv/plugins/TVMark.py:247 ginga/rv/plugins/TVMask.py:167
+msgid "Show"
+msgstr "Anzeigen"
+
+#: ginga/rv/plugins/TVMark.py:251
+msgid "Load coordinates file"
+msgstr "Koordinatendatei laden"
+
+#: ginga/rv/plugins/TVMark.py:254
+msgid "Use RA/DEC as coordinates instead of X/Y"
+msgstr "RA/DEC statt X/Y als Koordinaten verwenden"
+
+#: ginga/rv/plugins/TVMark.py:258
+msgid "Show markings"
+msgstr "Markierungen anzeigen"
+
+#: ginga/rv/plugins/TVMark.py:261
+msgid "Hide markings"
+msgstr "Markierungen ausblenden"
+
+#: ginga/rv/plugins/TVMark.py:264
+msgid "Forget markings"
+msgstr "Markierungen verwerfen"
+
+#: ginga/rv/plugins/TVMask.py:141 ginga/rv/plugins/WCSAxes.py:84
+msgid "Alpha:"
+msgstr "Alpha:"
+
+#: ginga/rv/plugins/TVMask.py:151
+msgid "Mask alpha (transparency)"
+msgstr "Masken-Alpha (Transparenz)"
+
+#: ginga/rv/plugins/TVMask.py:166
+msgid "Load Mask"
+msgstr "Maske laden"
+
+#: ginga/rv/plugins/TVMask.py:171
+msgid "Load mask image"
+msgstr "Maskenbild laden"
+
+#: ginga/rv/plugins/TVMask.py:174
+msgid "Show masks"
+msgstr "Masken anzeigen"
+
+#: ginga/rv/plugins/TVMask.py:177
+msgid "Hide masks"
+msgstr "Masken ausblenden"
+
+#: ginga/rv/plugins/TVMask.py:180
+msgid "Forget masks"
+msgstr "Masken verwerfen"
+
+#: ginga/rv/plugins/Thumbs.py:237
+msgid "Scroll the thumbs window when new images arrive"
+msgstr "Miniaturbildfenster scrollen, wenn neue Bilder eintreffen"
+
+#: ginga/rv/plugins/Thumbs.py:238
+msgid "Remove all current thumbnails"
+msgstr "Alle aktuellen Miniaturbilder entfernen"
+
+#: ginga/rv/plugins/Toolbar.py:161
+msgid "Select compatible viewer"
+msgstr "Kompatiblen Betrachter wählen"
+
+#: ginga/rv/plugins/Toolbar.py:163
+msgid "Go to previous image in channel"
+msgstr "Zum vorherigen Bild im Kanal wechseln"
+
+#: ginga/rv/plugins/Toolbar.py:165
+msgid "Go to next image in channel"
+msgstr "Zum nächsten Bild im Kanal wechseln"
+
+#: ginga/rv/plugins/Toolbar.py:263
+msgid "Flip image in X axis"
+msgstr "Bild in der X-Achse spiegeln"
+
+#: ginga/rv/plugins/Toolbar.py:265
+msgid "Flip image in Y axis"
+msgstr "Bild in der Y-Achse spiegeln"
+
+#: ginga/rv/plugins/Toolbar.py:267
+msgid "Swap X and Y axes"
+msgstr "X- und Y-Achse vertauschen"
+
+#: ginga/rv/plugins/Toolbar.py:270
+msgid "Rotate image 90 deg"
+msgstr "Bild um 90 Grad drehen"
+
+#: ginga/rv/plugins/Toolbar.py:272
+msgid "Rotate image -90 deg"
+msgstr "Bild um -90 Grad drehen"
+
+#: ginga/rv/plugins/Toolbar.py:274
+msgid "Orient image N=Up E=Right"
+msgstr "Bild ausrichten N=Oben O=Rechts"
+
+#: ginga/rv/plugins/Toolbar.py:276
+msgid "Orient image N=Up E=Left"
+msgstr "Bild ausrichten N=Oben O=Links"
+
+#: ginga/rv/plugins/Toolbar.py:279 ginga/rv/plugins/Toolbar.py:568
+msgid "Zoom in"
+msgstr "Vergrößern"
+
+#: ginga/rv/plugins/Toolbar.py:281 ginga/rv/plugins/Toolbar.py:570
+msgid "Zoom out"
+msgstr "Verkleinern"
+
+#: ginga/rv/plugins/Toolbar.py:283
+msgid "Zoom to fit window size"
+msgstr "An Fenstergröße anpassen"
+
+#: ginga/rv/plugins/Toolbar.py:285
+msgid "Zoom to 100% (1:1)"
+msgstr "Auf 100 % zoomen (1:1)"
+
+#: ginga/rv/plugins/Toolbar.py:288
+msgid "Pan with left, zoom with right"
+msgstr "Links verschieben, rechts zoomen"
+
+#: ginga/rv/plugins/Toolbar.py:291
+msgid ""
+"Left/right click zooms in/out;\n"
+"hold middle to pan freely over image"
+msgstr ""
+"Links/rechts-Klick zoomt hinein/heraus;\n"
+"mittlere Taste halten, um frei über das Bild zu verschieben"
+
+#: ginga/rv/plugins/Toolbar.py:295
+msgid "Drag left to rotate; click right to reset to 0 deg"
+msgstr "Links ziehen zum Drehen; rechts klicken zum Zurücksetzen auf 0 Grad"
+
+#: ginga/rv/plugins/Toolbar.py:298
+msgid "Scroll to set color distribution algorithm"
+msgstr "Scrollen, um den Farbverteilungsalgorithmus festzulegen"
+
+#: ginga/rv/plugins/Toolbar.py:301
+msgid "Scroll to set color map"
+msgstr "Scrollen, um die Farbkarte festzulegen"
+
+#: ginga/rv/plugins/Toolbar.py:304
+msgid "Left/right sets hi cut, up/down sets lo cut"
+msgstr "Links/rechts setzt oberen Schnitt, hoch/runter setzt unteren Schnitt"
+
+#: ginga/rv/plugins/Toolbar.py:307
+msgid "Contrast/bias with left/right/up/down"
+msgstr "Kontrast/Bias mit links/rechts/hoch/runter"
+
+#: ginga/rv/plugins/Toolbar.py:310
+msgid "Modes are oneshot or locked"
+msgstr "Modi sind einmalig oder gesperrt"
+
+#: ginga/rv/plugins/Toolbar.py:312
+msgid "Center image"
+msgstr "Bild zentrieren"
+
+#: ginga/rv/plugins/Toolbar.py:315
+msgid "Reset all transformations and rotations"
+msgstr "Alle Transformationen und Drehungen zurücksetzen"
+
+#: ginga/rv/plugins/Toolbar.py:317
+msgid "Auto cut levels"
+msgstr "Automatische Schnittwerte"
+
+#: ginga/rv/plugins/Toolbar.py:319
+msgid "Reset contrast"
+msgstr "Kontrast zurücksetzen"
+
+#: ginga/rv/plugins/Toolbar.py:322 ginga/rv/plugins/Toolbar.py:579
+#: ginga/rv/plugins/Toolbar.py:669
+msgid "Set channel preferences (in focused channel)"
+msgstr "Kanaleinstellungen festlegen (im fokussierten Kanal)"
+
+#: ginga/rv/plugins/Toolbar.py:324 ginga/rv/plugins/Toolbar.py:581
+#: ginga/rv/plugins/Toolbar.py:671
+msgid "Open file (in focused channel)"
+msgstr "Datei öffnen (im fokussierten Kanal)"
+
+#: ginga/rv/plugins/Toolbar.py:326 ginga/rv/plugins/Toolbar.py:583
+#: ginga/rv/plugins/Toolbar.py:673
+msgid "Select HDUs or cube slices (in focused channel)"
+msgstr "HDUs oder Würfelschichten wählen (im fokussierten Kanal)"
+
+#: ginga/rv/plugins/Toolbar.py:328 ginga/rv/plugins/Toolbar.py:585
+#: ginga/rv/plugins/Toolbar.py:675
+msgid "View image metadata (Header plugin)"
+msgstr "Bild-Metadaten anzeigen (Header-Plugin)"
+
+#: ginga/rv/plugins/Toolbar.py:330
+msgid "Magnify detail (Zoom plugin)"
+msgstr "Detail vergrößern (Zoom-Plugin)"
+
+#: ginga/rv/plugins/Toolbar.py:572
+msgid "Fit plot to window size"
+msgstr "Diagramm an Fenstergröße anpassen"
+
+#: ginga/rv/plugins/Toolbar.py:574
+msgid "Fit X axis to window size"
+msgstr "X-Achse an Fenstergröße anpassen"
+
+#: ginga/rv/plugins/Toolbar.py:576
+msgid "Fit Y axis to window size"
+msgstr "Y-Achse an Fenstergröße anpassen"
+
+#: ginga/rv/plugins/WCSAxes.py:83
+msgid "Line color:"
+msgstr "Linienfarbe:"
+
+#: ginga/rv/plugins/WCSAxes.py:95
+msgid "Line transparency (alpha)"
+msgstr "Linientransparenz (Alpha)"
+
+#: ginga/rv/plugins/WCSAxes.py:101
+msgid "Lines"
+msgstr "Linien"
+
+#: ginga/rv/plugins/WCSAxes.py:102
+msgid "Line style:"
+msgstr "Linienstil:"
+
+#: ginga/rv/plugins/WCSAxes.py:103
+msgid "# RA lines:"
+msgstr "Anz. RA-Linien:"
+
+#: ginga/rv/plugins/WCSAxes.py:104
+msgid "# DEC lines:"
+msgstr "Anz. DEC-Linien:"
+
+#: ginga/rv/plugins/WCSAxes.py:115
+msgid "Number of lines drawn for RA"
+msgstr "Anzahl der für RA gezeichneten Linien"
+
+#: ginga/rv/plugins/WCSAxes.py:119
+msgid "Number of lines drawn for DEC"
+msgstr "Anzahl der für DEC gezeichneten Linien"
+
+#: ginga/rv/plugins/WCSAxes.py:125
+msgid "Labels"
+msgstr "Beschriftungen"
+
+#: ginga/rv/plugins/WCSAxes.py:126
+msgid "Show label"
+msgstr "Beschriftung anzeigen"
+
+#: ginga/rv/plugins/WCSAxes.py:128
+msgid "Text offset:"
+msgstr "Textversatz:"
+
+#: ginga/rv/plugins/WCSAxes.py:129
+msgid "RA angle:"
+msgstr "RA-Winkel:"
+
+#: ginga/rv/plugins/WCSAxes.py:130
+msgid "DEC angle:"
+msgstr "DEC-Winkel:"
+
+#: ginga/rv/plugins/WCSAxes.py:135
+msgid "Show/hide label"
+msgstr "Beschriftung ein-/ausblenden"
+
+#: ginga/rv/plugins/WCSAxes.py:139
+msgid "Labels font size"
+msgstr "Schriftgröße der Beschriftungen"
+
+#: ginga/rv/plugins/WCSAxes.py:144
+msgid "Labels text offset in pixels"
+msgstr "Textversatz der Beschriftungen in Pixeln"
+
+#: ginga/rv/plugins/WCSAxes.py:149
+msgid "Orientation in deg of RA labels"
+msgstr "Ausrichtung der RA-Beschriftungen in Grad"
+
+#: ginga/rv/plugins/WCSAxes.py:153
+msgid "Orientation in deg of DEC labels"
+msgstr "Ausrichtung der DEC-Beschriftungen in Grad"
+
+#: ginga/rv/plugins/WCSMatch.py:75
+msgid "WCS Match"
+msgstr "WCS-Abgleich"
+
+#: ginga/rv/plugins/WCSMatch.py:77
+msgid "Reference Channel:"
+msgstr "Referenzkanal:"
+
+#: ginga/rv/plugins/WCSMatch.py:79
+msgid "Match Pan"
+msgstr "Verschiebung angleichen"
+
+#: ginga/rv/plugins/WCSMatch.py:80
+msgid "Match Scale"
+msgstr "Skalierung angleichen"
+
+#: ginga/rv/plugins/WCSMatch.py:81
+msgid "Match Transforms"
+msgstr "Transformationen angleichen"
+
+#: ginga/rv/plugins/WCSMatch.py:82
+msgid "Match Rotation"
+msgstr "Drehung angleichen"
+
+#: ginga/rv/plugins/WCSMatch.py:89
+msgid "Match pan position of reference image"
+msgstr "Verschiebeposition des Referenzbildes abgleichen"
+
+#: ginga/rv/plugins/WCSMatch.py:95
+msgid "Match scale of reference image"
+msgstr "Skalierung des Referenzbildes abgleichen"
+
+#: ginga/rv/plugins/WCSMatch.py:99
+msgid "Match transforms of reference image"
+msgstr "Transformationen des Referenzbildes abgleichen"
+
+#: ginga/rv/plugins/WCSMatch.py:103
+msgid "Match rotation of reference image"
+msgstr "Drehung des Referenzbildes abgleichen"
+
+#: ginga/rv/plugins/Zoom.py:142
+msgid "Zoom Amount:"
+msgstr "Zoom-Betrag:"
+
+#: ginga/rv/plugins/Zoom.py:154
+msgid "Relative Zoom"
+msgstr "Relativer Zoom"
+
+#: ginga/rv/plugins/Zoom.py:155
+msgid "Refresh Interval"
+msgstr "Aktualisierungsintervall"
+
+#: ginga/rv/plugins/Zoom.py:157
+msgid "Defaults"
+msgstr "Standardwerte"
+
+#: ginga/util/plots.py:161
+msgid "Contours"
+msgstr "Konturen"
+
+#: ginga/util/plots.py:226
+msgid "Radial plot"
+msgstr "Radialdiagramm"
+
+#: ginga/util/plots.py:226 ginga/util/plots.py:452
+msgid "Radius [pixels]"
+msgstr "Radius [Pixel]"
+
+#: ginga/util/plots.py:227
+msgid "Pixel Value (ADU)"
+msgstr "Pixelwert (ADU)"
+
+#: ginga/util/plots.py:309 ginga/util/plots.py:357
+msgid "Brightness"
+msgstr "Helligkeit"
+
+#: ginga/util/plots.py:309 ginga/util/plots.py:357
+msgid "Pixels"
+msgstr "Pixel"
+
+#: ginga/util/plots.py:484
+msgid "X"
+msgstr "X"
+
+#: ginga/util/plots.py:484
+msgid "Y"
+msgstr "Y"
+
+#: ginga/util/plots.py:485
+msgid "Surface Plot"
+msgstr "Oberflächendiagramm"
+
+#: ginga/util/stages/crop.py:37
+msgid "Crop %:"
+msgstr "Zuschnitt %:"
+
+#: ginga/util/stages/crop.py:38
+msgid "Output size:"
+msgstr "Ausgabegröße:"
+
+#: ginga/util/stages/cuts.py:34
+msgid "Auto"
+msgstr "Auto"
+
+#: ginga/util/stages/cuts.py:34
+msgid "Auto:"
+msgstr "Auto:"
+
+#: ginga/util/stages/cuts.py:38
+msgid "VMin:"
+msgstr "VMin:"
+
+#: ginga/util/stages/cuts.py:39
+msgid "VMax:"
+msgstr "VMax:"
+
+#: ginga/util/stages/flipswap.py:28
+msgid "Transform:"
+msgstr "Transformation:"
+
+#: ginga/util/stages/iccprof.py:36
+msgid "Input ICC profile:"
+msgstr "Eingabe-ICC-Profil:"
+
+#: ginga/util/stages/output.py:39
+msgid "Output Folder:"
+msgstr "Ausgabeordner:"
+
+#: ginga/util/stages/output.py:40
+msgid "Output Filename:"
+msgstr "Ausgabedateiname:"
+
+#: ginga/util/stages/output.py:41
+msgid "Output Filetype:"
+msgstr "Ausgabedateityp:"
+
+#: ginga/util/stages/output.py:42
+msgid "Auto Save"
+msgstr "Auto-Speichern"
+
+#: ginga/util/stages/preview.py:29
+msgid "Preview Channel:"
+msgstr "Vorschaukanal:"
+
+#: ginga/util/stages/preview.py:30
+msgid "Detach Image"
+msgstr "Bild abkoppeln"
+
+#: ginga/util/stages/rgbmap.py:97
+msgid "Copy from viewer"
+msgstr "Aus Betrachter kopieren"
+
+#: ginga/util/stages/scale.py:43
+msgid "Long side:"
+msgstr "Lange Seite:"
+
+#: ginga/util/stages/scale.py:45
+msgid "Scale:"
+msgstr "Skalierung:"
+
+#: ginga/util/stages/scale.py:47
+msgid "Output Size:"
+msgstr "Ausgabegröße:"
+
+#: ginga/util/stages/sharpen.py:34
+msgid "Strength:"
+msgstr "Stärke:"
+
+#: ginga/util/stages/whbal.py:44
+msgid "R:"
+msgstr "R:"
+
+#: ginga/util/stages/whbal.py:45
+msgid "G:"
+msgstr "G:"
+
+#: ginga/util/stages/whbal.py:46
+msgid "B:"
+msgstr "B:"
+
+#: ginga/util/stages/whbal.py:47
+msgid "Luminosity:"
+msgstr "Luminanz:"
+

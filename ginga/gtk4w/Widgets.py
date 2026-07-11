@@ -19,6 +19,7 @@ from ginga.util.paths import icondir, app_icon_path
 from ginga.fonts import font_asst
 from ginga.gw.widget_helpers import DIALOG_FLAGS_ONTOP
 from ginga.util.syncops import Shelf
+from ginga.locale.localize import translate_caption, _tr
 
 from gi.repository import Gtk
 from gi.repository import Gdk
@@ -287,7 +288,7 @@ class TextEntrySet(WidgetBase):
         hbox.append(w)
         w.connect('activate', self._cb_redirect)
         self.entry = w
-        w = Gtk.Button(label='Set')
+        w = Gtk.Button(label=_tr('Set'))
         w.connect('clicked', self._cb_redirect)
         hbox.append(w)
         self.btn = w
@@ -4879,11 +4880,12 @@ def build_info(captions, orientation='vertical'):
             idx = col * 2
             if idx < len(tup):
                 title, wtype = tup[idx:idx + 2]
+                title, disp = translate_caption(title, wtype)
                 if not title.endswith(':'):
                     name = name_mangle(title)
                 else:
                     name = name_mangle('lbl_' + title[:-1])
-                w = make_widget(title, wtype)
+                w = make_widget(disp, wtype)
                 table.add_widget(w, row, col)
                 wb[name] = w
             col += 1

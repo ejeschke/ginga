@@ -148,7 +148,7 @@ class TVMask(LocalPlugin):
         b.mask_color.set_index(self._color_options.index(self.maskcolor))
         b.mask_color.add_callback('activated', self.set_maskcolor_cb)
 
-        b.mask_alpha.set_tooltip('Mask alpha (transparency)')
+        b.mask_alpha.set_tooltip(_tr('Mask alpha (transparency)'))
         b.mask_alpha.set_text(str(self.maskalpha))
         b.mask_alpha.add_callback('activated', lambda w: self.set_maskalpha())
 
@@ -168,16 +168,16 @@ class TVMask(LocalPlugin):
         w, b = Widgets.build_info(captions)
         self.w.update(b)
 
-        b.load_mask.set_tooltip('Load mask image')
+        b.load_mask.set_tooltip(_tr('Load mask image'))
         b.load_mask.add_callback('activated', lambda w: self.load_mask_cb())
 
-        b.show.set_tooltip('Show masks')
+        b.show.set_tooltip(_tr('Show masks'))
         b.show.add_callback('activated', lambda w: self.redo())
 
-        b.hide.set_tooltip('Hide masks')
+        b.hide.set_tooltip(_tr('Hide masks'))
         b.hide.add_callback('activated', lambda w: self.clear_mask())
 
-        b.forget.set_tooltip('Forget masks')
+        b.forget.set_tooltip(_tr('Forget masks'))
         b.forget.add_callback('activated', lambda w: self.forget_masks())
 
         container.add_widget(w, stretch=0)
@@ -186,10 +186,10 @@ class TVMask(LocalPlugin):
         btns.set_border_width(4)
         btns.set_spacing(3)
 
-        btn = Widgets.Button('Close')
+        btn = Widgets.Button(_tr('Close'))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
-        btn = Widgets.Button("Help")
+        btn = Widgets.Button(_tr("Help"))
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
@@ -495,6 +495,7 @@ class TVMask(LocalPlugin):
 
 # Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
+from ginga.locale.localize import _tr
 if __doc__ is not None:
     __doc__ += generate_cfg_example('plugin_TVMask', package='ginga')
 

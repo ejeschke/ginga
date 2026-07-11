@@ -10,6 +10,7 @@ import matplotlib as mpl
 
 from ginga.util import iqcalc as _iqcalc  # Prevent namespace confusion below
 from ginga.gw import PlotView
+from ginga.locale.localize import _tr
 
 # fix issue of negative numbers rendering incorrectly with default font
 mpl.rcParams['axes.unicode_minus'] = False
@@ -157,7 +158,7 @@ class ContourPlot(Plot):
         ht, wd = data.shape
 
         self.ax.set_aspect('equal', adjustable='box')
-        self.set_titles(title='Contours')
+        self.set_titles(title=_tr('Contours'))
 
         self.ax.cla()
         self.ax.set_facecolor('#303030')
@@ -222,8 +223,8 @@ class RadialPlot(Plot):
         # Make a radial plot
         self.ax.set_xlim(-0.1, radius)
 
-        self.set_titles(title="Radial plot", xtitle='Radius [pixels]',
-                        ytitle='Pixel Value (ADU)')
+        self.set_titles(title=_tr("Radial plot"), xtitle=_tr('Radius [pixels]'),
+                        ytitle=_tr('Pixel Value (ADU)'))
         self.ax.grid(True)
 
         try:
@@ -305,8 +306,8 @@ class FWHMPlot(Plot):
         self.ax.cla()
 
         #self.ax.set_aspect('equal', adjustable='box')
-        self.set_titles(ytitle='Brightness', xtitle='Pixels',
-                        title='FWHM')
+        self.set_titles(ytitle=_tr('Brightness'), xtitle=_tr('Pixels'),
+                        title=_tr('FWHM'))
         self.ax.grid(True)
 
         # Make a FWHM plot
@@ -353,7 +354,7 @@ class FWHMPlot(Plot):
 
         self.ax.cla()
 
-        self.set_titles(ytitle='Brightness', xtitle='Pixels', title='FWHM')
+        self.set_titles(ytitle=_tr('Brightness'), xtitle=_tr('Pixels'), title=_tr('FWHM'))
         self.ax.grid(True)
 
         # Make a FWHM plot
@@ -448,7 +449,7 @@ class EEPlot(Plot):
                 self.ax.plot(sampling_radius, ys, marker='o', ls='none',
                              mfc=color, mec=color, label=None)
 
-        self.set_titles(title=title, xtitle='Radius [pixels]', ytitle='EE')
+        self.set_titles(title=title, xtitle=_tr('Radius [pixels]'), ytitle=_tr('EE'))
         self.ax.set_xlim(-0.1, x_max)
         self.ax.legend(loc='lower right', shadow=False, fancybox=False,
                        prop={'size': 8}, labelspacing=0.2)
@@ -480,8 +481,8 @@ class SurfacePlot(Plot):
 
             self.ax = self.figure.gca(projection='3d', facecolor='#808080')
 
-            self.set_titles(ytitle='Y', xtitle='X',
-                            title='Surface Plot')
+            self.set_titles(ytitle=_tr('Y'), xtitle=_tr('X'),
+                            title=_tr('Surface Plot'))
             self.ax.grid(True)
 
             zmin = np.min(Z) if self.floor is None else self.floor

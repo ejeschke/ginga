@@ -84,6 +84,7 @@ from ginga.gw import Widgets, Viewers
 from ginga.misc import Bunch
 from ginga import RGBImage, LayerImage, AstroImage
 from ginga import GingaPlugin
+from ginga.locale.localize import _tr
 
 from PIL import Image
 
@@ -133,7 +134,7 @@ class Compose(GingaPlugin.LocalPlugin):
         vbox.set_border_width(4)
         vbox.set_spacing(2)
 
-        fr = Widgets.Frame("Compositing")
+        fr = Widgets.Frame(_tr("Compositing"))
 
         captions = (("Compose Type:", 'label', "Compose Type", 'combobox'),
                     ("New Image", 'button', "Insert from Channel", 'button'),
@@ -152,9 +153,9 @@ class Compose(GingaPlugin.LocalPlugin):
         combobox.set_index(1)
 
         b.new_image.add_callback('activated', lambda w: self.new_cb())
-        b.new_image.set_tooltip("Start a new composite image")
+        b.new_image.set_tooltip(_tr("Start a new composite image"))
         b.insert_from_channel.add_callback('activated', lambda w: self.insert_cb())
-        b.insert_from_channel.set_tooltip("Insert channel image as layer")
+        b.insert_from_channel.set_tooltip(_tr("Insert channel image as layer"))
 
         zi = Viewers.CanvasView(logger=None)
         zi.set_desired_size(self._wd, self._ht)
@@ -178,7 +179,7 @@ class Compose(GingaPlugin.LocalPlugin):
         self.canvas.set_surface(zi)
         self.canvas.ui_set_active(True, viewer=zi)
 
-        fr = Widgets.Frame("Preview")
+        fr = Widgets.Frame(_tr("Preview"))
         fr.set_widget(iw)
 
         vpaned = Widgets.Splitter(orientation='vertical')
@@ -187,7 +188,7 @@ class Compose(GingaPlugin.LocalPlugin):
         # spacer
         vpaned.add_widget(Widgets.Label(''))
 
-        fr = Widgets.Frame("Layers")
+        fr = Widgets.Frame(_tr("Layers"))
         self.w.scales = fr
         fr.set_widget(Widgets.VBox())
         vpaned.add_widget(fr)
@@ -200,7 +201,7 @@ class Compose(GingaPlugin.LocalPlugin):
         w, b = Widgets.build_info(captions)
         self.w.update(b)
         b.save_to_channel.add_callback('activated', lambda w: self.save_to_channel_cb())
-        b.save_to_channel.set_tooltip("Save composite image to channel")
+        b.save_to_channel.set_tooltip(_tr("Save composite image to channel"))
         b.save_image_as.add_callback('activated', lambda w: self.save_as_cb())
         b.save_path.add_callback('activated', lambda *args: self.save_as_cb())
         vbox.add_widget(w, stretch=0)
@@ -211,10 +212,10 @@ class Compose(GingaPlugin.LocalPlugin):
         btns.set_border_width(4)
         btns.set_spacing(4)
 
-        btn = Widgets.Button("Close")
+        btn = Widgets.Button(_tr("Close"))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn)
-        btn = Widgets.Button("Help")
+        btn = Widgets.Button(_tr("Help"))
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)

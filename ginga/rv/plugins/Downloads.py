@@ -39,6 +39,7 @@ import time
 from ginga.gw import Widgets
 from ginga import GingaPlugin
 from ginga.misc import Bunch, Future
+from ginga.locale.localize import _tr
 
 __all__ = ['Downloads']
 
@@ -68,7 +69,7 @@ class Downloads(GingaPlugin.GlobalPlugin):
 
         sc = Widgets.ScrollArea()
         vbox2 = Widgets.VBox()
-        fr = Widgets.Frame(title="Downloads")
+        fr = Widgets.Frame(title=_tr("Downloads"))
         self.dlbox = Widgets.VBox()
         fr.set_widget(self.dlbox)
         vbox2.add_widget(fr, stretch=0)
@@ -81,10 +82,10 @@ class Downloads(GingaPlugin.GlobalPlugin):
         btns.set_spacing(4)
         btns.set_border_width(4)
 
-        btn = Widgets.Button("Close")
+        btn = Widgets.Button(_tr("Close"))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn)
-        btn = Widgets.Button("Clear All")
+        btn = Widgets.Button(_tr("Clear All"))
         btn.add_callback('activated', lambda w: self.gui_clear_all())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
@@ -106,7 +107,7 @@ class Downloads(GingaPlugin.GlobalPlugin):
         prog_bar.set_value(track.progress)
         hbox.add_widget(time_lbl)
         hbox.add_widget(prog_bar, stretch=1)
-        rmv = Widgets.Button('Clear')
+        rmv = Widgets.Button(_tr('Clear'))
 
         def _clear_download(w):
             self.gui_rm_track(track)

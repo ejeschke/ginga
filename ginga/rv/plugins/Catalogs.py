@@ -231,7 +231,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         vbox0.add_widget(hbox, stretch=1)
 
         vbox = Widgets.VBox()
-        fr = Widgets.Frame(" Image Server ")
+        fr = Widgets.Frame(_tr(" Image Server "))
         fr.set_widget(vbox)
         hbox.add_widget(fr, stretch=0)
 
@@ -246,7 +246,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
                                       lambda w: self.getimage_cb())
         chname = self.settings.get('image_channel', '')
         b.channel.set_text(chname)
-        b.channel.set_tooltip("Optional channel for result")
+        b.channel.set_tooltip(_tr("Optional channel for result"))
 
         vbox.add_widget(w, stretch=0)
 
@@ -265,12 +265,12 @@ class Catalogs(GingaPlugin.LocalPlugin):
             combobox.set_index(index)
         combobox.add_callback('activated',
                               lambda w, idx: self.setup_params_image(idx))
-        combobox.set_tooltip("Choose the image source")
+        combobox.set_tooltip(_tr("Choose the image source"))
         if len(self.image_server_options) > 0:
             self.setup_params_image(index, redo=False)
 
         vbox = Widgets.VBox()
-        fr = Widgets.Frame(" Catalog Server ")
+        fr = Widgets.Frame(_tr(" Catalog Server "))
         fr.set_widget(vbox)
         hbox.add_widget(fr, stretch=0)
 
@@ -284,7 +284,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         self.w2.limit_stars_to_area.set_state(self.limit_stars_to_area)
         self.w2.limit_stars_to_area.add_callback('activated',
                                                  self.limit_area_cb)
-        self.w2.limit_stars_to_area.set_tooltip("Filter out objects objects outside the shape")
+        self.w2.limit_stars_to_area.set_tooltip(_tr("Filter out objects objects outside the shape"))
 
         vbox.add_widget(w, stretch=0)
 
@@ -303,13 +303,13 @@ class Catalogs(GingaPlugin.LocalPlugin):
             combobox.set_index(index)
         combobox.add_callback('activated',
                               lambda w, idx: self.setup_params_catalog(idx))
-        combobox.set_tooltip("Choose the catalog source")
+        combobox.set_tooltip(_tr("Choose the catalog source"))
         if len(self.catalog_server_options) > 0:
             self.setup_params_catalog(index, redo=False)
 
         # name resolver
         vbox = Widgets.VBox()
-        fr = Widgets.Frame(" Name Server ")
+        fr = Widgets.Frame(_tr(" Name Server "))
         fr.set_widget(vbox)
 
         captions = (('Server:', 'llabel', 'server', 'combobox',
@@ -320,7 +320,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         w, b = Widgets.build_info(captions)
         self.w3 = b
         b.search_name.add_callback('activated', lambda w: self.getname_cb())
-        b.search_name.set_tooltip("Lookup name and populate ra/dec coordinates")
+        b.search_name.set_tooltip(_tr("Lookup name and populate ra/dec coordinates"))
         vbox.add_widget(w, stretch=0)
 
         combobox = b.server
@@ -333,7 +333,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         index = 0
         if len(self.name_server_options) > 0:
             combobox.set_index(index)
-        combobox.set_tooltip("Choose the object name resolver")
+        combobox.set_tooltip(_tr("Choose the object name resolver"))
 
         vbox0.add_widget(fr, stretch=0)
 
@@ -343,17 +343,17 @@ class Catalogs(GingaPlugin.LocalPlugin):
         btns = Widgets.HBox()
         btns.set_spacing(5)
 
-        btn1 = Widgets.RadioButton("Rectangle")
+        btn1 = Widgets.RadioButton(_tr("Rectangle"))
         btn1.set_state(self.drawtype == 'rectangle')
         btn1.add_callback('activated',
                           lambda w, tf: self.set_drawtype_cb(tf, 'rectangle'))
         btns.add_widget(btn1, stretch=0)
-        btn2 = Widgets.RadioButton("Circle", group=btn1)
+        btn2 = Widgets.RadioButton(_tr("Circle"), group=btn1)
         btn2.set_state(self.drawtype == 'circle')
         btn2.add_callback('activated',
                           lambda w, tf: self.set_drawtype_cb(tf, 'circle'))
         btns.add_widget(btn2, stretch=0)
-        btn = Widgets.Button("Entire image")
+        btn = Widgets.Button(_tr("Entire image"))
         btn.add_callback('activated', lambda w: self.setfromimage())
         btns.add_widget(btn, stretch=0)
         vbox0.add_widget(btns, stretch=0)
@@ -362,26 +362,26 @@ class Catalogs(GingaPlugin.LocalPlugin):
         btns = Widgets.HBox()
         btns.set_spacing(5)
 
-        btn1 = Widgets.RadioButton("Select")
+        btn1 = Widgets.RadioButton(_tr("Select"))
         btn1.set_state(mode == 'select')
         btn1.add_callback('activated',
                           lambda w, val: self.set_mode_cb('select', val))
-        btn1.set_tooltip("Choose this to highlight selection on table")
+        btn1.set_tooltip(_tr("Choose this to highlight selection on table"))
         self.w.btn_select = btn1
         btns.add_widget(btn1, stretch=0)
 
-        btn2 = Widgets.RadioButton("Draw", group=btn1)
+        btn2 = Widgets.RadioButton(_tr("Draw"), group=btn1)
         btn2.set_state(mode == 'draw')
         btn2.add_callback('activated',
                           lambda w, val: self.set_mode_cb('draw', val))
-        btn2.set_tooltip("Choose this to define search region")
+        btn2.set_tooltip(_tr("Choose this to define search region"))
         self.w.btn_draw = btn2
         btns.add_widget(btn2, stretch=0)
 
-        btn3 = Widgets.RadioButton("Edit", group=btn1)
+        btn3 = Widgets.RadioButton(_tr("Edit"), group=btn1)
         btn3.set_state(mode == 'edit')
         btn3.add_callback('activated', lambda w, val: self.set_mode_cb('edit', val))
-        btn3.set_tooltip("Choose this to edit or move a region")
+        btn3.set_tooltip(_tr("Choose this to edit or move a region"))
         self.w.btn_edit = btn3
         btns.add_widget(btn3)
 
@@ -393,7 +393,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         sw = Widgets.ScrollArea()
         sw.set_widget(vbox0)
 
-        nb.add_widget(sw, title="Params")
+        nb.add_widget(sw, title=_tr("Params"))
 
         vbox = Widgets.VBox()
         self.table = CatalogListing(self.logger, vbox)
@@ -403,7 +403,7 @@ class Catalogs(GingaPlugin.LocalPlugin):
         adj.set_limits(0, 1000, incr_value=1)
         adj.set_value(0)
         adj.set_tracking(True)
-        adj.set_tooltip("Choose subset of stars plotted")
+        adj.set_tooltip(_tr("Choose subset of stars plotted"))
         self.w.plotgrp = adj
         adj.add_callback('value-changed', self.plot_pct_cb)
         hbox.add_widget(adj, stretch=1)
@@ -413,31 +413,31 @@ class Catalogs(GingaPlugin.LocalPlugin):
         sb.set_value(self.plot_limit)
         #sb.set_wrapping(False)
         self.w.plotnum = sb
-        sb.set_tooltip("Adjust size of subset of stars plotted")
+        sb.set_tooltip(_tr("Adjust size of subset of stars plotted"))
         sb.add_callback('value-changed', self.plot_limit_cb)
         hbox.add_widget(sb, stretch=0)
 
         vbox.add_widget(hbox, stretch=0)
         self.w.listing = vbox
-        nb.add_widget(vbox, title="Listing")
+        nb.add_widget(vbox, title=_tr("Listing"))
 
         btns = Widgets.HBox()
         btns.set_spacing(3)
         self.w.buttons = btns
 
-        btn = Widgets.Button("Close")
+        btn = Widgets.Button(_tr("Close"))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
 
         if future:
-            btn = Widgets.Button('Ok')
+            btn = Widgets.Button(_tr('Ok'))
             btn.add_callback('activated', lambda w: self.ok())
             btns.add_widget(btn, stretch=0)
-            btn = Widgets.Button('Cancel')
+            btn = Widgets.Button(_tr('Cancel'))
             btn.add_callback('activated', lambda w: self.cancel())
             btns.add_widget(btn, stretch=0)
 
-        btn = Widgets.Button("Help")
+        btn = Widgets.Button(_tr("Help"))
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
@@ -1338,7 +1338,7 @@ class CatalogListing:
         self.btn['oprn'] = combobox
         btns.add_widget(combobox, stretch=0)
 
-        btn = Widgets.Button("Do it")
+        btn = Widgets.Button(_tr("Do it"))
         btn.add_callback('activated', self.do_operation_cb, combobox)
         btns.add_widget(btn, stretch=0)
 
@@ -1519,6 +1519,7 @@ class CatalogListing:
 
 # Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
+from ginga.locale.localize import _tr
 if __doc__ is not None:
     __doc__ += generate_cfg_example('plugin_Catalogs', package='ginga')
 

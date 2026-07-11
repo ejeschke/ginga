@@ -25,6 +25,7 @@ from ginga.misc import Bunch, Settings
 from ginga.web.pgw import PgHelp
 from ginga.util.paths import icondir, app_icon_path
 from ginga.fonts import font_asst
+from ginga.locale.localize import translate_caption, _tr
 
 __all__ = ['WidgetError', 'Widget', 'WidgetBase', 'TextEntry', 'TextEntrySet',
            'TextArea', 'TextSource', 'Dial', 'Label', 'Button', 'ComboBox',
@@ -403,6 +404,8 @@ class TextEntry(WidgetMixin, PGW.TextEntry):
 class TextEntrySet(WidgetMixin, PGW.TextEntrySet):
     def __init__(self, *args, **kwargs):
         WidgetMixin.__init__(self)
+        # translate the default "Set" button label (a declared option)
+        kwargs.setdefault('label', _tr('Set'))
         PGW.TextEntrySet.__init__(self, *get_args(args), **kwargs)
 
         # remapping pgwidgets 'activated' to ours
@@ -1774,11 +1777,12 @@ def build_info(captions, orientation='vertical'):
             idx = col * 2
             if idx < len(tup):
                 title, wtype = tup[idx:idx + 2]
+                title, disp = translate_caption(title, wtype)
                 if not title.endswith(':'):
                     name = name_mangle(title)
                 else:
                     name = name_mangle('lbl_' + title[:-1])
-                w = make_widget(title, wtype)
+                w = make_widget(disp, wtype)
                 table.add_widget(w, row, col)
                 wb[name] = w
             col += 1

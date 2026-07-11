@@ -124,41 +124,41 @@ class PlotTable(LocalPlugin):
         combobox = b.x_combo
         combobox.add_callback('activated', self.x_select_cb)
         self.w.xcombo = combobox
-        combobox.set_tooltip('Select a column to plot on X-axis')
+        combobox.set_tooltip(_tr('Select a column to plot on X-axis'))
 
         # Controls for Y-axis column listing
         combobox = b.y_combo
         combobox.add_callback('activated', self.y_select_cb)
         self.w.ycombo = combobox
-        combobox.set_tooltip('Select a column to plot on Y-axis')
+        combobox.set_tooltip(_tr('Select a column to plot on Y-axis'))
 
         b.log_x.set_state(self.tab_plot.logx)
         b.log_x.add_callback('activated', self.log_x_cb)
-        b.log_x.set_tooltip('Plot X-axis in log scale')
+        b.log_x.set_tooltip(_tr('Plot X-axis in log scale'))
 
         b.log_y.set_state(self.tab_plot.logy)
         b.log_y.add_callback('activated', self.log_y_cb)
-        b.log_y.set_tooltip('Plot Y-axis in log scale')
+        b.log_y.set_tooltip(_tr('Plot Y-axis in log scale'))
 
         b.x_lo.add_callback('activated', lambda w: self.set_xlim_cb())
-        b.x_lo.set_tooltip('Set X lower limit')
+        b.x_lo.set_tooltip(_tr('Set X lower limit'))
 
         b.x_hi.add_callback('activated', lambda w: self.set_xlim_cb())
-        b.x_hi.set_tooltip('Set X upper limit')
+        b.x_hi.set_tooltip(_tr('Set X upper limit'))
 
         b.y_lo.add_callback('activated', lambda w: self.set_ylim_cb())
-        b.y_lo.set_tooltip('Set Y lower limit')
+        b.y_lo.set_tooltip(_tr('Set Y lower limit'))
 
         b.y_hi.add_callback('activated', lambda w: self.set_ylim_cb())
-        b.y_hi.set_tooltip('Set Y upper limit')
+        b.y_hi.set_tooltip(_tr('Set Y upper limit'))
 
         b.show_marker.set_state(self.settings.get('show_marker', True))
         b.show_marker.add_callback('activated', self.set_marker_cb)
-        b.show_marker.set_tooltip('Mark data points')
+        b.show_marker.set_tooltip(_tr('Mark data points'))
 
         # Button to save plot
         self.save_plot = b.save
-        self.save_plot.set_tooltip('Save table plot')
+        self.save_plot.set_tooltip(_tr('Save table plot'))
         self.save_plot.add_callback('activated', lambda w: self.save_cb())
         self.save_plot.set_enabled(False)
 
@@ -175,10 +175,10 @@ class PlotTable(LocalPlugin):
         btns.set_border_width(4)
         btns.set_spacing(3)
 
-        btn = Widgets.Button('Close')
+        btn = Widgets.Button(_tr('Close'))
         btn.add_callback('activated', lambda w: self.close())
         btns.add_widget(btn, stretch=0)
-        btn = Widgets.Button('Help')
+        btn = Widgets.Button(_tr('Help'))
         btn.add_callback('activated', lambda w: self.help())
         btns.add_widget(btn, stretch=0)
         btns.add_widget(Widgets.Label(''), stretch=1)
@@ -492,6 +492,7 @@ class PlotTable(LocalPlugin):
 
 # Append module docstring with config doc for auto insert by Sphinx.
 from ginga.util.toolbox import generate_cfg_example  # noqa
+from ginga.locale.localize import _tr
 if __doc__ is not None:
     __doc__ += generate_cfg_example('plugin_PlotTable', package='ginga')
 
