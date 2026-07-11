@@ -204,6 +204,7 @@ def translate_caption(title, wtype):
 LANGUAGE_NAMES = {
     'en': 'English',
     'de': 'Deutsch',
+    'es': 'Español',
     'fr': 'Français',
     'it': 'Italiano',
     'ja': '日本語',
