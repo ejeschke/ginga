@@ -26,6 +26,7 @@ from ginga.misc import Task, ModuleManager, Settings, log
 import ginga.version as version
 import ginga.toolkit as ginga_toolkit
 from ginga.util import paths, rgb_cms, compat, loader, grc
+from ginga.locale import localize
 
 # Catch warnings
 logging.captureWarnings(True)
@@ -914,9 +915,20 @@ class ReferenceViewer:
                               use_opengl=False,
                               layout_file='layout.json',
                               plugin_file='plugins.yml',
-                              channel_prefix="Image")
+                              channel_prefix="Image",
+                              # UI language; None honors the environment
+                              # (LANGUAGE/LC_ALL/LC_MESSAGES/LANG)
+                              language=None,
+                              # whether to offer the Language menu in the
+                              # menubar; the 'language' setting is honored
+                              # regardless of this value
+                              show_languages=True)
         settings.load(onError='silent')
         self.settings = settings
+
+        # Apply the UI language before any UI is built.  The 'language'
+        # preference overrides the environment; None honors the environment.
+        localize.set_language(settings.get('language', None))
 
         # ------ command line overrides for various settings -----
         #

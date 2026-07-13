@@ -38,6 +38,12 @@ Ver 7.0.0 (unreleased)
   and translations provided for German, Japanese, French, Italian, Chinese,
   Korean and Spanish; the machinery is reusable by downstream applications
   via ``localize.register()``
+- Added two general settings (in ``general.cfg``) to control the UI language:
+  ``language`` selects the language (``None`` honors the environment locale,
+  otherwise a code like ``"ja"``, falling back to English if unavailable), and
+  ``show_languages`` (default ``True``) controls whether the ``Language`` menu
+  is offered in the menubar -- set it to ``False`` to lock down the language
+  while still honoring the ``language`` setting
 
 New widgets
 -----------

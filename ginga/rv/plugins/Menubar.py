@@ -126,13 +126,18 @@ class GingaMenubar(Menubar):
         # create a Language pulldown menu, and add it to the menu bar.  The
         # menu name is kept in English so it stays findable regardless of the
         # currently-selected language (it will get a flag icon later).  The
-        # items are each language's name in its own script.
-        langmenu = menubar.add_name("Language")
-        for code in localize.get_available_languages():
-            item = langmenu.add_name(localize.get_language_name(code))
-            item.add_callback('activated',
-                              lambda *args, code=code:
-                              self.fv.set_language_pref(code))
+        # items are each language's name in its own script.  The menu can be
+        # suppressed by setting "show_languages" to False in general.cfg (e.g.
+        # to lock down the UI language); the "language" preference is honored
+        # regardless of this setting.
+        gen_settings = self.fv.get_preferences().create_category('general')
+        if gen_settings.get('show_languages', True):
+            langmenu = menubar.add_name("Language")
+            for code in localize.get_available_languages():
+                item = langmenu.add_name(localize.get_language_name(code))
+                item.add_callback('activated',
+                                  lambda *args, code=code:
+                                  self.fv.set_language_pref(code))
 
         # create a Help pulldown menu, and add it to the menu bar
         helpmenu = menubar.add_name(_tr("Help"))

@@ -25,7 +25,6 @@ from ginga.modes import modeinfo
 # GUI imports
 from ginga.gw import Widgets, Viewers, GwHelp
 from ginga.fonts import font_asst
-from ginga.locale import localize
 from ginga.locale.localize import _tr, N_
 from ginga.util.paths import icondir as icon_dir
 
@@ -87,15 +86,8 @@ class GingaShell(GenericShell):
                               confirm_shutdown=True,
                               download_folder=None,
                               save_layout=False,
-                              channel_prefix="Image",
-                              # UI language; None honors the environment
-                              # (LANGUAGE/LC_ALL/LC_MESSAGES/LANG)
-                              language=None)
+                              channel_prefix="Image")
         settings.load(onError='silent')
-
-        # Apply the UI language before any UI is built.  The 'language'
-        # preference overrides the environment; None honors the environment.
-        localize.set_language(settings.get('language', None))
 
         GenericShell.__init__(self, logger, thread_pool, module_manager,
                               preferences, ev_quit=ev_quit, ws_sock=ws_sock)

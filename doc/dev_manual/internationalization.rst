@@ -138,6 +138,26 @@ are localized through the same code.  Build your own message template with
 ``ginga.locale._extract.build_catalog('myapp')``, and ship your own ``.po``,
 ``.mo`` and ``docs`` files under your package's locale directory.
 
+Selecting and locking the UI language
+-------------------------------------
+
+The reference viewer chooses its language from two general settings (in
+``$HOME/.ginga/general.cfg``):
+
+* ``language`` -- the UI language.  ``None`` (the default) honors the
+  environment locale (``LANGUAGE``/``LC_ALL``/``LC_MESSAGES``/``LANG``); a
+  language code such as ``"ja"`` forces that language, falling back to English
+  if it is not available.  The setting is applied once, before the UI is built.
+* ``show_languages`` -- whether the ``Language`` menu is offered in the menubar
+  (default ``True``).  Set it to ``False`` to "lock down" the language: the menu
+  is hidden, but the ``language`` setting above is still honored.  This is
+  useful for deployments that want to fix the language and prevent users from
+  changing it interactively.
+
+Both settings are defined in ``ginga.rv.main`` (with the rest of the general
+settings), so applications that reuse the reference viewer's setup pick them up
+automatically.
+
 ===========================
 Preparing a New Translation
 ===========================
