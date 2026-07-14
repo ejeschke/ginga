@@ -4735,7 +4735,9 @@ class Application(Callback.Callbacks):
         self._qtapp.processEvents()
 
     def process_end(self):
-        self._qtapp.quit()
+        # exit() rather than quit(): see note in quit() -- on Qt6 quit() is
+        # cancelled by windows that ignore their close event
+        self._qtapp.exit(0)
 
     def add_window(self, window, wid=None):
         if wid is None:
@@ -4804,7 +4806,12 @@ class Application(Callback.Callbacks):
         """
         self.make_callback('shutdown')
 
-        self._qtapp.quit()
+        # NOTE: use exit() rather than quit().  On Qt6, QApplication.quit()
+        # sends a close event to every top-level window and cancels the quit
+        # if any window ignores it -- and our TopLevel windows ignore close
+        # events by default (see TopLevelMixin._quit), so quit() would never
+        # terminate the event loop.  exit() unconditionally leaves exec().
+        self._qtapp.exit(0)
 
 
 class Dialog(TopLevelMixin, WidgetBase):

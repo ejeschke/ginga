@@ -32,6 +32,12 @@ Ver 7.0.0 (unreleased)
   banner under the ``pg`` backend
 - Many backend fixes (Qt/Gtk3/Gtk4/pg): font resolution, cell padding,
   label colors, Gtk4 menu styling and Info-panel label alignment
+- Fixed application shutdown under Qt6: ``Application.quit()`` now calls
+  ``QApplication.exit()`` instead of ``quit()``.  On Qt6, ``quit()`` sends a
+  close event to every top-level window and cancels the shutdown if any window
+  ignores it -- which Ginga's windows do by default -- so ``app.mainloop()``
+  would never return.  Window-close (``'close'``) callbacks are unaffected, so
+  applications can still intervene in a window closing
 - Added internationalization (i18n) support to the reference viewer: most
   UI strings, ``build_info`` captions, and plugin/mode help are now
   translatable through ``ginga.locale``, with a ``Language`` menu to switch
