@@ -465,9 +465,29 @@ class Label(WidgetMixin, PGW.Label):
 
 
 class Button(WidgetMixin, PGW.Button):
+
+    # Class-level default hover colors.  Each button snapshots these at
+    # construction, so bracketing UI creation with set_hover_color(bg, fg)
+    # ... set_hover_color(None, None) gives just those buttons a hover
+    # highlight.  Mirrors the qt/gtk backends.  See set_hover_color().
+    _hover_bg = None
+    _hover_fg = None
+
     def __init__(self, *args, **kwargs):
         WidgetMixin.__init__(self)
         PGW.Button.__init__(self, *get_args(args), **kwargs)
+
+        # apply the class-level hover default in effect when this button
+        # was created (pgwidgets Button.set_hover installs the highlight)
+        if Button._hover_bg is not None or Button._hover_fg is not None:
+            self.set_hover(Button._hover_bg, Button._hover_fg)
+
+    @classmethod
+    def set_hover_color(cls, bg=None, fg=None):
+        """Set the default hover background/foreground for buttons created
+        *after* this call; pass ``(None, None)`` to clear it."""
+        cls._hover_bg = bg
+        cls._hover_fg = fg
 
     def set_icon(self, iconpath, iconsize=None):
         wd, ht = 24, 24
