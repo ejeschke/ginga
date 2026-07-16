@@ -256,6 +256,10 @@ class ApplicationBase(Callbacks):
         if win not in self._windows:
             self._windows.append(win)
 
+    def remove_window(self, win):
+        if win in self._windows:
+            self._windows.remove(win)
+
     def make_timer(self):
         return Timer()
 
@@ -1719,6 +1723,15 @@ class FileDialog(ContainerWidgetMixin, FileBrowser):
     def __init__(self, *args, title='', parent=None, **kwargs):
         ContainerWidgetMixin.__init__(self)
         FileBrowser.__init__(self, *get_args(args), title=title)
+
+    def _close_and_fire(self, result):
+        # The pgwidgets FileBrowser fires 'activated' with a single path
+        # string (mode='file'/'directory') or a list (mode='files').  The
+        # Ginga contract (matching the qt/gtk backends) is always a list of
+        # paths, so callers can index ``filepaths[0]``.  Normalize here.
+        if not isinstance(result, (list, tuple)):
+            result = [result]
+        super()._close_and_fire(result)
 
 
 class BrowserFileDialog(ContainerWidgetMixin, PGW.FileDialog):
