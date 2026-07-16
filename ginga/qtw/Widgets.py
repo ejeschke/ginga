@@ -22,7 +22,8 @@ from ginga.gw.widget_helpers import DIALOG_FLAGS_ONTOP
 from ginga.locale.localize import translate_caption, _tr
 
 __all__ = ['WidgetError', 'Widget', 'WidgetBase', 'TextEntry', 'TextEntrySet',
-           'TextArea', 'TextSource', 'Label', 'Button', 'ComboBox', 'Timer',
+           'TextArea', 'TextSource', 'Label', 'HSeparator', 'VSeparator',
+           'Button', 'ComboBox', 'Timer',
            'SpinBox', 'Slider', 'Dial', 'ScrollBar', 'CheckBox', 'ToggleButton',
            'RadioButton', 'Image', 'ProgressBar', 'StatusBar', 'TreeView',
            'TableView', 'ContainerBase', 'Box', 'HBox', 'VBox',
@@ -94,6 +95,32 @@ class WidgetBase(Callback.Callbacks):
 
     def set_enabled(self, tf):
         self.widget.setEnabled(tf)
+
+    def set_padding(self, px):
+        """Set the widget's inner padding.  ``px`` is a single value for all
+        sides, or a (left, top, right, bottom) sequence.  Applies to the
+        layout for container widgets and to the widget's contents margins
+        otherwise (e.g. a plain Button)."""
+        if isinstance(px, (int, float)):
+            margins = (int(px),) * 4
+        else:
+            # (left, top, right, bottom)
+            margins = tuple(int(v) for v in px)
+        layout = self.widget.layout()
+        if layout is not None:
+            layout.setContentsMargins(*margins)
+        else:
+            self.widget.setContentsMargins(*margins)
+
+    def set_margins(self, left, right, top, bottom):
+        """Set the widget's margins.  Applies to the layout for container
+        widgets and to the widget's contents margins otherwise (e.g. a
+        plain Button)."""
+        layout = self.widget.layout()
+        if layout is not None:
+            layout.setContentsMargins(left, right, top, bottom)
+        else:
+            self.widget.setContentsMargins(left, right, top, bottom)
 
     def is_container(self):
         return False
@@ -479,12 +506,6 @@ class TextSource(WidgetBase):
             QtGui.QToolTip.showText(event.globalPos(), res[0])
         return True
 
-    def set_syntax_highlighter_class(self, klass):
-        return self.widget.set_syntax_highlighter_class(klass)
-
-    def get_syntax_highlighter(self):
-        return self.widget.get_syntax_highlighter()
-
     def get_modified(self):
         return self.widget.get_modified()
 
@@ -712,6 +733,26 @@ class Label(WidgetBase):
         else:
             raise ValueError(f"Don't understand alignment '{align}'")
         self.widget.setAlignment(cur)
+
+
+class HSeparator(WidgetBase):
+    """A thin horizontal rule (like an HTML <hr>)."""
+    def __init__(self):
+        super().__init__()
+        self.widget = QtGui.QFrame()
+        self.widget.setFrameShape(QtGui.QFrame.HLine)
+        self.widget.setFrameShadow(QtGui.QFrame.Sunken)
+        self._set_name(self.widget)
+
+
+class VSeparator(WidgetBase):
+    """A thin vertical rule."""
+    def __init__(self):
+        super().__init__()
+        self.widget = QtGui.QFrame()
+        self.widget.setFrameShape(QtGui.QFrame.VLine)
+        self.widget.setFrameShadow(QtGui.QFrame.Sunken)
+        self._set_name(self.widget)
 
 
 class Button(WidgetBase):
@@ -3509,21 +3550,6 @@ class ContainerBase(WidgetBase):
         if idx < 0:
             return None
         return self.children[idx]
-
-    def set_padding(self, px):
-        layout = self.widget.layout()
-        if layout is None:
-            return
-        if isinstance(px, int):
-            layout.setContentsMargins(px, px, px, px)
-        else:
-            layout.setContentsMargins(*px)
-
-    def set_margins(self, left, right, top, bottom):
-        layout = self.widget.layout()
-        if layout is None:
-            return
-        layout.setContentsMargins(left, right, top, bottom)
 
     def set_border_width(self, pix):
         layout = self.widget.layout()

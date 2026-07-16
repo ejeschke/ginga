@@ -4,6 +4,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import os
 import binascii
 from io import BytesIO
 
@@ -45,15 +46,24 @@ def get_icon(iconpath, size=None, format='svg'):
                                                  imgtype=format)
             return icon_uri
 
-    # other types handled by pillow
-    image = Image.open(iconpath)
+    # other types (raster images: png, gif, jpg, ...).
+    if size is None:
+        # no resize requested -- pass the original bytes straight through as
+        # a data URI (already a browser-renderable format).
+        ext = os.path.splitext(iconpath)[1].lower().lstrip('.') or 'png'
+        imgtype = 'jpeg' if ext in ('jpg', 'jpeg') else ext
+        with open(iconpath, 'rb') as icon_f:
+            buf = icon_f.read()
+        return get_image_src_from_buffer(buf, imgtype=imgtype)
+
+    # resize to the requested (wd, ht).  Convert to RGBA first: resizing a
+    # palette ('P') image and re-saving as 'P' can drop the transparent
+    # color (rendering the icon blank), so work in RGBA to keep transparency.
+    image = Image.open(iconpath).convert('RGBA')
     image = image.resize((wd, ht))
-
     img_buf = BytesIO()
-    image.save(img_buf, format=format)
-
-    icon_uri = get_image_src_from_buffer(img_buf.getvalue(), imgtype=format)
-    return icon_uri
+    image.save(img_buf, format='PNG')
+    return get_image_src_from_buffer(img_buf.getvalue(), imgtype='png')
 
 
 def get_image(imgpath, size=None, format='png'):

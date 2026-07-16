@@ -29,7 +29,8 @@ from gi.repository import Gio
 from gi.repository import GObject
 
 __all__ = ['WidgetError', 'Widget', 'WidgetBase', 'TextEntry', 'TextEntrySet',
-           'TextArea', 'Label', 'Button', 'ComboBox', 'Timer',
+           'TextArea', 'Label', 'HSeparator', 'VSeparator',
+           'Button', 'ComboBox', 'Timer',
            'SpinBox', 'Slider', 'Dial', 'ScrollBar', 'CheckBox', 'ToggleButton',
            'RadioButton', 'Image', 'ProgressBar', 'StatusBar', 'TreeView',
            'TableView', 'ContainerBase', 'Box', 'HBox', 'VBox', 'Frame',
@@ -108,6 +109,18 @@ class WidgetBase(Callback.Callbacks):
 
     def set_enabled(self, tf):
         self.widget.set_sensitive(tf)
+
+    def set_margins(self, left, right, top, bottom):
+        self.widget.set_margin_start(left)
+        self.widget.set_margin_end(right)
+        self.widget.set_margin_top(top)
+        self.widget.set_margin_bottom(bottom)
+
+    def set_padding(self, px):
+        if isinstance(px, int):
+            self.set_margins(px, px, px, px)
+        else:
+            self.set_margins(*px)
 
     def is_container(self):
         return False
@@ -533,6 +546,28 @@ class Label(WidgetBase):
         else:
             raise ValueError(f"Don't understand alignment '{align}'")
         self.label.set_valign(gtk_align)
+
+
+class HSeparator(WidgetBase):
+    """A thin horizontal rule.
+
+    TODO: implement with Gtk.Separator(orientation=HORIZONTAL); for now this
+    is a no-op placeholder (an empty label) so the gtk4 backend stays usable.
+    """
+    def __init__(self):
+        super().__init__()
+        self.widget = Gtk.Label()
+
+
+class VSeparator(WidgetBase):
+    """A thin vertical rule.
+
+    TODO: implement with Gtk.Separator(orientation=VERTICAL); no-op
+    placeholder for now.
+    """
+    def __init__(self):
+        super().__init__()
+        self.widget = Gtk.Label()
 
 
 class Button(WidgetBase):
@@ -3032,19 +3067,6 @@ class ContainerBase(WidgetBase):
     def _native_to_child(self, nchild):
         idx = self._get_native_index(nchild)
         return self.children[idx]
-
-    def set_margins(self, left, right, top, bottom):
-        self.widget.set_margin_start(left)
-        self.widget.set_margin_end(right)
-        self.widget.set_margin_top(top)
-        self.widget.set_margin_bottom(bottom)
-
-    def set_padding(self, px):
-        if isinstance(px, int):
-            self.set_margins(px, px, px, px)
-        else:
-            self.set_margins(*px)
-
 
 class Box(ContainerBase):
     def __init__(self, orientation='horizontal'):

@@ -28,7 +28,8 @@ from ginga.fonts import font_asst
 from ginga.locale.localize import translate_caption, _tr
 
 __all__ = ['WidgetError', 'Widget', 'WidgetBase', 'TextEntry', 'TextEntrySet',
-           'TextArea', 'TextSource', 'Dial', 'Label', 'Button', 'ComboBox',
+           'TextArea', 'TextSource', 'Dial', 'Label', 'HSeparator',
+           'VSeparator', 'Button', 'ComboBox',
            'SpinBox', 'Slider', 'ScrollBar', 'CheckBox', 'ToggleButton',
            'RadioButton', 'Image', 'Canvas', 'ProgressBar', 'StatusBar',
            'TreeView', 'TableView', 'Box', 'HBox', 'VBox', 'ButtonBox',
@@ -431,9 +432,86 @@ class TextArea(WidgetMixin, PGW.TextArea):
 
 
 class TextSource(WidgetMixin, PGW.TextSource):
+    """Ginga wrapper over the pgwidgets TextSource.  The pgwidgets side is
+    Python-authoritative (its local text model works before the browser
+    connects); this wrapper adds the Ginga TextSource API names that differ
+    from pgwidgets (show_line_numbers, append_text, ...) and relays
+    callbacks.  Most methods (get_text, insert_text, create_ref, tags,
+    find, get_ref_*, ...) are inherited unchanged from PGW.TextSource."""
+
     def __init__(self, *args, **kwargs):
         WidgetMixin.__init__(self)
+        # ginga uses a boolean (or 'char'/'word'/...) for wrap; pgwidgets
+        # wants a mode string ('none'/'word'/'hard').
+        if 'wrap' in kwargs:
+            kwargs['wrap'] = self._wrap_mode(kwargs['wrap'])
         PGW.TextSource.__init__(self, *get_args(args), **kwargs)
+
+        for name in ['tooltip', 'changed', 'cursor_moved', 'key-press',
+                     'line-clicked']:
+            self._enable_callback(name)
+
+        # Relay the pgwidgets/model callbacks out through this wrapper.
+        self.on('changed', lambda *a: self._make_callback('changed'))
+        self.on('cursor_moved',
+                lambda *a: self._make_callback('cursor_moved'))
+        self.on('line_clicked',
+                lambda lineno, *a: self._make_callback('line-clicked', lineno))
+        self.on('tooltip', self._tt_cb)
+
+    # -- Ginga TextSource API names that differ from pgwidgets --
+    def append_text(self, text, autoscroll=True, tags=None):
+        end = self.get_ref_end()
+        self.insert_text(end, text, tags=tags)
+        self.remove_ref(end)
+        if autoscroll:
+            self.scroll_to_end()
+
+    @staticmethod
+    def _wrap_mode(kind):
+        """Translate ginga's wrap value to a pgwidgets wrap mode."""
+        if kind in ('none', 'word', 'hard'):
+            return kind
+        # bool (or anything truthy/falsey): False/none -> 'none', else 'word'
+        return 'word' if kind else 'none'
+
+    def set_wrap(self, kind):
+        return PGW.TextSource.set_wrap(self, self._wrap_mode(kind))
+
+    def set_limit(self, numlines):
+        # matches the qt backend, which also does not cap the buffer here
+        pass
+
+    def set_font(self, font, size=10):
+        family = font if isinstance(font, str) else getattr(font, 'family',
+                                                            str(font))
+        return PGW.TextSource.set_font(self, family, size)
+
+    def set_scroll_pos(self, pos):
+        # pos is a vertical fraction (0..1); pgwidgets takes (h_pct, v_pct)
+        try:
+            self.set_scroll_position(0.0, float(pos))
+        except (TypeError, ValueError):
+            pass
+
+    def show_line_numbers(self, tf):
+        return self.set_line_numbers(tf)
+
+    def enable_line_icons(self, tf):
+        return PGW.TextSource.set_icon_gutter(self, tf)
+
+    def enable_tooltips(self, tf):
+        return self.set_tooltips_enabled(tf)
+
+    def _tt_cb(self, line_no, pos_in_line, text, x, y):
+        # Mirror the qt backend: give the page a chance to supply a tooltip
+        # string by appending to `res`; show it (or hide, when empty).
+        res = []
+        self._make_callback('tooltip', res, line_no, pos_in_line, text)
+        self.show_tooltip(res[0] if len(res) > 0 else '', x, y)
+
+    def set_icon_gutter(self, tf, pad_px=24):
+        return PGW.TextSource.set_icon_gutter(self, tf)
 
 
 class Label(WidgetMixin, PGW.Label):
@@ -464,6 +542,20 @@ class Label(WidgetMixin, PGW.Label):
         self._make_callback('released')
 
 
+class HSeparator(WidgetMixin, PGW.Separator):
+    """A thin horizontal rule (like an HTML <hr>)."""
+    def __init__(self, *args, **kwargs):
+        WidgetMixin.__init__(self)
+        PGW.Separator.__init__(self, *get_args(('horizontal',)), **kwargs)
+
+
+class VSeparator(WidgetMixin, PGW.Separator):
+    """A thin vertical rule."""
+    def __init__(self, *args, **kwargs):
+        WidgetMixin.__init__(self)
+        PGW.Separator.__init__(self, *get_args(('vertical',)), **kwargs)
+
+
 class Button(WidgetMixin, PGW.Button):
 
     # Class-level default hover colors.  Each button snapshots these at
@@ -473,9 +565,14 @@ class Button(WidgetMixin, PGW.Button):
     _hover_bg = None
     _hover_fg = None
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, text=None, iconpath=None, iconsize=None, **kwargs):
         WidgetMixin.__init__(self)
+        args = () if text is None else (text,)
         PGW.Button.__init__(self, *get_args(args), **kwargs)
+
+        # icon given at construction (like the qt backend)
+        if iconpath is not None:
+            self.set_icon(iconpath, iconsize=iconsize)
 
         # apply the class-level hover default in effect when this button
         # was created (pgwidgets Button.set_hover installs the highlight)
