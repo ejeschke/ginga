@@ -2,7 +2,7 @@
 What's New
 ++++++++++
 
-Ver 7.0.0 (unreleased)
+Ver 7.0.0 (2026.07.16)
 ======================
 - Adopted the new ``pgwidgets`` widget set (JavaScript widgets + Python
   bindings) as the basis of the ``ginga.web.pgw`` backend.

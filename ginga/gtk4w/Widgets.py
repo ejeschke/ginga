@@ -3068,6 +3068,7 @@ class ContainerBase(WidgetBase):
         idx = self._get_native_index(nchild)
         return self.children[idx]
 
+
 class Box(ContainerBase):
     def __init__(self, orientation='horizontal'):
         super(Box, self).__init__()
