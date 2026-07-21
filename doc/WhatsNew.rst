@@ -2,6 +2,10 @@
 What's New
 ++++++++++
 
+Ver 7.1.0 (unreleased)
+======================
+- bump required version of a few dependencies
+
 Ver 7.0.0 (2026.07.16)
 ======================
 - Adopted the new ``pgwidgets`` widget set (JavaScript widgets + Python
