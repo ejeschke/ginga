@@ -9,6 +9,7 @@ import tempfile
 import re
 import time
 import warnings
+import importlib.util
 from urllib.request import Request, urlopen, urlretrieve
 from urllib.error import URLError, HTTPError
 
@@ -17,16 +18,11 @@ from ginga.util import wcs
 
 from astropy import coordinates, units
 
-# Do we have astroquery installed?
-have_astroquery = False
-try:
-    from astroquery.vizier import Vizier          # added astroquery.vizier to use vizier catalogs
-
-    have_astroquery = True
-    # limit the number of rows in the vizier query to 5000
-    Vizier.ROW_LIMIT = 5000
-except ImportError:
-    pass
+# Do we have astroquery installed?  Its submodules (Vizier, SkyView,
+# Simbad, Ned) are imported lazily inside the servers that use them, so
+# merely importing this module does not pull in astroquery; here we only
+# record whether it is available.
+have_astroquery = importlib.util.find_spec('astroquery') is not None
 
 
 class _PyvoConeSearch:
@@ -51,26 +47,37 @@ class _PyvoConeSearch:
         return results
 
 
+class _ConeSearch:
+    """VO cone search that resolves its backend lazily, at call time:
+    prefer ``astroquery.vo_conesearch`` and fall back to the pyvo shim.
+
+    Resolving at call time means importing this module pulls in neither
+    astroquery nor pyvo, and it stays robust if astroquery is present but
+    its (migrating) ``vo_conesearch`` has gone away.
+    """
+
+    @staticmethod
+    def conesearch(center, radius, **kwargs):
+        try:
+            from astroquery.vo_conesearch import conesearch as aq_conesearch
+        except Exception:
+            aq_conesearch = None
+        if aq_conesearch is not None:
+            return aq_conesearch.conesearch(center, radius, **kwargs)
+        return _PyvoConeSearch.conesearch(center, radius, **kwargs)
+
+
 # The VO cone search is provided by astroquery.vo_conesearch, but that VO
 # functionality is migrating to pyvo (astropy dropped its own VO client
-# long ago).  Prefer astroquery when present; otherwise fall back to the
-# pyvo-backed shim above.  Either way guard it separately -- and
-# defensively against more than a plain ImportError -- so the other
-# astroquery-backed catalogs (Vizier, SkyView, SIMBAD, NED) keep working
-# if it is absent.
-have_vo_conesearch = False
-conesearch = None
-try:
-    from astroquery.vo_conesearch import conesearch
-
-    have_vo_conesearch = True
-except Exception:
-    # pyvo is imported lazily by the shim; here we only need to know it is
-    # available, so probe with find_spec rather than importing it eagerly.
-    import importlib.util
-    if importlib.util.find_spec('pyvo') is not None:
-        conesearch = _PyvoConeSearch
-        have_vo_conesearch = True
+# long ago).  Probe for either backend with find_spec -- without importing
+# it (the backend is imported lazily by _ConeSearch on first use) -- and
+# guard it separately from the astroquery core so the other astroquery-
+# backed catalogs (Vizier, SkyView, SIMBAD, NED) keep working if absent.
+# NB: we deliberately probe the top-level 'astroquery'/'pyvo' packages,
+# since find_spec('astroquery.vo_conesearch') would import astroquery.
+have_vo_conesearch = (importlib.util.find_spec('astroquery') is not None or
+                      importlib.util.find_spec('pyvo') is not None)
+conesearch = _ConeSearch if have_vo_conesearch else None
 
 # these are modifed at bottom of this module
 default_image_sources = []
@@ -338,6 +345,9 @@ class AstroqueryVizierCatalogServer(AstroqueryCatalogServer):
 
     def _search_radius(self, center, radius, catalog, columns, column_filters):
         # override this method to pass some special kwargs to the search
+        from astroquery.vizier import Vizier
+        # limit the number of rows in the vizier query to 5000
+        Vizier.ROW_LIMIT = 5000
 
         if columns:
             columns.insert(0, self.mapping['id'])
@@ -353,6 +363,8 @@ class AstroqueryVizierCatalogServer(AstroqueryCatalogServer):
 
     def _search_box(self, center, width, height, catalog, columns, column_filters):
         # override this method to pass some special kwargs to the search
+        from astroquery.vizier import Vizier
+
         if columns:
             columns.insert(0, self.mapping['id'])
             columns.insert(1, self.mapping['ra'])

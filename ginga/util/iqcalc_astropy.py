@@ -1,5 +1,7 @@
 """Module to handle image quality calculations using ``astropy``."""
 
+import importlib.util
+
 import numpy as np
 from astropy.modeling import models, fitting
 
@@ -12,12 +14,10 @@ from ginga.util.iqcalc import IQCalc as _IQCalc
 # Import the rest into namespace so we can use this module like iqcalc.
 from ginga.util.iqcalc import get_mean  # noqa
 
-try:
-    from photutils.centroids import centroid_com
-    from photutils.detection import find_peaks
-    have_photutils = True
-except ImportError:
-    have_photutils = False
+# photutils is imported lazily (inside the methods that use it) so that
+# merely importing this module does not pull in photutils; here we only
+# record whether it is available.
+have_photutils = importlib.util.find_spec('photutils') is not None
 
 __all__ = ['IQCalc']
 
@@ -331,6 +331,7 @@ class IQCalc(_IQCalc):
         if not have_photutils:
             raise IQCalcError("Please install the 'photutils' package "
                               "to use this function")
+        from photutils.centroids import centroid_com
 
         x0, y0, arr = self.cut_region(int(xc), int(yc), int(radius), data)
         cx, cy = centroid_com(np.asarray(arr))  # Return (X, Y), not (Y, X)
@@ -340,6 +341,7 @@ class IQCalc(_IQCalc):
         if not have_photutils:
             raise IQCalcError("Please install the 'photutils' package "
                               "to use this function")
+        from photutils.detection import find_peaks
 
         if threshold is None:
             # set threshold to default if none provided
