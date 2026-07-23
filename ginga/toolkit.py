@@ -4,6 +4,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import importlib.util
 
 toolkit = 'choose'
 family = None
@@ -71,16 +72,58 @@ def get_rv_toolkits():
     return ['qt5', 'qt6', 'pyside2', 'pyside6', 'gtk3', 'pg']
 
 
-def choose():
+def _installed(name):
+    """Return True if module `name` is importable, without importing it."""
     try:
-        from ginga.qtw import QtHelp  # noqa
-    except ImportError:
+        return importlib.util.find_spec(name) is not None
+    except (ImportError, ValueError):
+        # a parent package that fails while locating the spec
+        return False
+
+
+def choose():
+    """Select an available GUI toolkit and register it via use().
+
+    Uses ``importlib.util.find_spec`` to check which backend is present
+    before committing, so we don't import a backend wrapper (and
+    initialize its whole GUI stack) merely to discover it is unavailable.
+    The chosen backend is then registered so ``toolkit`` and ``family``
+    are fully resolved.
+    """
+    # Qt is preferred.  find_spec tells us a binding is present without
+    # importing anything; importing ginga.qtw.QtHelp then lets qtpy pick
+    # the concrete binding (qt5/qt6/pyside2/pyside6, honoring $QT_API) and
+    # record it through use().  If a binding's spec is present but it
+    # won't actually import, fall through to the next toolkit.
+    if any(_installed(mod) for mod in
+           ('PyQt5', 'PyQt6', 'PySide2', 'PySide6')):
         try:
-            from ginga.gtk3w import GtkHelp  # noqa
-        except (ImportError, ValueError):
-            try:
-                from ginga.gtk4w import GtkHelp  # noqa
-            except (ImportError, ValueError):
-                raise ImportError("qt or gtk variants not found")
+            from ginga.qtw import QtHelp  # noqa
+            return
+        except ImportError:
+            pass
+
+    # GTK next.  Both GTK3 and GTK4 are driven by PyGObject ('gi'), so
+    # find_spec alone can't tell them apart; ask gi's typelib repository
+    # which Gtk versions are installed (this loads the light 'gi' module
+    # but not Gtk itself).  Prefer GTK3, matching the previous order.
+    if _installed('gi'):
+        import gi
+        versions = set(gi.Repository.get_default().enumerate_versions('Gtk'))
+        if '3.0' in versions:
+            use('gtk3')
+            return
+        if '4.0' in versions:
+            use('gtk4')
+            return
+
+    # Web (pgwidgets) backend as a last resort.  The remote/websocket
+    # backend needs pgwidgets-python (imported as ``pgwidgets``), which in
+    # turn is built on pgwidgets-js (``pgwidgets_js``); require both.
+    if _installed('pgwidgets') and _installed('pgwidgets_js'):
+        use('pg')
+        return
+
+    raise ImportError("no supported GUI toolkit (qt, gtk or pg) found")
 
 # END
