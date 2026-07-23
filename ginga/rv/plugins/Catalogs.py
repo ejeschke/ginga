@@ -166,12 +166,18 @@ class Catalogs(GingaPlugin.LocalPlugin):
             typ = d.get('type', None)
             obj = None
             if typ == 'astroquery.vo_conesearch':
-                if catalog.have_astroquery:
+                if catalog.have_vo_conesearch:
                     obj = catalog.AstroqueryVOCatalogServer(self.logger,
                                                             d['fullname'],
                                                             d['shortname'],
                                                             d['mapping'],
-                                                            d['fullname'])
+                                                            url=d.get('url'),
+                                                            description=d['fullname'])
+                else:
+                    self.logger.warning(
+                        "VO cone search catalog '{}' skipped: neither "
+                        "astroquery.vo_conesearch nor pyvo is available".format(
+                            d.get('shortname', typ)))
             elif typ == 'astroquery.catalog':
                 if catalog.have_astroquery:
                     obj = catalog.AstroqueryCatalogServer(self.logger,

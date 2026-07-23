@@ -17,10 +17,9 @@ from ginga.util import wcs
 
 from astropy import coordinates, units
 
-# Do we have astroquery >=0.3.5 installed?
+# Do we have astroquery installed?
 have_astroquery = False
 try:
-    from astroquery.vo_conesearch import conesearch
     from astroquery.vizier import Vizier          # added astroquery.vizier to use vizier catalogs
 
     have_astroquery = True
@@ -28,6 +27,50 @@ try:
     Vizier.ROW_LIMIT = 5000
 except ImportError:
     pass
+
+
+class _PyvoConeSearch:
+    """Fallback for ``astroquery.vo_conesearch.conesearch`` backed by pyvo.
+
+    Implements the small slice of the astroquery cone-search interface
+    that ginga uses.  ``catalog_db`` must be a Cone Search service *access
+    URL*: pyvo has no equivalent of astroquery's catalog-name database.
+    """
+
+    @staticmethod
+    def conesearch(center, radius, *, catalog_db=None, verbose=False,
+                   return_astropy_table=True, use_names_over_ids=False,
+                   **kwargs):
+        import pyvo
+        if catalog_db is None:
+            raise ValueError("a Cone Search access URL (catalog_db) is "
+                             "required for the pyvo cone search")
+        results = pyvo.dal.conesearch(catalog_db, center, radius)
+        if return_astropy_table:
+            return results.to_table()
+        return results
+
+
+# The VO cone search is provided by astroquery.vo_conesearch, but that VO
+# functionality is migrating to pyvo (astropy dropped its own VO client
+# long ago).  Prefer astroquery when present; otherwise fall back to the
+# pyvo-backed shim above.  Either way guard it separately -- and
+# defensively against more than a plain ImportError -- so the other
+# astroquery-backed catalogs (Vizier, SkyView, SIMBAD, NED) keep working
+# if it is absent.
+have_vo_conesearch = False
+conesearch = None
+try:
+    from astroquery.vo_conesearch import conesearch
+
+    have_vo_conesearch = True
+except Exception:
+    # pyvo is imported lazily by the shim; here we only need to know it is
+    # available, so probe with find_spec rather than importing it eagerly.
+    import importlib.util
+    if importlib.util.find_spec('pyvo') is not None:
+        conesearch = _PyvoConeSearch
+        have_vo_conesearch = True
 
 # these are modifed at bottom of this module
 default_image_sources = []
@@ -216,18 +259,40 @@ class AstroqueryCatalogServer:
 
 
 class AstroqueryVOCatalogServer(AstroqueryCatalogServer):
-    """For queries using the `astroquery.vo.conesearch` function."""
+    """For queries using the VO cone search (astroquery.vo_conesearch, or
+    pyvo as a fallback)."""
 
     kind = 'astroquery.vo_conesearch'
 
-    def __init__(self, logger, full_name, key, mapping, description=None):
-        super(AstroqueryVOCatalogServer, self).__init__(logger, full_name,
-                                                        key, None, mapping,
-                                                        description=description)
+    def __init__(self, logger, full_name, key, mapping, url=None,
+                 description=None):
+        # NB: the VO cone search needs only astroquery.vo_conesearch OR the
+        # pyvo fallback -- not the astroquery core -- so we deliberately do
+        # not chain up to AstroqueryCatalogServer.__init__, which requires
+        # astroquery to be installed.
+        if not have_vo_conesearch:
+            raise ImportError("VO cone search unavailable, please install "
+                              "astroquery or pyvo")
+        self.logger = logger
+        self.full_name = full_name
+        self.short_name = key
+        self.mapping = mapping
+        self.querymod = None
+        # Cone Search service access URL; required by the pyvo fallback.
+        # When absent we fall back to the catalog name, which only
+        # astroquery can resolve (via its catalog-name database).
+        self.url = url
+        self.cat_columns = None
+        self.cat_column_filters = None
+
+        if description is None:
+            description = full_name
+        self.description = description
 
     def _search(self, center, radius, catalog):
-        # override this methid to pass some special kwargs to the search
-        results = conesearch.conesearch(center, radius, catalog_db=catalog,
+        # override this method to pass some special kwargs to the search
+        catalog_db = self.url if self.url is not None else self.full_name
+        results = conesearch.conesearch(center, radius, catalog_db=catalog_db,
                                         verbose=False,
                                         return_astropy_table=True,
                                         use_names_over_ids=False)
@@ -931,24 +996,23 @@ default_name_sources.extend([
      'type': 'name.sesame'},
 ])
 
-if have_astroquery:
-    # set up default catalog sources and image sources
-
+if have_vo_conesearch:
+    # Cone-search catalogs need astroquery.vo_conesearch or the pyvo
+    # fallback, and are identified by their VO service access URL (pyvo
+    # can't resolve catalog names, and astroquery's name database has been
+    # pruned down to just GSC 2.3).  Add more here with an explicit 'url'.
     default_catalog_sources.extend([
         {'shortname': "GSC 2.3",
          'fullname': "Guide Star Catalog 2.3 Cone Search 1",
          'type': 'astroquery.vo_conesearch',
+         'url': "http://gsss.stsci.edu/webservices/vo/ConeSearch.aspx?CAT=GSC23&",
          'mapping': {'id': 'objID', 'ra': 'ra', 'dec': 'dec', 'mag': ['Mag']}},
-        {'shortname': "USNO-A2.0 1",
-         'fullname': "The USNO-A2.0 Catalogue 1",
-         'type': 'astroquery.vo_conesearch',
-         'mapping': {'id': 'USNO-A2.0', 'ra': 'RAJ2000', 'dec': 'DEJ2000',
-                     'mag': ['Bmag', 'Rmag']}},
-        {'shortname': "2MASS 1",
-         'fullname': "Two Micron All Sky Survey (2MASS) 1",
-         'type': 'astroquery.vo_conesearch',
-         'mapping': {'id': 'htmID', 'ra': 'ra', 'dec': 'dec',
-                     'mag': ['h_m', 'j_m', 'k_m']}},
+    ])
+
+if have_astroquery:
+    # set up default catalog sources and image sources
+
+    default_catalog_sources.extend([
         {'shortname': "APASS DR9",
          'fullname': "II/336/apass9",
          'type': 'astroquery.vizier',
