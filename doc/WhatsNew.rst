@@ -5,6 +5,11 @@ What's New
 Ver 7.1.0 (unreleased)
 ======================
 - bump required version of a few dependencies
+- Added a ``TreeView.delete_tree()`` method (qt/gtk3/gtk4/pg) that removes
+  the nodes named by a subtree of keys -- individual leaves or whole
+  subtrees -- from a loaded tree, optionally pruning branches left empty,
+  preserving the selection on surviving items, and firing the ``selected``
+  callback if the selection changed and ``changed`` if anything was deleted
 
 Ver 7.0.0 (2026.07.16)
 ======================

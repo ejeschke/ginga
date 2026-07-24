@@ -821,6 +821,13 @@ class TreeView(WidgetMixin, PGW.TreeView):
         self._enable_callback('selected')
         self.on('activated', self._cb_redirect_activated)
         self._enable_callback('activated')
+        self.on('changed', self._cb_redirect_changed)
+        self._enable_callback('changed')
+
+    def _cb_redirect_changed(self, *args):
+        # the JS TreeView fires 'changed' (no args) after a structural
+        # change such as delete_tree()
+        self._make_callback('changed')
 
     def _cb_redirect_collapsed(self, node_vals, path):
         self._make_callback('collapsed', path)
@@ -879,6 +886,15 @@ class TreeView(WidgetMixin, PGW.TreeView):
 
     def update_tree(self, tree_dict, expand_new=False):
         super().update_tree(_treedata_to_plain(tree_dict))
+
+    def delete_tree(self, tree_dict, prune_empty=True):
+        """Delete the nodes named by `tree_dict` from the TreeView.
+
+        See the qt/gtk backends for the semantics.  The deletion, prune,
+        selection preservation and 'selected'/'changed' callbacks are all
+        performed by the pgwidgets JS TreeView.
+        """
+        super().delete_tree(_treedata_to_plain(tree_dict), prune_empty)
 
     def expand_all(self, tf):
         if tf:

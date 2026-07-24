@@ -1490,6 +1490,84 @@ class TreeView(WidgetBase):
         if self.auto_expand:
             self.widget.expandAll()
 
+    def delete_tree(self, tree_dict, prune_empty=True):
+        """Delete the nodes named by `tree_dict` from the TreeView.
+
+        `tree_dict` is a nested dict of keys mirroring the loaded tree.  A
+        key mapping to an empty dict (or None) removes that node together
+        with its whole subtree; a key mapping to a non-empty dict is
+        descended into so that only the named descendants are removed.
+        Keys absent from the loaded tree are ignored.  When `prune_empty`
+        is True, a branch left childless by the deletion is removed as well,
+        cascading upward.
+
+        Selection on surviving items is preserved.  If a selected item was
+        deleted (so the selection changed) the 'selected' callback fires;
+        if any items were deleted the 'changed' callback fires.
+        """
+        before = [tuple(p) for p in self.get_selected_paths()]
+        tv = self.widget
+        tv.blockSignals(True)
+        if self.sortable:
+            tv.setSortingEnabled(False)
+        tv.setUpdatesEnabled(False)
+        try:
+            deleted = self._delete_subtree(1, self.shadow, tv, tree_dict,
+                                           prune_empty)
+            survivors = [p for p in before if self._path_in_shadow(p)]
+            # restore selection on the surviving previously-selected items
+            for p in survivors:
+                self._path_to_item(list(p)).setSelected(True)
+        finally:
+            tv.setUpdatesEnabled(True)
+            if self.sortable:
+                tv.setSortingEnabled(True)
+            tv.blockSignals(False)
+
+        if deleted:
+            if len(survivors) < len(before):
+                self.make_callback('selected', self.get_selected())
+            self.make_callback('changed')
+
+    def _delete_subtree(self, level, shadow, parent_item, spec, prune_empty):
+        """Remove the nodes named by `spec`; return the number removed."""
+        count = 0
+        for key, sub in spec.items():
+            bnch = shadow.get(key)
+            if bnch is None:
+                continue                      # not loaded; nothing to delete
+            if not sub or bnch.terminal:
+                # remove node (+ its whole subtree, in one widget op)
+                self._remove_tree_item(level, parent_item, bnch.item)
+                del shadow[key]
+                count += 1
+            else:
+                count += self._delete_subtree(level + 1, bnch.node,
+                                              bnch.item, sub, prune_empty)
+                if prune_empty and len(bnch.node) == 0:
+                    self._remove_tree_item(level, parent_item, bnch.item)
+                    del shadow[key]
+                    count += 1
+        return count
+
+    def _remove_tree_item(self, level, parent_item, item):
+        if level == 1:
+            parent_item.takeTopLevelItem(parent_item.indexOfTopLevelItem(item))
+        else:
+            parent_item.removeChild(item)
+
+    def _path_in_shadow(self, path):
+        """Return True if `path` still resolves in the shadow index."""
+        if not path:
+            return False
+        s = self.shadow
+        for name in path[:-1]:
+            bnch = s.get(name)
+            if bnch is None:
+                return False
+            s = bnch.node
+        return path[-1] in s
+
     def _del_subtree(self, level, shadow, parent_item, tree):
         """Prune elements from widget that are not in the new tree"""
 
