@@ -922,8 +922,12 @@ class ComboBox(WidgetBase):
     show_text = set_text
 
     def get_text(self):
-        idx = self.get_index()
-        return self.get_alpha(idx)
+        # NOTE: use currentText() rather than the item at the current index
+        # so that, for an editable combo box, we return what the user has
+        # typed into the entry even if they have not pressed ENTER (which
+        # would leave the current index -- and thus the item text -- stale).
+        # For a non-editable combo box this still returns the selected item.
+        return self.widget.currentText()
 
     def append_text(self, text):
         self.widget.addItem(text)
@@ -934,7 +938,11 @@ class ComboBox(WidgetBase):
         self.widget.blockSignals(False)
 
     def get_index(self):
-        return self.widget.currentIndex()
+        # Return the index of the item matching the current text, or -1 if
+        # the text is not one of the offerings (e.g. a new value typed into
+        # an editable combo but not yet committed with ENTER).  The native
+        # currentIndex() would instead return the stale last selection.
+        return self.widget.findText(self.get_text())
 
 
 class SpinBox(WidgetBase):

@@ -681,6 +681,9 @@ class ComboBox(WidgetBase):
         cb.add_attribute(cell, 'text', 0)
         if editable:
             cb.set_entry_text_column(0)
+            # ENTER in the entry commits the typed value (see
+            # _entry_activate_cb); typing alone must not fire 'activated'
+            cb.get_child().connect('activate', self._entry_activate_cb)
         self.widget = cb
         self.widget.sconnect('changed', self._cb_redirect)
 
@@ -688,6 +691,24 @@ class ComboBox(WidgetBase):
 
     def _cb_redirect(self, widget):
         idx = widget.get_active()
+        # Only fire on a real selection.  For an editable combo box, typing
+        # in the entry also emits 'changed' but leaves the active index at
+        # -1; ENTER there is handled by _entry_activate_cb.
+        if idx >= 0:
+            self.make_callback('activated', idx)
+
+    def _entry_activate_cb(self, entry):
+        # ENTER in the editable entry commits the typed value: resolve it to
+        # a model index, appending it (like the Qt backend) if it is a new
+        # value, so the index reported to 'activated' is valid and
+        # consistent with get_text()/get_index().  set_active() masks its
+        # own 'changed' (GtkHelp.ComboBox), so this does not re-enter
+        # _cb_redirect.
+        idx = self.get_index()
+        if idx < 0:
+            self.append_text(entry.get_text())
+            idx = len(self.widget.get_model()) - 1
+        self.widget.set_active(idx)
         self.make_callback('activated', idx)
 
     def insert_alpha(self, text):
@@ -749,6 +770,17 @@ class ComboBox(WidgetBase):
         self.widget.set_active(index)
 
     def get_index(self):
+        if self.widget.get_has_entry():
+            # Return the index of the item matching the current (possibly
+            # typed) text, or -1 if it is not one of the offerings -- e.g. a
+            # new value typed but not committed with ENTER.
+            text = self.get_text()
+            model = self.widget.get_model()
+            for i in range(len(model)):
+                if model[i][0] == text:
+                    return i
+            return -1
+
         return self.widget.get_active()
 
     def get_text(self):
