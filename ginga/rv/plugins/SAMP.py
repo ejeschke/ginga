@@ -4,8 +4,9 @@
 The ``SAMP`` plugin implements a SAMP interface for the Ginga reference
 viewer.
 
-.. note:: To run this plugin, you need to install ``astropy`` that has the
-          ``samp`` module.
+.. note:: To run this plugin you need a SAMP implementation: either
+          ``astropy`` with the ``astropy.samp`` module (removed in astropy
+          8.0), or ``pyvo`` >= 1.9.0 (which provides ``pyvo.samp``).
 
 **Plugin Type: Global**
 
@@ -28,18 +29,31 @@ Currently, SAMP support is limited to ``image.load.fits`` messages,
 meaning that Ginga will load a FITS file if it receives one of these
 messages.
 
-Ginga's ``SAMP`` plugin uses the ``astropy.samp`` module, so you will need to
-have ``astropy`` installed to use the plugin.  By default, Ginga's ``SAMP``
-plugin will attempt to start a SAMP hub if one is not found running.
+Ginga's ``SAMP`` plugin uses the ``astropy.samp`` module (or ``pyvo.samp``
+as of pyvo 1.9.0, after ``astropy.samp`` was removed in astropy 8.0), so you
+will need one of those installed to use the plugin.  By default, Ginga's
+``SAMP`` plugin will attempt to start a SAMP hub if one is not found running.
 
 """
 import os
+import importlib
 
-try:
-    from astropy import samp
-    have_samp = True
-except ImportError:
-    have_samp = False
+# The SAMP implementation lived in ``astropy.samp`` but was removed in
+# astropy 8.0; it now lives in ``pyvo.samp`` (pyvo >= 1.9.0).  Prefer
+# astropy when present, otherwise fall back to pyvo.  Older pyvo also has a
+# ``pyvo.samp`` module, but it is only a thin helper that re-exports parts
+# of astropy.samp (no ``SAMPHubServer``), so require the full API here.
+samp = None
+have_samp = False
+for _samp_mod in ('astropy.samp', 'pyvo.samp'):
+    try:
+        _m = importlib.import_module(_samp_mod)
+    except ImportError:
+        continue
+    if hasattr(_m, 'SAMPHubServer') and hasattr(_m, 'SAMPIntegratedClient'):
+        samp = _m
+        have_samp = True
+        break
 
 from ginga import GingaPlugin
 from ginga.util import catalog
