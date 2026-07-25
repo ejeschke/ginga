@@ -336,8 +336,8 @@ class TextArea(WidgetBase):
     def __init__(self, wrap=False, editable=False):
         super(TextArea, self).__init__()
 
-        #tw = QtGui.QTextEdit()
-        tw = QtHelp.QGrowingTextEdit()
+        tw = QtGui.QTextEdit()
+        #tw = QtHelp.QGrowingTextEdit()
         tw.setReadOnly(not editable)
         if wrap:
             tw.setLineWrapMode(QtGui.QTextEdit.WidgetWidth)
