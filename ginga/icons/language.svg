@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Generic, country-neutral "language" flag marker for the Language menu. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+     viewBox="0 0 24 24" version="1.1">
+  <!-- pole -->
+  <rect x="3.4" y="2" width="1.8" height="20" rx="0.9" fill="#6b7280"/>
+  <circle cx="4.3" cy="2.4" r="1.15" fill="#6b7280"/>
+  <!-- waving flag cloth -->
+  <path d="M5.2 3
+           C7.5 1.6, 10 1.6, 12.4 3
+           C14.8 4.4, 17.4 4.4, 19.8 3
+           L19.8 12
+           C17.4 13.4, 14.8 13.4, 12.4 12
+           C10 10.6, 7.5 10.6, 5.2 12
+           Z"
+        fill="#3b82f6"/>
+  <!-- accent stripe -->
+  <path d="M5.2 7.5
+           C7.5 6.1, 10 6.1, 12.4 7.5
+           C14.8 8.9, 17.4 8.9, 19.8 7.5
+           L19.8 9.6
+           C17.4 11.0, 14.8 11.0, 12.4 9.6
+           C10 8.2, 7.5 8.2, 5.2 9.6
+           Z"
+        fill="#ffffff" fill-opacity="0.85"/>
+</svg>

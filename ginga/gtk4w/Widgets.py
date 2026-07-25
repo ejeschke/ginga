@@ -4016,11 +4016,22 @@ class Toolbar(ContainerBase):
 
 
 class MenuAction(WidgetBase):
-    def __init__(self, text=None, checkable=False):
+    def __init__(self, text=None, checkable=False, iconpath=None,
+                 iconsize=None, icon_only=False):
         super(MenuAction, self).__init__()
 
         self.text = text
         self.checkable = checkable
+        # TODO: GTK4 menus are Gio.Menu models rendered by Gtk.PopoverMenu,
+        # which does not display item icons unless each item is replaced by a
+        # custom widget (set_attribute_value("custom", ...) + add_child()).
+        # For now we accept and store the icon parameters but render text
+        # only -- which is the correct graceful fallback for icon_only too
+        # (the label is always shown here).  Implement custom-widget icons
+        # here to match qt/gtk3.
+        self.iconpath = iconpath
+        self.iconsize = iconsize
+        self.icon_only = icon_only
         self.state = None
 
         action_id = "menu-" + str(uuid.uuid4())
@@ -4051,6 +4062,14 @@ class MenuAction(WidgetBase):
     def set_tooltip(self, text):
         # TODO
         pass
+
+    def set_icon(self, iconpath, iconsize=None):
+        # TODO: see note in __init__ -- icons are not yet rendered for GTK4
+        # model menus.  Store the request so a future implementation can use
+        # it.
+        self.iconpath = iconpath
+        if iconsize is not None:
+            self.iconsize = iconsize
 
     def set_state(self, tf):
         if not self.checkable:
@@ -4087,14 +4106,20 @@ class Menu(ContainerBase):
     def add_widget(self, child):
         self.make_callback('widget-added', child)
 
-    def add_name(self, name, checkable=False):
-        child = MenuAction(text=name, checkable=checkable)
+    def add_name(self, name, checkable=False, iconpath=None, iconsize=None,
+                 icon_only=False):
+        # NOTE: iconpath/iconsize/icon_only accepted for API parity but not
+        # yet rendered under GTK4 (see MenuAction TODO); text is always shown
+        child = MenuAction(text=name, checkable=checkable, iconpath=iconpath,
+                           iconsize=iconsize, icon_only=icon_only)
         self.menus[name] = child
         self.section.append_item(child.get_widget())
         #self.widget.set_menu_model(self.model)
         return child
 
-    def add_menu(self, name):
+    def add_menu(self, name, iconpath=None, iconsize=None, icon_only=False):
+        # NOTE: iconpath/iconsize/icon_only accepted for API parity but not
+        # yet rendered under GTK4 (see MenuAction TODO); text is always shown
         child = Menu()
         self.menus[name] = child
         self.section.append_submenu(name, child.model)
@@ -4134,7 +4159,9 @@ class Menubar(ContainerBase):
         self.make_callback('widget-added', child)
         return child
 
-    def add_name(self, name):
+    def add_name(self, name, iconpath=None, iconsize=None, icon_only=False):
+        # NOTE: iconpath/iconsize/icon_only accepted for API parity but not
+        # yet rendered under GTK4 (see MenuAction TODO); text is always shown
         child = Menu()
         return self.add_widget(child, name)
 

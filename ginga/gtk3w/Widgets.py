@@ -4023,22 +4023,81 @@ class Toolbar(ContainerBase):
         self.add_ref(sep)
 
 
+# default (unscaled) pixel size for icons in menus/menubars
+_menu_icon_size = 16
+
+
+def _menuitem_set_content(item_w, text, iconpath, iconsize=None,
+                          icon_only=False):
+    """Give a ``Gtk.MenuItem`` a box child holding an optional icon and an
+    optional label, so menu items can show text, an icon, or both.
+
+    If ``icon_only`` is True and an icon is present, the label is omitted
+    (but kept as a tooltip); if there is no icon the label is always shown,
+    so text remains the graceful fallback.
+    """
+    old = item_w.get_child()
+    if old is not None:
+        item_w.remove(old)
+    box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+    have_icon = False
+    if iconpath is not None:
+        if iconsize is not None:
+            wd, ht = iconsize
+        else:
+            scale_f = _app.screen_res / 96.0
+            wd = ht = int(scale_f * _menu_icon_size)
+        pixbuf = GtkHelp.pixbuf_new_from_file_at_size(iconpath, wd, ht)
+        if pixbuf is not None:
+            image = Gtk.Image.new_from_pixbuf(pixbuf)
+            box.pack_start(image, False, False, 0)
+            image.show()
+            have_icon = True
+    if text and not (icon_only and have_icon):
+        label = Gtk.Label(label=text)
+        label.set_xalign(0.0)
+        box.pack_start(label, False, False, 0)
+        label.show()
+    if icon_only and have_icon and text:
+        item_w.set_tooltip_text(text)
+    item_w.add(box)
+    box.show()
+
+
 class MenuAction(WidgetBase):
-    def __init__(self, text=None, checkable=False):
+    def __init__(self, text=None, checkable=False, iconpath=None,
+                 iconsize=None, icon_only=False):
         super(MenuAction, self).__init__()
 
         self.text = text
         self.checkable = checkable
+        self.iconpath = iconpath
+        self.iconsize = iconsize
+        self.icon_only = icon_only
 
         if checkable:
-            self.widget = Gtk.CheckMenuItem(label=text)
-            self.widget.connect('toggled', self._cb_redirect)
+            widget = Gtk.CheckMenuItem() if iconpath is not None \
+                else Gtk.CheckMenuItem(label=text)
+            widget.connect('toggled', self._cb_redirect)
         else:
-            self.widget = Gtk.MenuItem(label=text)
-            self.widget.connect('activate', self._cb_redirect)
+            widget = Gtk.MenuItem() if iconpath is not None \
+                else Gtk.MenuItem(label=text)
+            widget.connect('activate', self._cb_redirect)
+        self.widget = widget
+        if iconpath is not None:
+            _menuitem_set_content(self.widget, text, iconpath, iconsize,
+                                  icon_only=icon_only)
         self.widget.show()
 
         self.enable_callback('activated')
+
+    def set_icon(self, iconpath, iconsize=None):
+        self.iconpath = iconpath
+        if iconsize is not None:
+            self.iconsize = iconsize
+        _menuitem_set_content(self.widget, self.text, iconpath, self.iconsize,
+                              icon_only=self.icon_only)
+        self.widget.show_all()
 
     def set_state(self, tf):
         if not self.checkable:
@@ -4071,13 +4130,20 @@ class Menu(ContainerBase):
         # self.widget.show_all()
         self.make_callback('widget-added', child)
 
-    def add_name(self, name, checkable=False):
-        child = MenuAction(text=name, checkable=checkable)
+    def add_name(self, name, checkable=False, iconpath=None, iconsize=None,
+                 icon_only=False):
+        child = MenuAction(text=name, checkable=checkable, iconpath=iconpath,
+                           iconsize=iconsize, icon_only=icon_only)
         self.add_widget(child)
         return child
 
-    def add_menu(self, name):
-        item_w = Gtk.MenuItem(label=name)
+    def add_menu(self, name, iconpath=None, iconsize=None, icon_only=False):
+        if iconpath is not None:
+            item_w = Gtk.MenuItem()
+            _menuitem_set_content(item_w, name, iconpath, iconsize,
+                                  icon_only=icon_only)
+        else:
+            item_w = Gtk.MenuItem(label=name)
         child = Menu()
         self.add_ref(child)
         self.menus[name] = child
@@ -4109,10 +4175,16 @@ class Menubar(ContainerBase):
         self.widget = Gtk.MenuBar()
         self.menus = Bunch.Bunch(caseless=True)
 
-    def add_widget(self, child, name):
+    def add_widget(self, child, name, iconpath=None, iconsize=None,
+                   icon_only=False):
         if not isinstance(child, Menu):
             raise ValueError("child widget needs to be a Menu object")
-        item_w = Gtk.MenuItem(label=name)
+        if iconpath is not None:
+            item_w = Gtk.MenuItem()
+            _menuitem_set_content(item_w, name, iconpath, iconsize,
+                                  icon_only=icon_only)
+        else:
+            item_w = Gtk.MenuItem(label=name)
         item_w.set_submenu(child.get_widget())
         self.add_ref(child)
         self.widget.append(item_w)
@@ -4121,8 +4193,13 @@ class Menubar(ContainerBase):
         self.make_callback('widget-added', child)
         return child
 
-    def add_name(self, name):
-        item_w = Gtk.MenuItem(label=name)
+    def add_name(self, name, iconpath=None, iconsize=None, icon_only=False):
+        if iconpath is not None:
+            item_w = Gtk.MenuItem()
+            _menuitem_set_content(item_w, name, iconpath, iconsize,
+                                  icon_only=icon_only)
+        else:
+            item_w = Gtk.MenuItem(label=name)
         child = Menu()
         self.add_ref(child)
         self.menus[name] = child

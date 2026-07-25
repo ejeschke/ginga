@@ -1650,14 +1650,25 @@ class Menu(ContainerWidgetMixin, PGW.Menu):
         ContainerWidgetMixin.__init__(self)
         PGW.Menu.__init__(self, *get_args(args), **kwargs)
 
-    def add_name(self, name, checkable=False):
-        child = MenuAction(text=name, checkable=checkable)
+    def add_name(self, name, checkable=False, iconpath=None, iconsize=None,
+                 icon_only=False):
+        kwargs = dict(text=name, checkable=checkable)
+        if iconpath is not None:
+            # forwarded to pgwidgets; icon rendering in menus depends on
+            # pgwidgets-js/-python support for these options.  When icons are
+            # not rendered, the text is shown (graceful fallback).
+            kwargs['icon_url'] = PgHelp.get_icon(iconpath, size=iconsize)
+            kwargs['icon_only'] = icon_only
+        child = MenuAction(**kwargs)
         self.add_widget(child)
         return child
 
-    def add_menu(self, name, menu=None):
+    def add_menu(self, name, menu=None, iconpath=None, iconsize=None,
+                 icon_only=False):
         if menu is None:
             menu = Menu()
+        # NOTE: iconpath/iconsize/icon_only accepted for API parity; submenu-
+        # item icons depend on pgwidgets support
         super().add_menu(name, menu)
         return menu
 
@@ -1685,9 +1696,18 @@ class Menubar(ContainerWidgetMixin, PGW.MenuBar):
         ContainerWidgetMixin.__init__(self)
         PGW.MenuBar.__init__(self, *get_args(args), **kwargs)
 
-    def add_name(self, name):
+    def add_name(self, name, iconpath=None, iconsize=None, icon_only=False):
         child = Menu()
-        self.add_menu(child, name)
+        if iconpath is not None:
+            options = dict(icon_url=PgHelp.get_icon(iconpath, size=iconsize),
+                           icon_only=icon_only)
+            # only send iconsize when set: under Pyodide a None value can
+            # cross the boundary as a non-null proxy and break the JS side
+            if iconsize is not None:
+                options['iconsize'] = iconsize
+            self.add_menu(child, name, options)
+        else:
+            self.add_menu(child, name)
         return child
 
     def get_menu(self, name):

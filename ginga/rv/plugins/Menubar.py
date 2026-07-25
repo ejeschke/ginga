@@ -9,6 +9,8 @@ reference viewer.
 ``GingaMenubar`` is a global plugin.  Only one instance can be opened.
 
 """
+import os.path
+
 from ginga import GingaPlugin
 from ginga.gw import Widgets
 from ginga.locale import localize
@@ -125,14 +127,20 @@ class GingaMenubar(Menubar):
 
         # create a Language pulldown menu, and add it to the menu bar.  The
         # menu name is kept in English so it stays findable regardless of the
-        # currently-selected language (it will get a flag icon later).  The
-        # items are each language's name in its own script.  The menu can be
-        # suppressed by setting "show_languages" to False in general.cfg (e.g.
-        # to lock down the UI language); the "language" preference is honored
-        # regardless of this setting.
+        # currently-selected language, and it is marked with a generic
+        # (country-neutral) flag icon.  The items are each language's name in
+        # its own script.  The menu can be suppressed by setting
+        # "show_languages" to False in general.cfg (e.g. to lock down the UI
+        # language); the "language" preference is honored regardless of this
+        # setting.
         gen_settings = self.fv.get_preferences().create_category('general')
         if gen_settings.get('show_languages', True):
-            langmenu = menubar.add_name("Language")
+            lang_icon = os.path.join(self.fv.iconpath, "language.svg")
+            # icon_only where the backend can render it (e.g. qt/gtk3);
+            # the "Language" text is passed so backends that don't render
+            # menu icons (gtk4, pg) fall back to the label
+            langmenu = menubar.add_name("Language", iconpath=lang_icon,
+                                        icon_only=True)
             for code in localize.get_available_languages():
                 item = langmenu.add_name(localize.get_language_name(code))
                 item.add_callback('activated',

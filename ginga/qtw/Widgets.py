@@ -4487,14 +4487,36 @@ class Toolbar(ContainerBase):
         self.widget.addWidget(spacer)
 
 
+# default pixel size for icons in menus/menubars
+_menu_icon_size = (16, 16)
+
+
+def _get_menu_icon(iconpath, iconsize=None):
+    wd, ht = iconsize if iconsize is not None else _menu_icon_size
+    return QtHelp.get_icon(iconpath, size=(wd, ht))
+
+
 class MenuAction(WidgetBase):
-    def __init__(self, text=None, checkable=False):
+    def __init__(self, text=None, checkable=False, iconpath=None,
+                 iconsize=None, icon_only=False):
         super(MenuAction, self).__init__()
 
         self.widget = None
         self.text = text
         self.checkable = checkable
+        self.iconpath = iconpath
+        self.iconsize = iconsize
+        # if True, show only the icon where the backend can render it,
+        # falling back to the text otherwise
+        self.icon_only = icon_only
         self.enable_callback('activated')
+
+    def set_icon(self, iconpath, iconsize=None):
+        self.iconpath = iconpath
+        if iconsize is not None:
+            self.iconsize = iconsize
+        if self.widget is not None:
+            self.widget.setIcon(_get_menu_icon(iconpath, self.iconsize))
 
     def set_state(self, tf):
         if not self.checkable:
@@ -4524,20 +4546,39 @@ class Menu(ContainerBase):
         self.menus = Bunch.Bunch(caseless=True)
 
     def add_widget(self, child):
-        w = self.widget.addAction(child.text, lambda: child._cb_redirect())
+        if child.iconpath is not None:
+            icon = _get_menu_icon(child.iconpath, child.iconsize)
+            disp = '' if child.icon_only else (child.text or '')
+            w = self.widget.addAction(icon, disp,
+                                      lambda: child._cb_redirect())
+            if child.icon_only and child.text:
+                # keep the label accessible (hover) even when only the icon
+                # shows; do NOT use setIconText -- an empty text() falls back
+                # to iconText, which would make the menu draw the label again
+                w.setToolTip(child.text)
+        else:
+            w = self.widget.addAction(child.text, lambda: child._cb_redirect())
         if child.checkable:
             w.setCheckable(True)
         child.widget = w
         self.add_ref(child)
         self.make_callback('widget-added', child)
 
-    def add_name(self, name, checkable=False):
-        child = MenuAction(text=name, checkable=checkable)
+    def add_name(self, name, checkable=False, iconpath=None, iconsize=None,
+                 icon_only=False):
+        child = MenuAction(text=name, checkable=checkable, iconpath=iconpath,
+                           iconsize=iconsize, icon_only=icon_only)
         self.add_widget(child)
         return child
 
-    def add_menu(self, name):
-        menu_w = self.widget.addMenu(name)
+    def add_menu(self, name, iconpath=None, iconsize=None, icon_only=False):
+        if iconpath is not None:
+            icon = _get_menu_icon(iconpath, iconsize)
+            menu_w = self.widget.addMenu(icon, '' if icon_only else name)
+            if icon_only:
+                menu_w.menuAction().setToolTip(name)
+        else:
+            menu_w = self.widget.addMenu(name)
         child = Menu()
         child.widget = menu_w
         self.add_ref(child)
@@ -4577,18 +4618,32 @@ class Menubar(ContainerBase):
             self.widget.setNativeMenuBar(True)
         self.menus = Bunch.Bunch(caseless=True)
 
-    def add_widget(self, child, name):
+    def add_widget(self, child, name, iconpath=None, iconsize=None,
+                   icon_only=False):
         if not isinstance(child, Menu):
             raise ValueError("child widget needs to be a Menu object")
-        menu_w = self.widget.addMenu(name)
+        # NOTE: Qt's menubar style always renders a top-level entry as
+        # icon-only when an icon is present, so icon_only has no additional
+        # effect here; the name is retained as the accessible/fallback label.
+        if iconpath is not None:
+            menu_w = self.widget.addMenu(_get_menu_icon(iconpath, iconsize),
+                                         name)
+        else:
+            menu_w = self.widget.addMenu(name)
         child.widget = menu_w
         self.add_ref(child)
         self.menus[name] = child
         self.make_callback('widget-added', child)
         return child
 
-    def add_name(self, name):
-        menu_w = self.widget.addMenu(name)
+    def add_name(self, name, iconpath=None, iconsize=None, icon_only=False):
+        # NOTE: see add_widget -- Qt renders top-level menubar entries as
+        # icon-only when an icon is present
+        if iconpath is not None:
+            menu_w = self.widget.addMenu(_get_menu_icon(iconpath, iconsize),
+                                         name)
+        else:
+            menu_w = self.widget.addMenu(name)
         child = Menu()
         child.widget = menu_w
         self.add_ref(child)

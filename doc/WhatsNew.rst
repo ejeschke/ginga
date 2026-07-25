@@ -5,6 +5,15 @@ What's New
 Ver 7.1.0 (unreleased)
 ======================
 - bump required version of a few dependencies
+- Menu items can now show an icon as well as (or instead of) text, like
+  toolbar actions.  ``Menu.add_name()``, ``Menu.add_menu()`` and
+  ``Menubar.add_name()`` accept ``iconpath``/``iconsize`` keyword arguments,
+  and ``MenuAction`` gains a ``set_icon()`` method.  An ``icon_only`` flag
+  requests showing just the icon where the backend can render it, always
+  falling back to the text label otherwise, so the same calling code shows
+  the icon, the text, or both depending on the backend.  Fully supported on
+  the qt, gtk3, and pg (web) backends; the gtk4 backend accepts the
+  arguments for API parity but renders text only for now
 - Added a ``TreeView.delete_tree()`` method (qt/gtk3/gtk4/pg) that removes
   the nodes named by a subtree of keys -- individual leaves or whole
   subtrees -- from a loaded tree, optionally pruning branches left empty,
