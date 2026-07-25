@@ -16,6 +16,17 @@ Ver 7.1.0 (unreleased)
   This preserves precision (no longer capped at 256 levels for deeper
   outputs) and is slightly faster.  The ``colorlen`` argument to the
   ``ColorDist`` classes is now vestigial and deprecated (it has no effect)
+- Color maps are now resolution-independent: ``ginga.cmap.ColorMap`` gains
+  ``get_colors(n)``, which samples/interpolates the map to any size, and can
+  be built from a discrete list (as before), piecewise-linear control points
+  (``ColorMap.from_control_points``), or a callable (``from_function``).
+  matplotlib color maps are captured without retaining a runtime dependency
+  on matplotlib
+- Added a ``color_depth`` viewer setting that controls the resolution (in
+  bits) at which pseudocolor is distributed, decoupled from the RGB output
+  depth.  Raising it (e.g. to 12) yields much smoother gradients -- many more
+  distinct colors and far less banding -- for colorful color maps on a
+  standard 8-bit display, at negligible cost.  The default (8) is unchanged
 
 Ver 7.0.0 (2026.07.16)
 ======================

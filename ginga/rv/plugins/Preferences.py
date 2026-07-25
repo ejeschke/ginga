@@ -56,6 +56,13 @@ color map and intensity map, used during the final phase of the color
 mapping process. Together with the "Color Distribution" preferences, these
 control the mapping of data values into a 24-bpp RGB visual representation.
 
+The "Color Depth" control sets the bit depth (8 to 16) at which pseudocolor
+is distributed -- i.e. the resolution of the color and intensity maps.  It
+is decoupled from the RGB output depth (which stays at the display's depth,
+normally 8-bit), so raising it (e.g. to 12) produces smoother color
+gradients with much less banding for colorful color maps, at negligible
+cost.  The effect can be seen in real time.
+
 The "Colormap" control selects which color map should be loaded and
 used.  Click the control to show the list, or simply scroll the mouse
 wheel while hovering the cursor over the control.
@@ -546,7 +553,7 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.sort_options = ('loadtime', 'alpha')
 
         for key in ['color_map', 'intensity_map',
-                    'color_algorithm', 'color_hashsize',
+                    'color_algorithm', 'color_hashsize', 'color_depth',
                     'color_map_invert', 'color_map_rot_pct',
                     'contrast', 'brightness']:
             self.t_.get_setting(key).add_callback(
@@ -648,7 +655,8 @@ class Preferences(GingaPlugin.LocalPlugin):
         # COLOR MAPPING OPTIONS
         fr = Widgets.Frame(_tr("Color Mapping"))
 
-        captions = (('Colormap:', 'label', 'Colormap', 'combobox'),
+        captions = (('Color Depth:', 'label', 'color_depth', 'spinbutton'),
+                    ('Colormap:', 'label', 'Colormap', 'combobox'),
                     ('Intensity:', 'label', 'Intensity', 'combobox'),
                     ('Rotate:', 'label', 'rotate_cmap', 'hscale'),
                     ('Invert CMap', 'checkbutton', 'Unrotate CMap', 'button',
@@ -657,6 +665,13 @@ class Preferences(GingaPlugin.LocalPlugin):
         self.w.update(b)
         self.w.cmap_choice = b.colormap
         self.w.imap_choice = b.intensity
+
+        b.color_depth.set_tooltip(
+            _tr("Bit depth used for distributing pseudocolor; higher values "
+                "give smoother gradients (output stays at the display depth)"))
+        b.color_depth.set_limits(8, 16, incr_value=1)
+        b.color_depth.set_value(self.t_.get('color_depth', 8))
+        b.color_depth.add_callback('value-changed', self.set_color_depth_cb)
 
         b.invert_cmap.set_tooltip(_tr("Invert color map"))
         b.invert_cmap.set_state(False)
@@ -1337,6 +1352,11 @@ class Preferences(GingaPlugin.LocalPlugin):
         name = imap.get_names()[index]
         self.t_.set(intensity_map=name)
 
+    def set_color_depth_cb(self, w, val):
+        """This callback is invoked when the user changes the color depth
+        (pseudocolor distribution resolution) from the preferences pane."""
+        self.t_.set(color_depth=int(val))
+
     def set_calg_cb(self, w, index):
         """This callback is invoked when the user selects a new color
         hashing algorithm from the preferences pane."""
@@ -1645,6 +1665,8 @@ class Preferences(GingaPlugin.LocalPlugin):
 
         rot_pct = self.t_['color_map_rot_pct']
         self.w.rotate_cmap.set_value(int(rot_pct * 100))
+
+        self.w.color_depth.set_value(int(self.t_.get('color_depth', 8)))
 
     def set_buflen_ext_cb(self, setting, value):
         num_images = self.t_['numImages']

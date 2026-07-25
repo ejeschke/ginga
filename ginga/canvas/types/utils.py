@@ -4,6 +4,8 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import numpy as np
+
 from ginga.canvas.CanvasObject import (CanvasObjectBase, _bool, _color,
                                        register_canvas_types,
                                        colors_plus_none)
@@ -99,12 +101,27 @@ class ColorBar(CanvasObjectBase):
 
         pxwd, pxht = width, max(self.height, scale_ht)
 
-        maxc = max(rgbmap.maxc + 1, 256)
-        maxf = float(maxc)
+        # Normalize color values to 0..1 by the RGB *output* depth; this is
+        # decoupled from the distribution resolution (color_depth).
+        maxf = float(rgbmap.maxc + 1)
+
+        # The colorbar can show at most as many distinct colors as it has
+        # pixels of width, so sample the (possibly high-resolution) color
+        # array down to the bar width.  This keeps drawing fast and correct
+        # at color depths > 8, where get_colors() may return many thousands
+        # of entries.
+        full_arr = rgbmap.get_colors()
+        n_full = len(full_arr)
+        n_colors = min(n_full, max(int(pxwd), 1))
+        if n_colors < n_full:
+            idx = np.linspace(0, n_full - 1, n_colors).astype(int)
+            color_arr = full_arr[idx] / maxf
+        else:
+            color_arr = full_arr / maxf
 
         # calculate intervals for range numbers
         nums = max(int(pxwd // avg_pixels_per_range_num), 1)
-        spacing = maxc // nums
+        spacing = max(n_colors // nums, 1)
         start = spacing // 2
         _interval = {start + i * spacing: True for i in range(0, nums - 1)}
         ## self.logger.debug("nums=%d spacing=%d intervals=%s" % (
@@ -116,16 +133,15 @@ class ColorBar(CanvasObjectBase):
         y_top = y_base + self.height
 
         x2 = pxwd
-        clr_wd = pxwd // maxc
-        rem_px = x2 - (clr_wd * maxc)
+        clr_wd = pxwd // n_colors
+        rem_px = x2 - (clr_wd * n_colors)
         if rem_px > 0:
-            ival = maxc // rem_px
+            ival = n_colors // rem_px
         else:
             ival = 0
         clr_ht = pxht - scale_ht
 
         dist = rgbmap.get_dist()
-        color_arr = rgbmap.get_colors() / maxf
 
         j = ival
         off = 0
@@ -293,28 +309,42 @@ class DrawableColorBarP(RectangleP):
         pxwd, pxht = width, max(height, scale_ht)
         pxwd, pxht = max(pxwd, 1), max(pxht, 1)
 
-        maxc = max(rgbmap.maxc + 1, 256)
-        maxf = float(maxc)
+        # Normalize color values to 0..1 by the RGB *output* depth; this is
+        # decoupled from the distribution resolution (color_depth).
+        maxf = float(rgbmap.maxc + 1)
+
+        # The colorbar can show at most as many distinct colors as it has
+        # pixels of width, so sample the (possibly high-resolution) color
+        # array down to the bar width.  This keeps drawing fast and correct
+        # at color depths > 8, where get_colors() may return many thousands
+        # of entries.
+        full_arr = rgbmap.get_colors()
+        n_full = len(full_arr)
+        n_colors = min(n_full, max(int(pxwd), 1))
+        if n_colors < n_full:
+            idx = np.linspace(0, n_full - 1, n_colors).astype(int)
+            color_arr = full_arr[idx] / maxf
+        else:
+            color_arr = full_arr / maxf
 
         # calculate intervals for range numbers
         nums = max(int(pxwd // avg_pixels_per_range_num), 1)
-        spacing = maxc // nums
+        spacing = max(n_colors // nums, 1)
         start = spacing // 2
         _interval = {start + i * spacing: True for i in range(0, nums - 1)}
 
         x_base, y_base, x_top, y_top = cx1, cy1, cx2, cy2
 
         x2 = pxwd
-        clr_wd = pxwd // maxc
-        rem_px = x2 - (clr_wd * maxc)
+        clr_wd = pxwd // n_colors
+        rem_px = x2 - (clr_wd * n_colors)
         if rem_px > 0:
-            ival = maxc // rem_px
+            ival = n_colors // rem_px
         else:
             ival = 0
         clr_ht = pxht - scale_ht
 
         dist = rgbmap.get_dist()
-        color_arr = rgbmap.get_colors() / maxf
 
         j = ival
         off = cx1

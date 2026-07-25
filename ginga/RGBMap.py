@@ -80,7 +80,8 @@ class RGBMapper(Callback.Callbacks):
     # result
     #
 
-    def __init__(self, logger, dist=None, settings=None, bpp=None):
+    def __init__(self, logger, dist=None, settings=None, bpp=None,
+                 color_depth=None):
         Callback.Callbacks.__init__(self)
 
         self.logger = logger
@@ -96,7 +97,11 @@ class RGBMapper(Callback.Callbacks):
         # (can be less than the data size of the output array)
         if bpp is None:
             bpp = 8
-        self.set_bpp(bpp)
+        # color_depth (distribution resolution) may be given explicitly or
+        # via a 'color_depth' setting; otherwise it defaults to bpp
+        if color_depth is None and settings is not None:
+            color_depth = settings.get('color_depth', None)
+        self.set_bpp(bpp, color_depth=color_depth)
 
         # Create settings and set defaults
         if settings is None:
@@ -113,7 +118,7 @@ class RGBMapper(Callback.Callbacks):
         self.t_.add_defaults(color_map='gray', intensity_map='ramp',
                              color_map_invert=False, color_map_rot_pct=0.0,
                              color_algorithm='linear',
-                             color_hashsize=self.maxc + 1,
+                             color_hashsize=self.res_maxc + 1,
                              contrast=0.5, brightness=0.5)
         self.t_.get_setting('color_map').add_callback('set',
                                                       self.color_map_set_cb)
@@ -151,28 +156,72 @@ class RGBMapper(Callback.Callbacks):
         im_name = self.t_.get('intensity_map', 'ramp')
         self.set_intensity_map(im_name)
 
-    def set_bpp(self, bpp):
+    def set_bpp(self, bpp, color_depth=None):
         """
-        Set the bit depth (per band) for the output.
-        A typical "32-bit RGBA" image would be 8; a 48-bit image would
-        be 16, etc.
+        Set the bit depth (per band) of the OUTPUT RGB, and optionally the
+        color distribution *resolution* depth.
+
+        A typical "32-bit RGBA" image would be bpp=8; a 48-bit image would
+        be bpp=16, etc.  ``color_depth`` (defaults to ``bpp``) is the depth
+        at which the color distribution and color/intensity maps are
+        computed -- i.e. how many distinct gradient steps are produced.
+        Making it larger than ``bpp`` yields smoother pseudocolor on a
+        lower-depth display (e.g. color_depth=12 with an 8-bit output).
         """
+        if color_depth is None:
+            color_depth = getattr(self, 'color_depth', None) or bpp
+        # the distribution resolution must be at least the output depth
+        color_depth = max(int(bpp), int(color_depth))
         self.bpp = bpp
+        self.color_depth = color_depth
+        # OUTPUT range per band (external callers, e.g. colorbars, read this)
         self.maxc = int(2 ** self.bpp - 1)
+        # distribution / LUT resolution (drives the cache and index range)
+        self.res_maxc = int(2 ** color_depth - 1)
 
         self.create_pipeline()
 
         self._refresh_cache()
 
-    def create_pipeline(self):
-        # create RGB mapping pipeline
-        self.p_input = RGBInput(bpp=self.bpp)
-        self.p_dist = Distribute(bpp=self.bpp)
+    def set_color_depth(self, color_depth, callback=True):
+        """Set the color distribution resolution depth (see set_bpp).
+
+        Rebuilds the mapping pipeline at the new resolution and re-applies
+        the current color/intensity maps and contrast/brightness state.
+        """
+        self.set_bpp(self.bpp, color_depth=color_depth)
+        self._apply_settings_to_stages(callback=callback)
+
+    def _apply_settings_to_stages(self, callback=True):
+        # After the pipeline is (re)built the fresh stages start at their
+        # defaults, so re-apply the current maps and settings.
         if self.dist is not None:
             self.p_dist.set_dist(self.dist)
-        self.p_shift = ShiftMap(bpp=self.bpp)
-        self.p_imap = IntensityMap(bpp=self.bpp)
-        self.p_cmap = ColorMap(bpp=self.bpp)
+        else:
+            self.p_dist.set_color_algorithm(
+                self.t_.get('color_algorithm', 'linear'))
+        if self.cmap is not None:
+            self.p_cmap.set_cmap(self.cmap)
+        self.p_cmap.invert_cmap(self.t_.get('color_map_invert', False))
+        self.p_cmap.rotate_color_map(self.t_.get('color_map_rot_pct', 0.0))
+        if self.imap is not None:
+            self.p_imap.set_imap(self.imap)
+        self.p_shift.set_contrast(self.t_.get('contrast', 0.5))
+        self.p_shift.set_brightness(self.t_.get('brightness', 0.5))
+        self.recalc(callback=callback)
+
+    def create_pipeline(self):
+        # The color-mapping stages run at the distribution *resolution*
+        # (color_depth); only the final ColorMap emits RGB at the output
+        # depth (bpp).
+        cd = self.color_depth
+        self.p_input = RGBInput(bpp=cd)
+        self.p_dist = Distribute(bpp=cd)
+        if self.dist is not None:
+            self.p_dist.set_dist(self.dist)
+        self.p_shift = ShiftMap(bpp=cd)
+        self.p_imap = IntensityMap(bpp=cd)
+        self.p_cmap = ColorMap(bpp=cd, out_bpp=self.bpp)
 
         stages = [self.p_input,
                   self.p_dist,
@@ -233,7 +282,7 @@ class RGBMapper(Callback.Callbacks):
         self.recalc()
 
     def rotate_cmap(self, num, callback=True):
-        pct = num / (self.maxc + 1)
+        pct = num / (self.res_maxc + 1)
         self.t_.set(color_map_rot_pct=pct, callback=callback)
 
     def color_map_rot_pct_set_cb(self, setting, pct):
@@ -262,8 +311,8 @@ class RGBMapper(Callback.Callbacks):
         mapped by the value of `index`.
         """
         index = int(index)
-        assert (index >= 0) and (index <= self.maxc), \
-            RGBMapError("Index must be in range 0-%d !" % (self.maxc))
+        assert (index >= 0) and (index <= self.res_maxc), \
+            RGBMapError("Index must be in range 0-%d !" % (self.res_maxc))
         return tuple(self.cache_arr[index])
 
     def get_rgbval(self, index):
@@ -272,8 +321,8 @@ class RGBMapper(Callback.Callbacks):
         mapped by the value of `index`.
         """
         index = int(index)
-        assert (index >= 0) and (index <= self.maxc), \
-            RGBMapError("Index must be in range 0-%d !" % (self.maxc))
+        assert (index >= 0) and (index <= self.res_maxc), \
+            RGBMapError("Index must be in range 0-%d !" % (self.res_maxc))
         return self.cache_arr[index]
 
     def get_colors(self):
@@ -324,7 +373,7 @@ class RGBMapper(Callback.Callbacks):
         self.recalc()
 
     def _refresh_cache(self):
-        i_arr = np.arange(0, self.maxc + 1, dtype=np.uint)
+        i_arr = np.arange(0, self.res_maxc + 1, dtype=np.uint)
         self.p_dist.result.setvals(res_np=i_arr)
         self.pipeline.run_from(self.p_shift)
         cache_arr = self.pipeline.get_data(self.pipeline[-1])

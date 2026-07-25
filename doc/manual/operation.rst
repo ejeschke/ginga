@@ -232,6 +232,12 @@ distribution algorithms can also be set from the ``Preferences`` plugin,
 under the heading "Color Distribution", or from the drop-down control in
 the ``Info`` plugin, just above the cut levels boxes.
 
+.. note:: The *resolution* at which pseudocolor is distributed is set by
+   the ``color_depth`` viewer setting (default 8 bits).  Raising it (for
+   example to 12) produces smoother color gradients, with many more distinct
+   colors and much less banding, for colorful color maps on a standard
+   8-bit display; the RGB output itself stays at the display's depth.
+
 ---------------------------
 Making contrast adjustments
 ---------------------------

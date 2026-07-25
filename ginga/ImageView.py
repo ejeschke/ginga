@@ -81,6 +81,12 @@ class ImageViewBase(ViewerBase):
         # to be eventually deprecated
         self.t_ = self.settings
 
+        # 'color_depth' is the resolution (in bits) at which pseudocolor is
+        # distributed; the RGB *output* stays 8-bit for the display.  Higher
+        # values (e.g. 12) give smoother gradients with less banding.  Set
+        # before creating the RGB mapper so it is picked up on construction.
+        self.t_.add_defaults(color_depth=8)
+
         # RGB mapper
         if rgbmap:
             # which way should the settings be migrated--
@@ -96,6 +102,8 @@ class ImageViewBase(ViewerBase):
 
         # Initialize RGBMap
         rgbmap.add_callback('changed', self.rgbmap_cb)
+        self.t_.get_setting('color_depth').add_callback(
+            'set', self.color_depth_cb)
 
         # for scale
         self.t_.add_defaults(scale=(1.0, 1.0), sanity_check_scale=True)
@@ -682,6 +690,14 @@ class ImageViewBase(ViewerBase):
         """Handle callback for when RGB map has changed."""
         self.logger.debug("RGB map has changed.")
         self.renderer.rgbmap_change(rgbmap)
+
+    def color_depth_cb(self, setting, depth):
+        """Handle a change of the 'color_depth' setting (pseudocolor
+        distribution resolution); rebuild the RGB mapper accordingly."""
+        self.rgbmap.set_color_depth(depth)
+        # force the pipeline to re-render the image at the new color depth
+        # (whence=1: the distribution range changed, so re-run from cut levels)
+        self.redraw(whence=1)
 
     def get_rgbmap(self):
         """Get the RGB map object used by this instance.

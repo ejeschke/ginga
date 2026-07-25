@@ -346,7 +346,43 @@ Find out which one is being used::
   >>> v.get_settings().get('color_algorithm')
   'log'
 
-  
+.. note:: Internally, each distribution algorithm (see
+   ``ginga.ColorDist``) is computed as a normalized 0.0-1.0 curve.  The
+   ``RGBMapper`` (below) scales that curve to the mapping *resolution* and
+   quantizes it to the corresponding index type, so the distribution itself
+   is independent of the output bit depth.  Distribution classes accept a
+   legacy ``colorlen`` argument, but it is now vestigial and has no effect.
+
+
+Color Depth
+===========
+
+The *color depth* is the resolution, in bits, at which pseudocolor is
+distributed -- i.e. how many distinct gradient steps the color and
+intensity maps produce.  It is decoupled from the RGB *output* depth (which
+stays at the display's depth, normally 8-bit), so raising it yields smoother
+gradients -- many more distinct colors and much less banding -- for colorful
+color maps on a standard display, at negligible cost.
+
+The color depth is controlled by the viewer setting ``color_depth``
+(default 8; a value of 12 is a good balance for 8-bit displays).  It may be
+set on the viewer's settings::
+
+  >>> v.get_settings().set(color_depth=12)
+
+or directly on the ``RGBMapper``::
+
+  >>> v.get_rgbmap().set_color_depth(12)
+
+.. note:: ``RGBMapper`` keeps the output (per-band) bit depth (``bpp``,
+   currently 8 for all backends) separate from the distribution resolution
+   (``color_depth``).  The color/intensity/distribution tables are sized to
+   ``2 ** color_depth`` entries, while the produced RGB values remain at
+   ``2 ** bpp``.  Because color maps are resolution-independent
+   (``ginga.cmap.ColorMap.get_colors(n)`` samples/interpolates to any size),
+   the color map is sampled at the full ``color_depth`` resolution.
+
+
 Color Map
 =========
 
@@ -375,6 +411,14 @@ Find out which one is being used::
 Enable matplotlib color maps to be available (if ``matplotlib`` is installed)::
 
   >>> cmap.add_matplotlib_cmaps()
+
+.. note:: Color maps are resolution-independent: a
+   ``ginga.cmap.ColorMap`` provides ``get_colors(n)`` which samples or
+   interpolates it to any length.  A map can be backed by a discrete list of
+   colors (as before), by piecewise-linear control points
+   (``ColorMap.from_control_points``), or by a callable
+   (``ColorMap.from_function``).  matplotlib color maps are captured as
+   discrete lists so no runtime dependency on matplotlib is retained.
 
 Invert the color map::
 

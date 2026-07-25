@@ -37,19 +37,29 @@ class RGBMapStage(Stage):
         self.trace = False
         self.set_bpp(bpp)
 
+    @staticmethod
+    def _depth_dtype(depth):
+        """Smallest unsigned integer dtype that holds a `depth`-bit value."""
+        if depth <= 8:
+            return np.dtype(np.uint8)
+        elif depth <= 16:
+            return np.dtype(np.uint16)
+        return np.dtype(np.uint32)
+
     def _set_dtype(self):
-        if self.bpp <= 8:
-            self.dtype = np.dtype(np.uint8)
-        elif self.bpp <= 16:
-            self.dtype = np.dtype(np.uint16)
-        else:
-            self.dtype = np.dtype(np.uint32)
+        self.dtype = self._depth_dtype(self.bpp)
 
     def set_bpp(self, bpp):
         """
         Set the bit depth (per band) for the output.
         A typical "32-bit RGBA" image would be 8; a 48-bit image would
         be 16, etc.
+
+        For the color-mapping stages this is the resolution at which the
+        distribution and color/intensity tables are computed.  The final
+        ColorMap stage can additionally emit RGB at a *different* output
+        depth (see ColorMap's ``out_bpp``), so the color distribution can
+        run at, say, 12-bit while the display output stays 8-bit.
         """
         self.bpp = bpp
         self.maxc = int(2 ** self.bpp - 1)
@@ -349,7 +359,16 @@ class IntensityMap(RGBMapStage):
         self.calc_imap()
 
     def calc_imap(self):
-        arr = np.array(self.imap.ilst) * float(self.maxc)
+        # Sample the intensity curve at the OUTPUT resolution (bit depth) so
+        # it isn't capped at the source imap's length -- the same treatment
+        # as the ColorMap stage.  This is required now that the Distribute
+        # stage emits the full 0..maxc index range.
+        ilst = np.asarray(self.imap.ilst, dtype=float)
+        n = self.maxc + 1
+        if len(ilst) != n:
+            ilst = np.interp(np.linspace(0.0, 1.0, n),
+                             np.linspace(0.0, 1.0, len(ilst)), ilst)
+        arr = ilst * float(self.maxc)
         self._iarr = np.round(arr).astype(np.uint, copy=False)
 
     def run(self, prev_stage):
@@ -376,8 +395,19 @@ class ColorMap(RGBMapStage):
     """
     _stagename = 'rgbmap-color-map'
 
-    def __init__(self, bpp=8):
+    def __init__(self, bpp=8, out_bpp=None):
         super().__init__(bpp=bpp)
+
+        # The color table is sized to 2**bpp entries (the distribution
+        # resolution), but its RGB values -- and the mapped output -- are
+        # produced at `out_bpp` (defaults to bpp).  Keeping out_bpp < bpp
+        # lets pseudocolor be distributed at high resolution while the
+        # output stays at the display's depth (e.g. 8-bit).
+        if out_bpp is None:
+            out_bpp = bpp
+        self.out_bpp = out_bpp
+        self.out_maxc = int(2 ** out_bpp - 1)
+        self.out_dtype = self._depth_dtype(out_bpp)
 
         self.cmap = None
         self._carr = None
@@ -411,11 +441,15 @@ class ColorMap(RGBMapStage):
         self.calc_cmap()
 
     def _gen_cmap(self):
-        clst = self.cmap.clst
-        self.maxc = len(clst) - 1
-        arr = np.array(clst).transpose() * float(self.maxc)
-        # does this really need to be the same type as rgbmap output type?
-        carr = np.round(arr).astype(self.dtype, copy=False)
+        # Sample the colormap at the OUTPUT resolution (bit depth) rather
+        # than the source colormap's length, so pseudocolor is not capped
+        # at 256 levels for deeper outputs.  (self.maxc is the bpp-based
+        # output level; it is no longer overridden with len(clst) - 1.)
+        # table sized to the distribution resolution (self.maxc + 1) ...
+        colors = self.cmap.get_colors(self.maxc + 1)   # (n, 3) float in 0..1
+        # ... but the RGB values are produced at the OUTPUT depth
+        arr = colors.transpose() * float(self.out_maxc)
+        carr = np.round(arr).astype(self.out_dtype, copy=False)
         return carr
 
     def reset_cmap(self):
@@ -458,15 +492,15 @@ class ColorMap(RGBMapStage):
         else:
             res_shape = shape + (depth, )
 
-        out = np.empty(res_shape, dtype=self.dtype, order='C')
+        out = np.empty(res_shape, dtype=self.out_dtype, order='C')
 
         from ginga.RGBMap import RGBPlanes
         rgbobj = RGBPlanes(out, order)
 
-        # set alpha channel
+        # set alpha channel (at the output depth)
         if rgbobj.hasAlpha:
             aa = rgbobj.get_slice('A')
-            aa.fill(self.maxc)
+            aa.fill(self.out_maxc)
 
         ri, gi, bi = self.get_order_indexes(rgbobj.get_order(), 'RGB')
         arr_out = rgbobj.rgbarr

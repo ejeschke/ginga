@@ -13238,20 +13238,94 @@ class ColorMapError(Exception):
 
 
 class ColorMap:
-    """Class to handle color maps."""
+    """Class to handle color maps.
 
-    def __init__(self, name, clst):
+    A color map can be backed by any one of three representations:
+
+    - ``clst``: a discrete list/array of RGB triples (0..1).  This is the
+      legacy representation (canonically ``min_cmap_len`` == 256 entries).
+    - ``ctrl_pts``: piecewise-linear control points ``[(pos, (r, g, b)),
+      ...]`` with ``pos`` in 0..1 -- a compact, resolution-independent
+      representation.
+    - ``fn``: a callable ``x (array in 0..1) -> array of RGB(A)`` (e.g. a
+      matplotlib colormap).
+
+    Regardless of the backing, ``get_colors(n)`` samples the map to an
+    ``(n, 3)`` float array, interpolating/evaluating as needed.  The
+    discrete ``clst`` attribute is always available (sampled to
+    ``min_cmap_len`` when the map is built from ``ctrl_pts``/``fn``) so
+    existing code that reads ``.clst`` keeps working.
+    """
+
+    def __init__(self, name, clst=None, *, ctrl_pts=None, fn=None):
         self.name = name
-        self.clst = clst
+        self._fn = fn
+        self._ctrl_pts = None
+        if ctrl_pts is not None:
+            pos = np.asarray([p for p, _c in ctrl_pts], dtype=float)
+            col = np.asarray([c for _p, c in ctrl_pts], dtype=float)[:, :3]
+            self._ctrl_pts = (pos, col)
+
+        if clst is not None:
+            # preserve the original object for backward compatibility
+            self.clst = clst
+        elif self._fn is not None or self._ctrl_pts is not None:
+            # derive a canonical discrete list from the backing
+            self.clst = self.get_colors(min_cmap_len)
+        else:
+            raise ColorMapError("need one of clst, ctrl_pts, or fn")
+
+    @classmethod
+    def from_control_points(cls, name, ctrl_pts):
+        """Build a colormap from piecewise-linear control points."""
+        return cls(name, ctrl_pts=ctrl_pts)
+
+    @classmethod
+    def from_function(cls, name, fn):
+        """Build a colormap from a callable ``x in 0..1 -> RGB(A)``."""
+        return cls(name, fn=fn)
+
+    def get_colors(self, n):
+        """Sample the colormap to an ``(n, 3)`` float array in 0..1."""
+        x = np.linspace(0.0, 1.0, n)
+        if self._fn is not None:
+            arr = np.asarray(self._fn(x), dtype=float)
+            return np.clip(arr[:, :3], 0.0, 1.0)
+        if self._ctrl_pts is not None:
+            pos, col = self._ctrl_pts
+            out = np.empty((n, 3), dtype=float)
+            for c in range(3):
+                out[:, c] = np.interp(x, pos, col[:, c])
+            return np.clip(out, 0.0, 1.0)
+        # discrete list backing
+        clst = np.asarray(self.clst, dtype=float)[:, :3]
+        if n == len(clst):
+            return np.clip(clst, 0.0, 1.0)
+        src_x = np.linspace(0.0, 1.0, len(clst))
+        out = np.empty((n, 3), dtype=float)
+        for c in range(3):
+            out[:, c] = np.interp(x, src_x, clst[:, c])
+        return np.clip(out, 0.0, 1.0)
 
 
 def add_cmap(name, clst):
-    """Add a color map."""
+    """Add a color map from a list/array of RGB triples.
+
+    Any length >= 2 is accepted (it is interpolated to the needed
+    resolution downstream); the canonical ``min_cmap_len`` is no longer
+    required.
+    """
     global cmaps
-    assert len(clst) == min_cmap_len, \
-        ValueError("color map '%s' length mismatch %d != %d (needed)" % (
-            name, len(clst), min_cmap_len))
+    if len(clst) < 2:
+        raise ValueError("color map '%s' needs at least 2 entries "
+                         "(got %d)" % (name, len(clst)))
     cmaps[name] = ColorMap(name, clst)
+
+
+def register_cmap(cmap):
+    """Register an already-built :class:`ColorMap` under its name."""
+    global cmaps
+    cmaps[cmap.name] = cmap
 
 
 def get_cmap(name):
@@ -13275,11 +13349,21 @@ def get_names():
 
 
 def matplotlib_to_ginga_cmap(cm, name=None):
-    """Convert matplotlib colormap to Ginga's."""
+    """Convert a matplotlib colormap to a Ginga :class:`ColorMap`.
+
+    A matplotlib colormap (whether ``ListedColormap`` or
+    ``LinearSegmentedColormap``) is internally an ``N``-entry lookup table
+    (``N`` defaults to 256), so calling it re-quantizes to those N colors.
+    We therefore capture the table at its native resolution as a discrete
+    ``clst``; :meth:`ColorMap.get_colors` then interpolates it smoothly to
+    the output resolution -- reproducing matplotlib's appearance without
+    banding at higher bit depths.  No matplotlib reference is retained, so
+    matplotlib stays an optional dependency, touched only here (and only
+    when it is installed).
+    """
     if name is None:
         name = cm.name
-    arr = cm(np.arange(0, min_cmap_len) / float(min_cmap_len - 1))
-    clst = arr[:, 0:3]
+    clst = np.asarray(cm(np.linspace(0.0, 1.0, cm.N)), dtype=float)[:, :3]
     return ColorMap(name, clst)
 
 
