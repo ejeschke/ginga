@@ -125,10 +125,14 @@ class Distribute(RGBMapStage):
         if self._bypass or arr_in is None:
             return arr_in
 
-        if not np.issubdtype(arr_in.dtype, np.uint):
-            arr_in = arr_in.astype(np.uint)
+        if not np.issubdtype(arr_in.dtype, np.integer):
+            arr_in = arr_in.astype(np.uint32)
 
-        return self.dist.hash_array(arr_in)
+        # the ColorDist curve is normalized to 0.0-1.0; scale it to the
+        # output level (bit depth) and quantize to the index dtype used to
+        # look up the downstream cache/colormap (uint8/uint16/uint32)
+        norm = self.dist.hash_array(arr_in)
+        return np.round(norm * self.maxc).astype(self.dtype, copy=False)
 
     def run(self, prev_stage):
         arr_in = self.pipeline.get_data(prev_stage)

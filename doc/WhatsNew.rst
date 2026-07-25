@@ -10,6 +10,12 @@ Ver 7.1.0 (unreleased)
   subtrees -- from a loaded tree, optionally pruning branches left empty,
   preserving the selection on surviving items, and firing the ``selected``
   callback if the selection changed and ``changed`` if anything was deleted
+- The ``ColorDist`` color distribution classes now produce a normalized
+  0.0-1.0 floating point curve; the RGB mapping ``Distribute`` stage scales
+  that to the output level (bit depth) and quantizes to the index type.
+  This preserves precision (no longer capped at 256 levels for deeper
+  outputs) and is slightly faster.  The ``colorlen`` argument to the
+  ``ColorDist`` classes is now vestigial and deprecated (it has no effect)
 
 Ver 7.0.0 (2026.07.16)
 ======================

@@ -412,7 +412,10 @@ class RGBMapper(Callback.Callbacks):
         return arr_out
 
     def get_hasharray(self, idx):
-        return self.p_dist.dist.hash_array(idx)
+        # route through the Distribute stage so callers (e.g. the OpenGL
+        # colormap builder) get scaled integer indices, matching the fast
+        # render path in get_rgb_array()
+        return self.p_dist.get_hasharray(idx)
 
     def copy_attributes(self, dst_rgbmap, keylist=None):
         if keylist is None:
