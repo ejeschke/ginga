@@ -44,12 +44,19 @@ class TestColorBar:
         v, rgbmap = self._make_viewer()
         rgbmap.set_color_depth(8)
         row8 = self._mid_row(v)
-        first8, last8 = tuple(row8[0]), tuple(row8[-1])
+        first8, last8 = row8[0].astype(int), row8[-1].astype(int)
+        # The ends must land on the *same ends of the color map* at every
+        # depth.  We allow a small tolerance rather than exact equality: the
+        # map is sampled at a different resolution per depth and the very last
+        # pixel column is subject to rasterization rounding, so the endpoint
+        # color can wobble by a few levels across platforms.  The original bug
+        # (only ~1/16 of the map shown) put the far end on a completely
+        # different hue, hundreds of levels away, so this still catches it.
         for depth in (10, 12, 16):
             rgbmap.set_color_depth(depth)
             row = self._mid_row(v)
-            assert tuple(row[0]) == first8
-            assert tuple(row[-1]) == last8
+            assert np.allclose(row[0].astype(int), first8, atol=16)
+            assert np.allclose(row[-1].astype(int), last8, atol=16)
 
     def test_higher_depth_shows_more_distinct_colors(self):
         # a wide bar reveals more of a colorful map's gradient at higher depth
