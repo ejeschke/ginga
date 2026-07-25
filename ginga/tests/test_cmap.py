@@ -158,4 +158,44 @@ class TestColorMapResolution:
         # interpolates to higher resolution (not re-quantized to 256)
         assert len(np.unique(cm.get_colors(65536), axis=0)) > 256
 
+
+class TestDS9Colormaps:
+    """The DS9-derived maps are stored as authoritative piecewise-linear
+    control points (see ``cmap._ds9_segmented``)."""
+
+    names = ['gray', 'ramp', 'red', 'green', 'blue', 'heat',
+             'ds9_cool', 'ds9_a', 'ds9_b', 'ds9_bb', 'ds9_he']
+
+    def test_backed_by_control_points(self):
+        for name in self.names:
+            cm = ginga.cmap.get_cmap(name)
+            assert cm._ctrl_pts is not None, name
+            assert cm._fn is None, name
+
+    def test_endpoints_and_range(self):
+        for name in self.names:
+            colors = ginga.cmap.get_cmap(name).get_colors(256)
+            assert colors.shape == (256, 3)
+            assert colors.min() >= 0.0 and colors.max() <= 1.0
+
+    def test_gray_is_linear_ramp(self):
+        colors = ginga.cmap.get_cmap('gray').get_colors(256)
+        ramp = np.linspace(0.0, 1.0, 256)
+        for c in range(3):
+            np.testing.assert_allclose(colors[:, c], ramp, atol=1e-6)
+
+    def test_red_has_no_blue_or_green(self):
+        # authoritative DS9 'red' is a pure red ramp (the old baked array had
+        # a spurious ~2/255 blue tail)
+        colors = ginga.cmap.get_cmap('red').get_colors(256)
+        assert colors[:, 1].max() == 0.0
+        assert colors[:, 2].max() == 0.0
+        np.testing.assert_allclose(colors[:, 0], np.linspace(0, 1, 256),
+                                   atol=1e-6)
+
+    def test_resolution_independent(self):
+        # sampling at higher resolution yields more distinct colors (no 256 cap)
+        cm = ginga.cmap.get_cmap('ds9_a')
+        assert len(np.unique(cm.get_colors(4096), axis=0)) > 256
+
 # END

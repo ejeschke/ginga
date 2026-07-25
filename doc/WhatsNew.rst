@@ -29,6 +29,12 @@ Ver 7.1.0 (unreleased)
   standard 8-bit display, at negligible cost.  The default (8) is unchanged.
   Both the standard and OpenGL renderers honor the setting (the OpenGL
   renderer sizes its GPU colormap texture up to 4096 entries)
+- The DS9-derived color maps (``gray``, ``ramp``, ``red``, ``green``,
+  ``blue``, ``heat``, ``ds9_cool``, ``ds9_a``, ``ds9_b``, ``ds9_bb``,
+  ``ds9_he``) are now defined by their authoritative SAOImageDS9
+  piecewise-linear control points instead of baked 256-entry arrays.  They
+  are exact, resolution-independent (smooth at any color depth), and small
+  (this also removed ~2600 lines from ``ginga/cmap.py``)
 
 Ver 7.0.0 (2026.07.16)
 ======================
