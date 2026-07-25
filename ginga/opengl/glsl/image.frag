@@ -142,8 +142,12 @@ void main()
 {
     vec4 color;
     int clen = textureSize(color_map);
-    float vmax = clen - 1;
-    
+    // max colormap index (depends on color_depth/resolution)
+    float imax = float(clen - 1);
+    // color value range: the colormap is an 8-bit (RGBA8) texture, so its
+    // stored values are normalized by 255 regardless of its length
+    float cmax = 255.0;
+
     if ((image_type & 0x1) == 0)
     {
         // RGBA traditional image, no interactive RGB map
@@ -158,14 +162,14 @@ void main()
             // cut levels
             // RGB[A] mapped textures are NOT normalized to 0..1
             // but sent as float
-            int idx_r = int(cut_levels(value.r, vmax));
-            int idx_g = int(cut_levels(value.g, vmax));
-            int idx_b = int(cut_levels(value.b, vmax));
-        
+            int idx_r = int(cut_levels(value.r, imax));
+            int idx_g = int(cut_levels(value.g, imax));
+            int idx_b = int(cut_levels(value.b, imax));
+
             // apply RGB mapping
-            float r = texelFetch(color_map, idx_r).r / vmax;
-            float g = texelFetch(color_map, idx_g).g / vmax;
-            float b = texelFetch(color_map, idx_b).b / vmax;
+            float r = texelFetch(color_map, idx_r).r / cmax;
+            float g = texelFetch(color_map, idx_g).g / cmax;
+            float b = texelFetch(color_map, idx_b).b / cmax;
             color = vec4(r, g, b, value.a);
         }
         else
@@ -177,12 +181,12 @@ void main()
                 float value = interpolate(img_texture, o_tex_coord).r;
 
                 // cut levels
-                int idx = int(cut_levels(value, vmax));
+                int idx = int(cut_levels(value, imax));
 
                 // apply RGB mapping
                 uvec4 clr = texelFetch(color_map, idx);
-                color = vec4(clr.r / vmax, clr.g / vmax, clr.b / vmax,
-                             clr.a / vmax);
+                color = vec4(clr.r / cmax, clr.g / cmax, clr.b / cmax,
+                             clr.a / cmax);
             }
             else
             {   // get source and alpha value, passed in red and green channels
@@ -190,11 +194,11 @@ void main()
                 vec2 value = interpolate(img_texture, o_tex_coord).rg;
 
                 // cut levels
-                int idx = int(cut_levels(value.r, vmax));
+                int idx = int(cut_levels(value.r, imax));
 
                 // apply RGB mapping
                 uvec4 clr = texelFetch(color_map, idx);
-                color = vec4(clr.r / vmax, clr.g / vmax, clr.b / vmax,
+                color = vec4(clr.r / cmax, clr.g / cmax, clr.b / cmax,
                              value.g);
             }
         }

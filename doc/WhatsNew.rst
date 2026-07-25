@@ -26,7 +26,9 @@ Ver 7.1.0 (unreleased)
   bits) at which pseudocolor is distributed, decoupled from the RGB output
   depth.  Raising it (e.g. to 12) yields much smoother gradients -- many more
   distinct colors and far less banding -- for colorful color maps on a
-  standard 8-bit display, at negligible cost.  The default (8) is unchanged
+  standard 8-bit display, at negligible cost.  The default (8) is unchanged.
+  Both the standard and OpenGL renderers honor the setting (the OpenGL
+  renderer sizes its GPU colormap texture up to 4096 entries)
 
 Ver 7.0.0 (2026.07.16)
 ======================

@@ -146,6 +146,11 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPipelineRenderer):
         self._tex_cache = dict()
         self._levels = (0.0, 0.0)
         self._cmap_len = 256
+        # upper bound on the GPU colormap texture length; the colormap is
+        # sized to the rgbmap resolution (color_depth) up to this cap, which
+        # keeps per-change uploads small while still eliminating banding
+        # (4096 entries saturates an 8-bit display)
+        self._cmap_len_max = 4096
         self.max_texture_dim = 0
         self.image_uploads = []
         self.cmap_uploads = []
@@ -659,10 +664,23 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPipelineRenderer):
     def gl_set_cmap(self, rgbmap):
         # TODO: this does not yet work with 'histeq' color distribution
         hashsize = rgbmap.get_hash_size()
+
+        # Size the GPU colormap texture to the rgbmap resolution
+        # (2 ** color_depth), capped at self._cmap_len_max.  The shader adapts
+        # to any length (it reads textureSize(color_map)), so a longer map
+        # yields smoother pseudocolor gradients at higher color depths.
+        cmap_len = min(hashsize, self._cmap_len_max)
+        if cmap_len != self._cmap_len:
+            self._cmap_len = cmap_len
+            gl.glBindBuffer(gl.GL_TEXTURE_BUFFER, self.cmap_buf)
+            gl.glBufferData(gl.GL_TEXTURE_BUFFER, self._cmap_len * 4, None,
+                            gl.GL_DYNAMIC_DRAW)
+            gl.glBindBuffer(gl.GL_TEXTURE_BUFFER, 0)
+
         idx = rgbmap.get_hasharray(np.arange(0, hashsize))
         if hashsize != self._cmap_len:
             # Downsample color distribution hash to our opengl colormap length
-            xi = (np.arange(0, self._cmap_len) * (hashsize / self._cmap_len)).clip(0, hashsize).astype(np.uint)
+            xi = (np.arange(0, self._cmap_len) * (hashsize / self._cmap_len)).clip(0, hashsize - 1).astype(np.uint)
             if len(xi) != self._cmap_len:
                 raise render.RenderError("Error generating color hash table index: size mismatch {} != {}".format(len(xi), self._cmap_len))
 
@@ -672,9 +690,9 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPipelineRenderer):
                                        dtype=np.uint8)
         img_arr = img_arr[idx]
 
-        # append alpha channel
+        # append (opaque) alpha channel; colormap values are 8-bit (0..255)
         wd = img_arr.shape[0]
-        alpha = np.full((wd, 1), self._cmap_len - 1, dtype=np.uint8)
+        alpha = np.full((wd, 1), 255, dtype=np.uint8)
         img_arr = np.concatenate((img_arr, alpha), axis=1)
         map_id = self.get_texture_id(rgbmap.mapper_id)
 
