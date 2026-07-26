@@ -14,6 +14,10 @@ Ver 7.1.0 (unreleased)
   the icon, the text, or both depending on the backend.  Fully supported on
   the qt, gtk3, and pg (web) backends; the gtk4 backend accepts the
   arguments for API parity but renders text only for now
+- The qt ``RadioButton`` now honors the ``group`` keyword across different
+  containers.  Previously qt only made radio buttons mutually exclusive when
+  they shared a parent widget; grouped buttons now use a shared
+  ``QButtonGroup``, matching the gtk3/gtk4/pg backends
 - Added a ``TreeView.delete_tree()`` method (qt/gtk3/gtk4/pg) that removes
   the nodes named by a subtree of keys -- individual leaves or whole
   subtrees -- from a loaded tree, optionally pruning branches left empty,

@@ -1163,6 +1163,23 @@ class RadioButton(WidgetBase):
         super(RadioButton, self).__init__()
 
         self.widget = QtGui.QRadioButton(text)
+        # Qt only makes radio buttons mutually exclusive when they share a
+        # parent widget (the default ``autoExclusive`` behavior).  To honor
+        # the ``group`` kwarg regardless of which container each button lives
+        # in, grouped buttons are placed in a shared QButtonGroup, and their
+        # parent-based auto-exclusivity is turned off so the explicit group
+        # is the sole authority (and doesn't bleed into other radios that
+        # happen to share a container).
+        self.group = None
+        if group is not None:
+            if group.group is None:
+                group.group = QtGui.QButtonGroup()
+                group.group.addButton(group.widget)
+                group.widget.setAutoExclusive(False)
+            self.group = group.group
+            self.group.addButton(self.widget)
+            self.widget.setAutoExclusive(False)
+
         self.widget.toggled.connect(self._cb_redirect)
 
         self.enable_callback('activated')
@@ -1175,7 +1192,13 @@ class RadioButton(WidgetBase):
             return
         # toggled only fires when the value is toggled
         self.widget.blockSignals(True)
-        if not tf and self.widget.autoExclusive():
+        if not tf and self.group is not None:
+            # can't directly uncheck the checked button of an exclusive
+            # QButtonGroup; drop exclusivity, uncheck, then restore
+            self.group.setExclusive(False)
+            self.widget.setChecked(False)
+            self.group.setExclusive(True)
+        elif not tf and self.widget.autoExclusive():
             # Qt won't let us uncheck the currently-checked radio in
             # an autoExclusive group; flip the flag, uncheck, then
             # restore.  Matches what gtk's set_active(False) does
