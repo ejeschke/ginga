@@ -10,6 +10,8 @@ These algorithms are modeled after the ones described for ds9 here:
     http://ds9.si.edu/doc/ref/how.html
 
 """
+import warnings
+
 import numpy as np
 
 
@@ -34,11 +36,20 @@ class ColorDistBase:
         # each in 0.0-1.0
         self.hash = None
         self.calc_hash()
+        # validate/normalize the hash produced by calc_hash (skipped when a
+        # subclass -- e.g. histeq -- defers building it to hash_array())
+        if self.hash is not None:
+            self.check_hash()
 
-    def _set_hash(self, base):
-        """Store the (0.0-1.0) distribution curve `base` as the hash LUT."""
+    def set_hash(self, base):
+        """Install the normalized (0.0-1.0) distribution curve `base` as the
+        hash LUT.  Subclasses should call this from ``calc_hash()``.
+        """
         self.hash = np.clip(base, 0.0, 1.0).astype(np.float32, copy=False)
-        self.check_hash()
+        self._check_length()
+
+    # deprecated internal name kept for backward compatibility
+    _set_hash = set_hash
 
     def hash_array(self, idx):
         # `idx` are integer indices assumed to be in 0..hashsize-1;
@@ -54,12 +65,50 @@ class ColorDistBase:
             ColorDistError("Bad hash size!")
         self.hashsize = size
         self.calc_hash()
+        if self.hash is not None:
+            self.check_hash()
 
-    def check_hash(self):
+    def _check_length(self):
         hashlen = len(self.hash)
         assert hashlen == self.hashsize, \
             ColorDistError("Computed hash table size (%d) != specified size "
                            "(%d)" % (hashlen, self.hashsize))
+
+    def check_hash(self):
+        """Validate the hash LUT.
+
+        Checks the table length and -- for backward compatibility -- detects
+        and normalizes a pre-7.1 hash.  Older ``ColorDist`` subclasses filled
+        ``hash`` with integer indices scaled by ``colorlen`` instead of a
+        normalized 0.0-1.0 float curve; feeding those to the (now
+        output-scaling) ``Distribute`` stage produced silent garbage.  We
+        detect that here and normalize, emitting a
+        ``PendingDeprecationWarning`` (a soft, pre-deprecation signal for
+        this grace-period release).
+
+        This runs once per hash build (from ``__init__`` / ``set_hash_size``),
+        never per pixel, so it has no per-frame cost.  The compatibility
+        shim will be removed in a future release.
+        """
+        self._check_length()
+        hsh = self.hash
+        # An integer dtype, or float values well above the 0.0-1.0 range
+        # (old curves scale up to ``colorlen - 1``), indicate the old
+        # contract.  The 1.5 threshold sits safely between the new
+        # contract's 1.0 ceiling and the old contract's ~colorlen floor, so
+        # float round-off can't trigger a false positive.
+        if (not np.issubdtype(hsh.dtype, np.floating) or
+                (hsh.size > 0 and np.nanmax(hsh) > 1.5)):
+            warnings.warn(
+                "ColorDist.calc_hash() produced a non-normalized hash "
+                "(integer or > 1.0 values); normalizing to 0.0-1.0 for "
+                "backward compatibility.  Update calc_hash() to install a "
+                "normalized float curve via set_hash().  This compatibility "
+                "shim will be removed in a future release.",
+                PendingDeprecationWarning, stacklevel=2)
+            denom = max(self.colorlen - 1, 1)
+            self.hash = np.clip(np.asarray(hsh, dtype=np.float32) / denom,
+                                0.0, 1.0)
 
     def calc_hash(self):
         """Create the hash table that implements the distribution function.
@@ -97,7 +146,7 @@ class LinearDist(ColorDistBase):
 
     def calc_hash(self):
         base = np.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
-        self._set_hash(base)
+        self.set_hash(base)
 
     def get_dist_pct(self, pct):
         pct = np.asarray(pct, dtype=float)
@@ -122,7 +171,7 @@ class LogDist(ColorDistBase):
         base = np.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
         base = np.log(self.exp * base + 1.0) / np.log(self.exp)
         base = base.clip(0.0, 1.0)
-        self._set_hash(base)
+        self.set_hash(base)
 
     def get_dist_pct(self, pct):
         pct = np.asarray(pct, dtype=float)
@@ -148,7 +197,7 @@ class PowerDist(ColorDistBase):
         base = np.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
         base = (self.exp ** base - 1.0) / self.exp
         base = base.clip(0.0, 1.0)
-        self._set_hash(base)
+        self.set_hash(base)
 
     def get_dist_pct(self, pct):
         pct = np.asarray(pct, dtype=float)
@@ -173,7 +222,7 @@ class SqrtDist(ColorDistBase):
         base = np.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
         base = np.sqrt(base)
         base = base.clip(0.0, 1.0)
-        self._set_hash(base)
+        self.set_hash(base)
 
     def get_dist_pct(self, pct):
         pct = np.asarray(pct, dtype=float)
@@ -197,7 +246,7 @@ class SquaredDist(ColorDistBase):
     def calc_hash(self):
         base = np.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
         base = (base ** 2.0)
-        self._set_hash(base)
+        self.set_hash(base)
 
     def get_dist_pct(self, pct):
         pct = np.asarray(pct, dtype=float)
@@ -225,7 +274,7 @@ class AsinhDist(ColorDistBase):
         base = np.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
         base = np.arcsinh(self.factor * base) / self.nonlinearity
         base = base.clip(0.0, 1.0)
-        self._set_hash(base)
+        self.set_hash(base)
 
     def get_dist_pct(self, pct):
         pct = np.asarray(pct, dtype=float)
@@ -254,7 +303,7 @@ class SinhDist(ColorDistBase):
         base = np.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
         base = np.sinh(self.factor * base) / self.nonlinearity
         base = base.clip(0.0, 1.0)
-        self._set_hash(base)
+        self.set_hash(base)
 
     def get_dist_pct(self, pct):
         pct = np.asarray(pct, dtype=float)
@@ -303,7 +352,7 @@ class HistogramEqualizationDist(ColorDistBase):
         else:
             # flat image: avoid a divide-by-zero
             base = np.zeros(self.hashsize, dtype=np.float32)
-        self._set_hash(base)
+        self.set_hash(base)
 
         return self.hash[idx]
 
@@ -328,7 +377,7 @@ class CurveDist(ColorDistBase):
 
     def calc_hash(self):
         base = np.arange(0.0, float(self.hashsize), 1.0) / self.hashsize
-        self._set_hash(base)
+        self.set_hash(base)
 
     def get_dist_pct(self, pct):
         pct = np.asarray(pct, dtype=float)

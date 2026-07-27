@@ -28,7 +28,14 @@ Ver 7.1.0 (unreleased)
   that to the output level (bit depth) and quantizes to the index type.
   This preserves precision (no longer capped at 256 levels for deeper
   outputs) and is slightly faster.  The ``colorlen`` argument to the
-  ``ColorDist`` classes is now vestigial and deprecated (it has no effect)
+  ``ColorDist`` classes is now vestigial and deprecated (it has no effect).
+  Custom ``ColorDist`` subclasses should now install their curve as a
+  normalized 0.0-1.0 float array via the new public ``set_hash()`` method
+  (formerly ``_set_hash``).  For backward compatibility, a subclass whose
+  ``calc_hash()`` still stores a pre-7.1 integer/``colorlen``-scaled hash is
+  detected at build time and normalized automatically, with a
+  ``PendingDeprecationWarning``; this shim will be removed in a future
+  release (github issue #1148)
 - Color maps are now resolution-independent: ``ginga.cmap.ColorMap`` gains
   ``get_colors(n)``, which samples/interpolates the map to any size, and can
   be built from a discrete list (as before), piecewise-linear control points

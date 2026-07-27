@@ -1,5 +1,7 @@
 """Test ColorDist.py"""
 
+import warnings
+
 import numpy as np
 import pytest
 
@@ -91,3 +93,111 @@ class TestColorDist:
         out16 = stage16.get_hasharray(self.data.astype(np.uint32))
         assert out16.dtype == np.uint16
         assert out16.min() >= 0 and out16.max() <= 65535
+
+
+class TestColorDistBackwardCompat:
+    """Regression tests for the pre-7.1 ColorDist compatibility shim
+    (github issue #1148): older subclasses filled ``hash`` with integer
+    indices scaled by ``colorlen`` instead of a normalized 0.0-1.0 curve.
+    """
+    hashsize = 256
+    colorlen = 256
+
+    def _old_int_dist_cls(self):
+        class OldIntDist(cd.ColorDistBase):
+            # pre-7.1 contract: fill `hash` with integer indices scaled by
+            # colorlen-1, set directly (no set_hash), like a linear ramp
+            def calc_hash(self):
+                x = np.arange(self.hashsize) / self.hashsize
+                self.hash = (x * (self.colorlen - 1)).astype(int)
+
+            def get_dist_pct(self, pct):
+                return np.clip(np.asarray(pct, dtype=float), 0.0, 1.0)
+        return OldIntDist
+
+    def test_old_integer_hash_normalized_with_warning(self):
+        cls = self._old_int_dist_cls()
+        with pytest.warns(PendingDeprecationWarning):
+            dist = cls(self.hashsize, colorlen=self.colorlen)
+        assert dist.hash.dtype == np.float32
+        assert dist.hash.min() >= 0.0 and dist.hash.max() <= 1.0
+        # migrated curve matches a linear 0..1 ramp
+        linear = cd.LinearDist(self.hashsize).hash
+        np.testing.assert_allclose(dist.hash, linear,
+                                   atol=1.0 / (self.colorlen - 1))
+        # hash_array now returns the normalized curve
+        y = dist.hash_array(np.arange(self.hashsize, dtype=int))
+        assert y.min() >= 0.0 and y.max() <= 1.0
+
+    def test_old_float_scaled_hash_normalized_with_warning(self):
+        class OldFloatDist(cd.ColorDistBase):
+            def calc_hash(self):
+                x = np.arange(self.hashsize) / self.hashsize
+                self.hash = x * (self.colorlen - 1)   # float, max ~255
+
+            def get_dist_pct(self, pct):
+                return np.clip(np.asarray(pct, dtype=float), 0.0, 1.0)
+        with pytest.warns(PendingDeprecationWarning):
+            dist = OldFloatDist(self.hashsize, colorlen=self.colorlen)
+        assert dist.hash.dtype == np.float32
+        assert dist.hash.max() <= 1.0
+
+    def test_old_dist_through_distribute_no_garbage(self):
+        # the reported bug: old integer hash was double-scaled to garbage
+        # indices (e.g. max 64770 instead of 255) with no error
+        from ginga.util.stages.color import Distribute
+        cls = self._old_int_dist_cls()
+        data = np.arange(self.hashsize, dtype=np.uint32)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", PendingDeprecationWarning)
+            dist = cls(self.hashsize, colorlen=self.colorlen)
+            stage = Distribute(bpp=8)
+            stage.set_dist(dist)
+            out = stage.get_hasharray(data)
+        assert out.dtype == np.uint8
+        assert out.max() <= 255            # not garbage (was ~64770)
+        # a near-linear ramp: matches the built-in linear distribution to
+        # within one level (the old integer hash truncated, losing <1 level)
+        lin = Distribute(bpp=8)
+        lin.set_color_algorithm('linear')
+        diff = np.abs(out.astype(int) - lin.get_hasharray(data).astype(int))
+        assert diff.max() <= 1
+        assert np.all(np.diff(out.astype(int)) >= 0)   # monotonic ramp
+
+    def test_set_hash_size_remigrates_old_dist(self):
+        cls = self._old_int_dist_cls()
+        with pytest.warns(PendingDeprecationWarning):
+            dist = cls(self.hashsize, colorlen=self.colorlen)
+        with pytest.warns(PendingDeprecationWarning):
+            dist.set_hash_size(512)
+        assert len(dist.hash) == 512
+        assert dist.hash.dtype == np.float32 and dist.hash.max() <= 1.0
+
+    def test_new_style_subclass_does_not_warn(self):
+        class NewDist(cd.ColorDistBase):
+            def calc_hash(self):
+                x = np.arange(self.hashsize) / self.hashsize
+                self.set_hash(x)           # normalized 0..1 via public API
+
+            def get_dist_pct(self, pct):
+                return np.clip(np.asarray(pct, dtype=float), 0.0, 1.0)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", PendingDeprecationWarning)
+            dist = NewDist(self.hashsize)
+        assert dist.hash.dtype == np.float32 and dist.hash.max() <= 1.0
+
+    def test_builtin_dists_do_not_warn(self):
+        # no false positives for the shipped distributions
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", PendingDeprecationWarning)
+            for name in cd.get_dist_names():
+                cd.get_dist(name)(self.hashsize)
+
+    def test_set_hash_public_and_alias(self):
+        # public set_hash() and the deprecated _set_hash alias are the same
+        assert cd.ColorDistBase._set_hash is cd.ColorDistBase.set_hash
+        dist = cd.LinearDist(self.hashsize)
+        dist.set_hash(np.linspace(0.0, 1.0, self.hashsize))
+        assert dist.hash.dtype == np.float32 and dist.hash.max() <= 1.0
+        dist._set_hash(np.linspace(0.0, 1.0, self.hashsize))
+        assert dist.hash.max() <= 1.0
