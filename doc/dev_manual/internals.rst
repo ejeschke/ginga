@@ -179,6 +179,63 @@ an unavailable renderer falls back gracefully.  The factory
 ``ginga.canvas.render.get_render_class(name)`` maps a name to a class.
 
 
+The standard pixel renderer
+---------------------------
+
+``StandardPipelineRenderer`` (in ``ginga.canvas.render``) composites a frame
+on the CPU by running a :class:`~ginga.util.pipeline.Pipeline` of *stages*
+(each stage transforms a Numpy array and passes it to the next); the stages
+live in ``ginga.util.stages.render``:
+
+#. **createbg** -- allocate the background array at the window size and fill
+   it with the viewer's background color.
+#. **overlays** -- draw every image on the canvas into that array (see the
+   per-image sub-pipeline below).
+#. **iccprofile** -- apply an output ICC color profile, if one is configured.
+#. **flipswap** -- apply the viewer's flip/swap-axes transforms.
+#. **rotate** -- apply the viewer's rotation.
+#. **output** -- deliver the array in the RGB(A) channel order the backend
+   wants.
+
+The result is a single RGBA array; the backend then draws the vector graphics
+(shapes, text, ...) on top of it using its native 2D drawing API, via the
+``RenderContext`` returned by ``setup_cr()``.  (This is the key difference
+from the GPU renderers, which record *all* drawing -- images included -- into
+a render list and replay it on the GPU.)
+
+The ``whence`` optimization
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Re-running the whole pipeline for every little change would be wasteful, so
+every redraw carries a ``whence`` value: a hint of *what* changed, and hence
+how far *down* the pipeline the work must start.  A lower ``whence`` means
+more of the pipeline must re-run.  ``render_whence()`` looks the value up in a
+table and runs the pipeline from the first stage whose threshold it meets:
+
+======  ==============  =========================================
+whence  runs from       typically triggered by
+======  ==============  =========================================
+<= 2.0  overlays        new data, zoom, pan, cut levels, colormap
+<= 2.3  iccprofile      ICC output profile change
+<= 2.5  flipswap        flip / swap-axes transform
+<= 2.6  rotate          rotation
+>= 3.0  (none)          only the vector graphics changed (e.g. fg)
+======  ==============  =========================================
+
+Within the **overlays** stage, each image runs its own small sub-pipeline
+(``Scale`` -> ``Reorder`` -> ``Cuts`` -> ``RGBMap`` -> ``Merge`` for a
+``normimage``), and ``whence`` selects the entry point there too: ``<= 0``
+re-scales the cutout (new data / zoom / pan), ``<= 1`` re-applies the cut
+levels, ``<= 2`` re-applies the RGB/color mapping, and anything higher just
+re-merges the already-mapped tile into the background.  So dragging the cut
+levels (``whence=1``) recuts and remaps but does not re-scale, while rotating
+(``whence=2.6``) reuses the fully composited image and only re-rotates.
+
+The GPU renderers use the same ``whence`` values but interpret them
+differently -- since images live in GPU textures, most changes become
+transform/uniform updates rather than re-running CPU stages.
+
+
 The Vulkan renderer
 -------------------
 
