@@ -141,7 +141,10 @@ class PlotViewBase(ViewerBase):
             self.enable_callback(name)
 
         if figure is None:
-            figure = Figure()
+            figure = Figure(layout='constrained')
+        # TODO (?):
+        # else:
+        #     figure.set_layout_engine('constrained')
         self.figure = figure
 
         self.artist_dct = dict()

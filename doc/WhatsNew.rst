@@ -74,6 +74,7 @@ Ver 7.1.0 (unreleased)
   piecewise-linear control points instead of baked 256-entry arrays.  They
   are exact, resolution-independent (smooth at any color depth), and small
   (this also removed ~2600 lines from ``ginga/cmap.py``)
+- Fixed an issue with matplotlib plots getting their axes labels cut off
 
 Ver 7.0.0 (2026.07.16)
 ======================
