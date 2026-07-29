@@ -149,6 +149,106 @@ For more information on canvases and canvas objects, refer to
 Chapter:ref:`_ch-canvas_graphics`.
 
 
+Renderers
+=========
+
+Every viewer delegates the actual drawing of its canvas to a *renderer*.
+Renderers all descend from ``RenderBase`` (in ``ginga.canvas.render``) and
+fall into two broad styles:
+
+* **Standard pixel renderers** (``pil``, ``agg``, ``opencv``, ``cairo``, the
+  Qt ``qt`` renderer, ...) subclass ``StandardPipelineRenderer``.  They run a
+  CPU *pipeline* (``createbg`` -> ``overlays`` -> ``iccprofile`` ->
+  ``flipswap`` -> ``rotate`` -> ``output``) that composites the image and
+  overlays into an RGBA array, and draw vector graphics (shapes, text) on top
+  with the backend's 2D drawing API.
+
+* **GPU / vector-replay renderers** (``opengl`` and ``vulkan``) additionally
+  mix in ``VectorRenderMixin`` (in ``ginga.vec.CanvasRenderVec``).  Rather
+  than run the CPU pipeline, they *record* every draw operation into a render
+  list (via a recording ``RenderContext`` returned by ``setup_cr()``) and
+  *replay* it onto the GPU each frame (``draw_vector()``).  Images are handed
+  to the GPU as textures and colormapped in a fragment shader; shapes are
+  drawn from vertex buffers.  This is the model a GPU renderer needs, because
+  zoom/pan/rotate become cheap transform changes rather than re-rasterization.
+
+A renderer is chosen with the ``renderer`` viewer setting (or the reference
+viewer's ``-r/--renderer`` option); each backend viewer keeps a list of
+renderers it can host and picks the first that initializes, so a request for
+an unavailable renderer falls back gracefully.  The factory
+``ginga.canvas.render.get_render_class(name)`` maps a name to a class.
+
+
+The Vulkan renderer
+-------------------
+
+The Vulkan renderer (``renderer='vulkan'``, in ``ginga.vulkan``) is a
+GPU-native, toolkit-agnostic renderer offered as an alternative to OpenGL
+(which is being deprecated on some platforms).  It is *offscreen*: it renders
+into a Vulkan image in GPU memory and copies the result back to a Numpy array,
+which every backend can display via the same array path used by the
+``pil``/``agg`` renderers.  There is no per-toolkit Vulkan window yet, so the
+same renderer works for the qt, gtk3, gtk4, tk and pg (web/websocket) backends
+(but *not* in-situ under Pyodide/PyScript, where the native binding and driver
+are unavailable).
+
+Requirements: the optional ``vulkan`` dependency (``pip install
+ginga[vulkan]``, the PyPI Vulkan binding) plus a system Vulkan loader and a
+device.  Mesa **lavapipe** provides a CPU/headless device, which is enough for
+CI and machines without a GPU.
+
+How it fits together (all under ``ginga/vulkan/``):
+
+* ``vkcore.VulkanContext`` wraps the instance/device/queue/command pool and
+  the buffer/image/texture/sampler helpers.  ``OffscreenColorTarget`` is the
+  RGBA image drawn into and read back.
+* ``pipelines.py`` holds the graphics pipelines: ``ShapePipeline`` (solid
+  shapes and expanded wide/dashed lines), ``MultiImagePipeline`` (any number
+  of images per frame, each with its own cached texture) and ``GlyphPipeline``
+  (text tiles).  Shaders are GLSL compiled to SPIR-V, shipped as ``.spv`` under
+  ``ginga/vulkan/glsl/`` (regenerate with ``glsl/compile.sh``; no runtime
+  shader compiler is required).
+* ``CanvasRenderVk.CanvasRendererGPU`` is the renderer.  It mixes
+  ``VectorRenderMixin`` with ``StandardPipelineRenderer`` (for the coordinate
+  bookkeeping only -- the CPU pipeline stages are not run), records draw ops,
+  and in ``get_surface_as_array()`` replays them through a ``VulkanReplayEngine``
+  that drives the pipelines into the shared render pass, then reads the pixels
+  back.
+
+Notable design points that a maintainer should know:
+
+* **Colormapping is on the GPU.**  A monochrome image is uploaded as a raw
+  ``R32_SFLOAT`` texture; the fragment shader applies the cut levels and indexes
+  a colormap texel buffer built from the viewer's ``rgbmap`` (the color
+  distribution is baked into that lookup table, as in the OpenGL renderer).  So
+  cut-level, distribution and colormap changes update live *without*
+  re-uploading the image.  RGB images shown through a ``normimage`` get the
+  same interactive treatment per channel; images shown through the plain
+  ``image`` type are drawn as native RGBA.
+* **Textures are cached and only re-uploaded on change.**  Zoom and pan reuse
+  the cached texture and just change the transform, so they never re-cut or
+  re-upload -- the GPU stretches the texture over the new quad, analogous to
+  OpenGL moving the camera.
+* **Clip space.**  Vulkan clip space has Y pointing *down* (like window
+  pixels, unlike OpenGL's Y-up) and depth in ``[0, 1]``.  The 2D path maps
+  window pixels straight to clip space with no Y-flip; the 3D camera path
+  reuses ``ginga.opengl.Camera`` and applies a small correction matrix to the
+  projection.
+* **No native primitives for everything.**  As with OpenGL, Vulkan does not
+  guarantee line widths greater than 1 or line stippling, and has no text
+  primitive.  Wide and dashed lines are expanded into filled triangles
+  (``ginga.canvas.stroke``) and text is rasterized with Pillow into an RGBA
+  tile and blitted as a textured quad.
+
+To try it in the reference viewer::
+
+    ginga -t qt -r vulkan
+
+or select ``vulkan`` from the renderer control in the ``gw`` example viewers.
+A headless smoke test is ``ginga/tests/test_vulkan_*.py`` (these skip
+automatically when the binding or a device is missing).
+
+
 Miscellaneous Topics
 ====================
 

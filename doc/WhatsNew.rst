@@ -4,6 +4,25 @@ What's New
 
 Ver 7.1.0 (unreleased)
 ======================
+- Added an experimental **Vulkan renderer** (``renderer='vulkan'``), a
+  GPU-accelerated, toolkit-agnostic renderer built as an alternative to the
+  OpenGL one.  It renders GPU-native (images colormapped in-shader with live
+  cut levels/distribution, shapes/wide/dashed lines, native Pillow text, RGBA
+  alpha, and a 3D camera mode) into an *offscreen* Vulkan image and hands the
+  result back as an array, so every backend (qt, gtk3, gtk4, tk, and the pg
+  web/websocket backend) can use it via the same array path as the pil/agg
+  renderers.  Select it with ``ginga -t <toolkit> -r vulkan`` or the new
+  per-viewer ``renderer`` setting; it falls back automatically when the
+  ``vulkan`` binding or a device is unavailable.  Requires the optional
+  ``vulkan`` dependency (``pip install ginga[vulkan]``) and a system Vulkan
+  driver (Mesa lavapipe works for a CPU/headless device).  See the developer
+  manual ("The Vulkan renderer") for details.  Not available in-situ under
+  Pyodide/PyScript.
+- The OpenGL renderer now draws text by rasterizing it with Pillow and
+  blitting a texture (filled, anti-aliased) instead of converting it to
+  cairo path outlines, and supports wide and dashed lines by expanding them
+  into filled triangles (OpenGL does not guarantee ``lineWidth > 1`` or
+  stippling).  This drops the cairo dependency for OpenGL text.
 - bump required version of a few dependencies
 - Menu items can now show an icon as well as (or instead of) text, like
   toolbar actions.  ``Menu.add_name()``, ``Menu.add_menu()`` and

@@ -97,6 +97,31 @@ def text_size(text, font):
     return wd_px, ht_px
 
 
+def rasterize_text(text, pil_font, color=(1.0, 1.0, 1.0, 1.0)):
+    """Rasterize ``text`` to an ``(H, W, 4)`` uint8 RGBA array: a transparent
+    tile with the glyphs drawn in ``color`` (an RGB or RGBA tuple in 0..1).
+
+    ``pil_font`` is a loaded Pillow truetype font (e.g. from :func:`get_font`).
+    Returns ``(arr, width, height)``.  Used by the GPU renderers to blit text
+    as a textured quad.
+    """
+    dummy = ImageDraw.Draw(Image.new('RGBA', (4, 4)))
+    try:
+        l, t, r, b = dummy.textbbox((0, 0), text, font=pil_font)
+    except Exception:
+        w0, h0 = dummy.textsize(text, font=pil_font)
+        l, t, r, b = 0, 0, w0, h0
+    w, h = max(1, r - l), max(1, b - t)
+    pad = 2
+    img = Image.new('RGBA', (w + 2 * pad, h + 2 * pad), (0, 0, 0, 0))
+    rr, gg, bb = (int(c * 255) for c in color[:3])
+    aa = int((color[3] if len(color) > 3 else 1.0) * 255)
+    ImageDraw.Draw(img).text((pad - l, pad - t), text, font=pil_font,
+                             fill=(rr, gg, bb, aa))
+    arr = np.ascontiguousarray(np.asarray(img, dtype=np.uint8))
+    return arr, arr.shape[1], arr.shape[0]
+
+
 def text_to_array(text, font, rot_deg=0.0):
     wd, ht = text_size(text, font)
     f = get_font(font.fontname, font.fontsize)

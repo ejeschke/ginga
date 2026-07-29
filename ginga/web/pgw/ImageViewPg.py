@@ -55,9 +55,14 @@ class ImageViewPg(ImageView.ImageViewBase):
         self.timer_msg = None
 
         self.renderer = None
-        # Pick a renderer that can work with us
-        renderers = ['cairo', 'pil', 'opencv', 'agg']
+        # Pick a renderer that can work with us.  'vulkan' is only usable in
+        # the native (e.g. websocket-server) mode; under Pyodide/in-situ the
+        # binding isn't importable, so choose_best_renderer() falls back.
+        renderers = ['cairo', 'pil', 'opencv', 'agg', 'vulkan']
         preferred = self.t_['renderer']
+        if preferred in (None, 'opengl'):
+            # no preference (or opengl, unsupported here) -> default
+            preferred = 'cairo'
         if preferred in renderers:
             renderers.remove(preferred)
         self.possible_renderers = [preferred] + renderers

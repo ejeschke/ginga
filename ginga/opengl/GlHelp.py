@@ -42,10 +42,16 @@ class GlContext:
         self.widget = widget
 
     def text_extents(self, text, font):
-        # TODO: we need a better approximation
-        wd = len(text) * font.fontsize * 0.45
-        ht = font.fontsize
-        return wd, ht
+        pil_font = get_cached_font(getattr(font, 'fontname', 'sans'),
+                                   int(round(getattr(font, 'fontsize', 12))))
+        try:
+            from PIL import Image, ImageDraw
+            d = ImageDraw.Draw(Image.new('RGBA', (4, 4)))
+            l, t, r, b = d.textbbox((0, 0), text, font=pil_font)
+            return (max(1, r - l), max(1, b - t))
+        except Exception:
+            # last-resort approximation
+            return (int(len(text) * font.fontsize * 0.45), int(font.fontsize))
 
 
 class ShaderManager:

@@ -145,6 +145,12 @@ class FitsViewer:
         renderers = ['cairo', 'pil', 'agg', 'opencv']
         if ginga_toolkit.family.startswith('qt'):
             renderers.extend(['qt', 'vqt'])
+        try:
+            from ginga.vulkan.vkcore import have_vulkan
+            if have_vulkan:
+                renderers.append('vulkan')
+        except ImportError:
+            pass
         wrender = Widgets.ComboBox()
         for name in renderers:
             wrender.append_text(name)
@@ -209,6 +215,8 @@ class FitsViewer:
         self.fs = None
         if hasattr(Widgets, 'FileDialog'):
             self.fs = Widgets.FileDialog(title=_tr("Open FITS File"))
+            self.fs.set_mode('file')
+            self.fs.add_callback('activated', self.open_file_cb)
 
     def set_drawparams(self):
         index = self.wdrawtype.get_index()
@@ -249,6 +257,10 @@ class FitsViewer:
 
     def open_file(self):
         self.fs.show()
+
+    def open_file_cb(self, w, paths):
+        if len(paths) > 0:
+            self.load_file(paths[0])
 
     def drop_file_cb(self, fitsimage, drop_event):
         handle_drop_event(fitsimage, drop_event)

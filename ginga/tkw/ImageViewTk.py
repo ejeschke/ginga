@@ -45,8 +45,11 @@ class ImageViewTk(ImageView.ImageViewBase):
 
         self.renderer = None
         # Pick a renderer that can work with us
-        renderers = ['cairo', 'agg', 'pil', 'opencv']
+        renderers = ['cairo', 'agg', 'pil', 'opencv', 'vulkan']
         preferred = self.t_['renderer']
+        if preferred in (None, 'opengl'):
+            # no preference (or opengl, unsupported here) -> default
+            preferred = 'cairo'
         if preferred in renderers:
             renderers.remove(preferred)
         self.possible_renderers = [preferred] + renderers

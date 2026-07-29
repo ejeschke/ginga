@@ -97,7 +97,8 @@ class ImageViewBase(ViewerBase):
             rgbmap = RGBMap.RGBMapper(self.logger, settings=self.t_)
         self.rgbmap = rgbmap
 
-        # Renderer
+        # Renderer (default is to choose the best one)
+        self.t_.add_defaults(renderer=None)
         self.renderer = None
 
         # Initialize RGBMap

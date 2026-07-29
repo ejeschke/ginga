@@ -379,6 +379,9 @@ class ReferenceViewer:
         add_argument("--rcport", dest="rc_port", type=int,
                      default=None, metavar="NUM",
                      help="Use PORT for Ginga Remote Control plugin")
+        add_argument("-r", "--renderer", dest="renderer", metavar="NAME",
+                     default=None,
+                     help="Specify renderer to use (default: choose best)")
         add_argument("--sep", dest="separate_channels", default=False,
                      action="store_true",
                      help="Load files in separate channels")
@@ -913,6 +916,7 @@ class ReferenceViewer:
                               font_scaling_factor=None,
                               save_layout=True,
                               use_opengl=False,
+                              renderer=None,
                               layout_file='layout.json',
                               plugin_file='plugins.yml',
                               channel_prefix="Image",
@@ -964,6 +968,10 @@ class ReferenceViewer:
         # OpenGL
         if hasattr(options, 'opengl') and options.opengl:
             settings.set(use_opengl=True)
+
+        # Choosing a renderer
+        if hasattr(options, 'renderer') and options.renderer:
+            settings.set(renderer=options.renderer)
 
         # restore the window to approximate
         if hasattr(options, 'norestore'):

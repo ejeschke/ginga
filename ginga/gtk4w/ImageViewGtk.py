@@ -48,10 +48,10 @@ class ImageViewGtk(ImageView.ImageViewBase):
             imgwin.set_draw_func(self.draw_event, None)
             imgwin.connect("resize", self.configure_event)
 
-            renderers = ['cairo', 'agg', 'pil', 'opencv']
+            renderers = ['cairo', 'agg', 'pil', 'opencv', 'vulkan']
             self.t_.set_defaults(renderer='cairo')
-            if self.t_['renderer'] == 'opengl':
-                # currently cannot use opengl renderer except with GLArea
+            if self.t_['renderer'] in (None, 'opengl'):
+                # no preference (or opengl, which needs a GLArea) -> default
                 self.t_.set(renderer='cairo')
 
             if sys.byteorder == 'little':

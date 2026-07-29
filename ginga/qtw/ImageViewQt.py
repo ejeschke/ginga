@@ -12,6 +12,7 @@ from functools import partial
 import numpy as np
 
 from ginga import ImageView, Mixins, Bindings, events
+from ginga.canvas import render
 from ginga.cursors import cursor_info
 from ginga.qtw.QtHelp import (QtGui, QtCore, QImage, QPixmap, QCursor,
                               QPainter, QOpenGLWidget, QSurfaceFormat,
@@ -202,8 +203,19 @@ class ImageViewQt(ImageView.ImageViewBase):
         else:
             # Qt needs this to be in BGR(A)
             self.rgb_order = 'BGRA'
-            # default renderer is Qt one
-            self.renderer = CanvasRenderer(self, surface_type='qpixmap')
+            # pick a renderer that can work with this widget; the 'qt'
+            # renderer is the default and gets an offscreen QPixmap surface
+            # (fast path), other renderers composite via the array path
+            renderers = ['qt', 'agg', 'pil', 'opencv', 'cairo', 'vulkan']
+            self.t_.set_defaults(renderer='qt')
+            preferred = self.t_.get('renderer', 'qt')
+            if preferred in (None, 'opengl'):
+                # no preference (or opengl, which needs the GL widget) -> qt
+                preferred = 'qt'
+            if preferred in renderers:
+                renderers.remove(preferred)
+            self.possible_renderers = [preferred] + renderers
+            self.choose_best_renderer()
 
         self.msgtimer = Timer()
         self.msgtimer.add_callback('expired',
@@ -216,6 +228,32 @@ class ImageViewQt(ImageView.ImageViewBase):
 
     def get_widget(self):
         return self.imgwin
+
+    def choose_renderer(self, name):
+        if self.wtype == 'opengl':
+            if name != 'opengl':
+                raise ValueError("Only possible renderer for this widget "
+                                 "is 'opengl'")
+            self.renderer = OpenGLRenderer(self)
+        elif name == 'qt':
+            # the Qt renderer draws onto an offscreen QPixmap surface
+            self.renderer = CanvasRenderer(self, surface_type='qpixmap')
+        else:
+            klass = render.get_render_class(name)
+            self.renderer = klass(self)
+
+    def choose_best_renderer(self):
+        for name in self.possible_renderers:
+            try:
+                self.choose_renderer(name)
+                self.logger.info("best renderer available is '{}'".format(name))
+                return
+            except Exception as e:
+                self.logger.debug("Renderer '{}' not usable: {}".format(name, e))
+                continue
+
+        raise ImageViewQtError("No valid renderers available: {}".format(
+            str(self.possible_renderers)))
 
     def configure_window(self, width, height):
         self.logger.debug("window size reconfigured to %dx%d" % (

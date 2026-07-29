@@ -59,7 +59,13 @@ try:
         from qtpy.QtGui import QShortcut  # noqa
     except ImportError:
         from qtpy.QtWidgets import QShortcut  # noqa
-    from qtpy.QtWidgets import QOpenGLWidget, QWIDGETSIZE_MAX  # noqa
+    from qtpy.QtWidgets import QOpenGLWidget  # noqa
+    try:
+        from qtpy.QtWidgets import QWIDGETSIZE_MAX  # noqa
+    except ImportError:
+        # PySide6 6.11+ no longer exposes this name and qtpy does not
+        # backfill it; it is a fixed Qt constant ((1 << 24) - 1).
+        QWIDGETSIZE_MAX = (1 << 24) - 1
     from qtpy.QtCore import QItemSelectionModel, QEvent  # noqa
     from qtpy.QtWidgets import QApplication, QWidget  # noqa
     from qtpy import QtSvg  # noqa

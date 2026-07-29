@@ -13,9 +13,11 @@ from packaging.version import parse as parse_version
 
 from OpenGL import GL as gl
 
+from collections import OrderedDict
+
 from ginga.vec import CanvasRenderVec as vec
-from ginga.canvas import render, transform
-from ginga.cairow import CairoHelp
+from ginga.canvas import render, transform, stroke
+from ginga.pilw import PilHelp
 from ginga import trcalc, RGBMap
 from ginga.util import rgb_cms
 
@@ -75,25 +77,14 @@ class RenderContext(render.RenderContextBase):
 
     def draw_text(self, cx, cy, text, rot_deg=0.0, font=None, fill=None,
                   line=None):
-        # TODO: this draws text as polygons, since there is no native
-        # text support in OpenGL.  It uses cairo to convert the text to
-        # paths.  Currently the paths are drawn, but not filled correctly.
-        paths = CairoHelp.text_to_paths(text, font, flip_y=True,
-                                        cx=cx, cy=cy, rot_deg=rot_deg)
-        scale = self.viewer.get_scale()
-        base = np.array((cx, cy))
-
-        for pts in paths:
-            # we have to rotate and scale the polygons to account for the
-            # odd transform we use for OpenGL
-            rot_deg = -self.viewer.get_rotation()
-            if rot_deg != 0.0:
-                pts = trcalc.rotate_coord(pts, [rot_deg], (cx, cy))
-            pts = (pts - base) * (1 / scale) + base
-            self.set_line(fill.color, alpha=fill.alpha, linewidth=1)
-            # NOTE: since non-convex polygons are not filled correctly, it
-            # doesn't work to set any fill here
-            self.draw_polygon(pts, line=self.line)
+        # Text is rasterized with Pillow and blitted as a textured quad
+        # (filled + anti-aliased), rather than converting to polygon outlines.
+        color = (1.0, 1.0, 1.0, 1.0)
+        if fill is not None and getattr(fill, 'color', None) is not None:
+            color = fill._color_4tup
+        elif line is not None and getattr(line, 'color', None) is not None:
+            color = line._color_4tup
+        self.renderer.gl_draw_text(cx, cy, text, rot_deg, font, color)
 
     def draw_polygon(self, cpoints, line=None, fill=None):
         self.renderer.gl_draw_shape(gl.GL_LINE_LOOP, cpoints, fill, line)
@@ -156,6 +147,10 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPipelineRenderer):
         self.cmap_uploads = []
 
         self.pgm_mgr = GlHelp.ShaderManager(self.logger)
+
+        # LRU cache of rasterized-text textures, keyed by (text, font, color)
+        self._text_cache = OrderedDict()
+        self._text_cache_max = 256
 
         self.fbo = None
         self.fbo_size = (0, 0)
@@ -712,6 +707,23 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPipelineRenderer):
         cache = cvs_img.get_cache(self.viewer)
         # TODO: put tex_id in cache?
         tex_id = self.get_texture_id(cvs_img.image_id)
+
+        # if image has fixed cut levels, use those
+        cuts = getattr(cvs_img, 'cuts', None)
+        if cuts is not None:
+            loval, hival = cuts
+        else:
+            loval, hival = self._levels
+
+        self._gl_draw_textured_quad(tex_id, cp, cache.image_type,
+                                    interp=cache.interp,
+                                    loval=loval, hival=hival)
+
+    def _gl_draw_textured_quad(self, tex_id, cp, image_type, interp=0,
+                               loval=0.0, hival=0.0):
+        """Draw a textured quad (image shader) over the 4 corner points ``cp``,
+        with texcoords (0,0),(1,0),(1,1),(0,1).  Shared by image and text
+        drawing."""
         rgbmap = self.viewer.get_rgbmap()
         map_id = self.get_texture_id(rgbmap.mapper_id)
         self.pgm_mgr.setup_program('image')
@@ -734,17 +746,10 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPipelineRenderer):
         gl.glUniform1i(_loc, 1)
 
         _loc = self.pgm_mgr.get_uniform_loc("image_type")
-        gl.glUniform1i(_loc, cache.image_type)
+        gl.glUniform1i(_loc, image_type)
 
         _loc = self.pgm_mgr.get_uniform_loc("interp")
-        gl.glUniform1i(_loc, cache.interp)
-
-        # if image has fixed cut levels, use those
-        cuts = getattr(cvs_img, 'cuts', None)
-        if cuts is not None:
-            loval, hival = cuts
-        else:
-            loval, hival = self._levels
+        gl.glUniform1i(_loc, interp)
 
         _loc = self.pgm_mgr.get_uniform_loc("loval")
         gl.glUniform1f(_loc, loval)
@@ -772,6 +777,46 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPipelineRenderer):
         gl.glBindVertexArray(0)
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
         self.pgm_mgr.setup_program(None)
+
+    def _get_text_texture(self, text, font, color):
+        """Return ``(tex_id, w, h)`` for ``text`` in ``color`` (RGBA 0..1),
+        rasterized with Pillow and cached (LRU) by content."""
+        key = (text, getattr(font, 'fontname', 'sans'),
+               int(round(getattr(font, 'fontsize', 12))),
+               tuple(round(float(c), 3) for c in color))
+        hit = self._text_cache.get(key)
+        if hit is not None:
+            self._text_cache.move_to_end(key)
+            return hit
+        pil_font = GlHelp.get_cached_font(key[1], key[2])
+        arr, w, h = PilHelp.rasterize_text(text, pil_font, color)
+        tex_id = gl.glGenTextures(1)
+        # upload as a native RGBA texture (no RGB map)
+        self.gl_set_image(tex_id, arr, 0x0)
+        self._text_cache[key] = (tex_id, w, h)
+        # bound cache: delete the least-recently-used texture when over budget
+        if len(self._text_cache) > self._text_cache_max:
+            _key, (old_tex, _w, _h) = self._text_cache.popitem(last=False)
+            gl.glDeleteTextures([old_tex])
+        return (tex_id, w, h)
+
+    def gl_draw_text(self, cx, cy, text, rot_deg, font, color):
+        if not self._drawing or not text:
+            return
+        tex_id, w, h = self._get_text_texture(text, font, color)
+
+        # size the quad by 1/scale so the text stays a constant pixel size
+        # (the camera applies the zoom); anchor bottom-left at (cx, cy) with
+        # the text extending right (+x) and up (-y), matching the CPU renderers
+        scale = self.viewer.get_scale()
+        wc, hc = w / scale, h / scale
+        cp = np.array([(cx, cy - hc), (cx + wc, cy - hc),
+                       (cx + wc, cy), (cx, cy)], dtype=np.float32)
+        rot = rot_deg - self.viewer.get_rotation()
+        if rot != 0.0:
+            cp = trcalc.rotate_coord(cp, [rot], (cx, cy))
+
+        self._gl_draw_textured_quad(tex_id, cp, 0x0)   # native RGBA, no map
 
     def gl_draw_shape(self, gl_shape, cpoints, fill, line):
 
@@ -816,23 +861,51 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPipelineRenderer):
             gl.glDrawArrays(gl.GL_TRIANGLE_FAN, 0, len(vertices))
 
         # draw line, if any
-        # TODO: support line stippling (dash)
         if line is not None and line.linewidth > 0:
             _c = line._color_4tup
             gl.glUniform4f(_loc, _c[0], _c[1], _c[2], _c[3])
 
-            # draw outline
-            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
-            # > 1.0 not guaranteed to be supported as of OpenGL 4.2
-            # TODO
-            # gl.glLineWidth(line.linewidth)
-            gl.glLineWidth(1.0)
+            lw = float(line.linewidth)
+            dashed = getattr(line, 'linestyle', 'solid') == 'dash'
+            closed = (gl_shape == gl.GL_LINE_LOOP)
 
-            gl.glDrawArrays(gl_shape, 0, len(vertices))
+            if lw > 1.0 or dashed:
+                # OpenGL doesn't guarantee lineWidth > 1 or stippling, so
+                # expand the stroke into filled triangles.  Widths/patterns
+                # are in *pixels*; divide by the scale so the line keeps a
+                # constant pixel size as the camera zooms (as text does).
+                scale = self.viewer.get_scale()
+                width_c = lw / scale
+                pts2d = np.asarray(cpoints, dtype=np.float32)[:, :2]
+                if dashed:
+                    pat = [p / scale for p in stroke.dash_pattern(lw)]
+                    for run in stroke.dash_polylines(pts2d, pat, closed):
+                        self._gl_fill_tris(stroke.stroke_polyline(run, width_c,
+                                                                  False))
+                else:
+                    self._gl_fill_tris(stroke.stroke_polyline(pts2d, width_c,
+                                                              closed))
+            else:
+                # cheap width-1 native line
+                gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_LINE)
+                gl.glLineWidth(1.0)
+                gl.glDrawArrays(gl_shape, 0, len(vertices))
 
         gl.glBindVertexArray(0)
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
         self.pgm_mgr.setup_program(None)
+
+    def _gl_fill_tris(self, tris2d):
+        """Draw a triangle-list (``(N, 2)`` vertices) as filled triangles.
+        Assumes the 'shape' program + line VAO are bound and the ``fg_clr``
+        colour uniform is already set (called from :meth:`gl_draw_shape`)."""
+        if len(tris2d) == 0:
+            return
+        verts = trcalc.pad_z(tris2d, dtype=np.float32)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vbo_line)
+        gl.glBufferData(gl.GL_ARRAY_BUFFER, verts, gl.GL_DYNAMIC_DRAW)
+        gl.glPolygonMode(gl.GL_FRONT_AND_BACK, gl.GL_FILL)
+        gl.glDrawArrays(gl.GL_TRIANGLES, 0, len(verts))
 
     def show_errors(self):
         while True:

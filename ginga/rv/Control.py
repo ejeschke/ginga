@@ -78,6 +78,7 @@ class GingaShell(GenericShell):
                               scrollbars='off',
                               numImages=10,
                               # Offset to add to numpy-based coords
+                              # FITS standard
                               pixel_coords_offset=1.0,
                               # save primary header when loading files
                               save_primary_header=True,
@@ -1364,6 +1365,7 @@ class GingaShell(GenericShell):
                                           self.settings.get('numImages', 1))
             settings.set_defaults(switchnew=True, numImages=num_images,
                                   raisenew=True, genthumb=True,
+                                  renderer=self.settings.get('renderer', None),
                                   focus_indicator=False,
                                   sort_order='loadtime')
 

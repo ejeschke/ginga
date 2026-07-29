@@ -453,6 +453,12 @@ def get_render_class(rtype):
         from ginga.opengl import CanvasRenderGL
         return CanvasRenderGL.CanvasRenderer
 
+    if rtype == 'vulkan':
+        # GPU-native drawing: shapes + images drawn by Vulkan pipelines via
+        # vector replay
+        from ginga.vulkan import CanvasRenderVk
+        return CanvasRenderVk.CanvasRendererGPU
+
     if rtype == 'qt':
         from ginga.qtw import CanvasRenderQt
         return CanvasRenderQt.CanvasRenderer
