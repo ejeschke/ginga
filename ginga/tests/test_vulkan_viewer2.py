@@ -361,6 +361,74 @@ def test_rgba_image_alpha_blends(viewer):
     assert int(blend.sum()) > 200              # ~600 px overlap, blended
 
 
+def test_per_image_rgbmap(viewer):
+    """A normimage overlay with its own rgbmap is colormapped with that map
+    (its own GPU colormap buffer), independent of the viewer's."""
+    from ginga import RGBMap, cmap
+
+    viewer.configure(120, 60)
+    viewer.enable_autozoom('off')
+    main = AstroImage.AstroImage(logger=logger)
+    main.set_data(np.full((40, 80), 300.0, dtype=np.float32))
+    viewer.set_image(main)
+    viewer.cut_levels(0, 1000)
+    viewer.scale_to(1.0, 1.0)
+
+    canvas = viewer.get_canvas()
+    NormImage = canvas.get_draw_class('normimage')
+    rm = RGBMap.RGBMapper(logger)
+    rm.set_cmap(cmap.get_cmap('rainbow'))
+    ov = AstroImage.AstroImage(logger=logger)
+    ov.set_data(np.full((15, 15), 900.0, dtype=np.float32))
+    # own rgbmap AND own cut levels
+    canvas.add(NormImage(5, 5, ov, rgbmap=rm, cuts=(0, 1000)))
+    viewer.redraw_now(whence=0)
+
+    arr = viewer.renderer.get_surface_as_array('RGBA')[..., :3].astype(int)
+    colored = (~((arr[..., 0] == arr[..., 1]) & (arr[..., 1] == arr[..., 2])))
+    # two distinct colormap buffers on the GPU: viewer gray + overlay rainbow
+    n_cmaps = len(viewer.renderer._engine.image._cmaps)
+    canvas.delete_all_objects()
+    viewer.enable_autozoom('on')
+    assert int(colored.sum()) > 100        # overlay rendered in color
+    assert n_cmaps >= 2                     # not sharing the viewer's colormap
+
+
+def test_interpolation_methods(viewer):
+    """The in-shader display interpolation kernels (bilinear/bicubic/lanczos)
+    all smooth a zoomed low-res image far more than nearest, and are distinct
+    kernels (not aliased to one another)."""
+    viewer.configure(100, 40)
+    viewer.enable_autozoom('off')
+    data = np.tile(np.linspace(0, 1000, 5, dtype=np.float32), (3, 1))
+    img = AstroImage.AstroImage(logger=logger)
+    img.set_data(data)
+    viewer.set_image(img)
+    viewer.cut_levels(0, 1000)
+    viewer.scale_to(18.0, 18.0)
+
+    def frame(interp):
+        viewer.get_settings().set(interpolation=interp)
+        viewer.redraw_now(whence=0)
+        return viewer.renderer.get_surface_as_array('RGBA')[..., :3].astype(int)
+
+    def gray_levels(a):
+        g = a[(a[..., 0] == a[..., 1]) & (a[..., 1] == a[..., 2])]
+        return len(np.unique(g[:, 0]))
+
+    nlev = gray_levels(frame('nearest'))
+    bil, bic, lan = frame('linear'), frame('bicubic'), frame('lanczos')
+    # each interpolated kernel is much smoother (many more levels) than nearest
+    assert min(gray_levels(bil), gray_levels(bic),
+               gray_levels(lan)) > nlev * 3
+    # and the three kernels produce visibly different results
+    assert (bic != bil).any() and (lan != bil).any() and (lan != bic).any()
+
+    viewer.get_settings().set(interpolation='basic')
+    viewer.scale_to(1.0, 1.0)
+    viewer.enable_autozoom('on')
+
+
 def test_camera_mode_3d(viewer):
     """3D camera mode: shapes with z coordinates are projected by the camera,
     and orbiting the camera changes the rendered frame."""

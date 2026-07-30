@@ -461,8 +461,12 @@ class MultiImagePipeline:
     ``image_type`` push constant (``image2.frag``).
 
     Descriptor set 0: binding 0 image sampler (R32F mono or RGBA8 native),
-    binding 1 the shared colormap texel buffer.  Push constants: view/proj
-    (vertex, 0..128, ``image.vert``) + loval/hival/image_type (fragment, 128).
+    binding 1 the image's colormap texel buffer.  Colormaps are cached by an
+    opaque key (the renderer uses the rgbmap identity), so images that share a
+    colormap share one GPU buffer while an image with its own rgbmap gets its
+    own.  Push constants: view/proj (vertex, 0..128, ``image.vert``) +
+    loval/hival/image_type/obj_alpha (fragment, 128); the display
+    interpolation (nearest/bilinear) is packed into bit 4 of image_type.
     """
 
     def __init__(self, ctx, target, max_images=64):
@@ -470,9 +474,9 @@ class MultiImagePipeline:
         self.target = target
         self.width, self.height = target.width, target.height
         self.max_images = max_images
-        self._images = {}     # image_id -> dict(image, mem, view, dset, cmap_gen)
-        self._cmap = None     # (buffer, mem, view)
-        self._cmap_gen = 0
+        # image_id -> dict(image, mem, view, dset, cmap_key, cmap_gen)
+        self._images = {}
+        self._cmaps = {}      # cmap_key -> dict(buf, mem, view, gen)
         self._scratch = []    # per-frame vertex buffers
 
         att = vk.VkAttachmentDescription(
@@ -544,12 +548,15 @@ class MultiImagePipeline:
             ctx, self.vmod, self.fmod, self.layout, self.render_pass,
             self.width, self.height)
 
-    def set_colormap(self, rgba_u8):
-        """Set the shared colormap (``(N, 4)`` uint8).  Existing per-image
-        descriptor sets rebind it lazily on their next :meth:`record`."""
+    def set_colormap(self, cmap_key, rgba_u8):
+        """(Re)build the colormap buffer for ``cmap_key`` (an ``(N, 4)`` uint8
+        array).  Bumps the key's generation so images using it rebind lazily on
+        their next :meth:`record`."""
         cm = np.ascontiguousarray(rgba_u8, dtype=np.uint8)
-        if self._cmap is not None:
-            self._destroy_cmap()
+        old = self._cmaps.get(cmap_key)
+        gen = 0 if old is None else old['gen'] + 1
+        if old is not None:
+            self._destroy_cmap(cmap_key)
         buf, mem = self.ctx.create_buffer(
             cm.nbytes, vk.VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT,
             vk.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
@@ -557,8 +564,10 @@ class MultiImagePipeline:
         self.ctx.upload(mem, cm)
         view = self.ctx.create_buffer_view(buf, vk.VK_FORMAT_R8G8B8A8_UINT,
                                            cm.nbytes)
-        self._cmap = (buf, mem, view)
-        self._cmap_gen += 1
+        self._cmaps[cmap_key] = dict(buf=buf, mem=mem, view=view, gen=gen)
+
+    def has_colormap(self, cmap_key):
+        return cmap_key in self._cmaps
 
     def has_image(self, image_id):
         return image_id in self._images
@@ -593,7 +602,8 @@ class MultiImagePipeline:
                     sType=_s('DESCRIPTOR_SET_ALLOCATE_INFO'),
                     descriptorPool=self.pool, descriptorSetCount=1,
                     pSetLayouts=[self.dsl]))[0]
-            ent = dict(dset=dset, image=None, mem=None, view=None, cmap_gen=-1)
+            ent = dict(dset=dset, image=None, mem=None, view=None,
+                       cmap_key=None, cmap_gen=-1)
             self._images[image_id] = ent
         else:
             self._destroy_tex(ent)
@@ -608,20 +618,23 @@ class MultiImagePipeline:
             0, None)
 
     def record(self, cmd, image_id, quad_pos, quad_uv, loval, hival,
-               image_type, obj_alpha, mats_bytes):
-        """Record one image draw (image must have been uploaded)."""
+               image_type, obj_alpha, cmap_key, interp, mats_bytes):
+        """Record one image draw (image must have been uploaded, and its
+        ``cmap_key`` colormap set via :meth:`set_colormap`)."""
         ent = self._images.get(image_id)
         if ent is None:
             return
         ctx = self.ctx
-        # (re)bind the shared colormap into this set if it changed
-        if ent['cmap_gen'] != self._cmap_gen and self._cmap is not None:
+        # (re)bind this image's colormap if the key or its buffer changed
+        cm = self._cmaps.get(cmap_key)
+        if cm is not None and (ent['cmap_key'] != cmap_key or
+                               ent['cmap_gen'] != cm['gen']):
             vk.vkUpdateDescriptorSets(ctx.device, 1, [vk.VkWriteDescriptorSet(
                 sType=_s('WRITE_DESCRIPTOR_SET'), dstSet=ent['dset'],
                 dstBinding=1, descriptorCount=1,
                 descriptorType=vk.VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,
-                pTexelBufferView=[self._cmap[2]])], 0, None)
-            ent['cmap_gen'] = self._cmap_gen
+                pTexelBufferView=[cm['view']])], 0, None)
+            ent['cmap_key'], ent['cmap_gen'] = cmap_key, cm['gen']
 
         pos = np.ascontiguousarray(quad_pos, np.float32).reshape(-1, 2)
         uv = np.ascontiguousarray(quad_uv, np.float32).reshape(-1, 2)
@@ -632,8 +645,10 @@ class MultiImagePipeline:
             vk.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
         ctx.upload(vmem, verts)
         self._scratch.append((vbuf, vmem))
+        # pack the display interpolation (0=nearest..3=lanczos) into bits 4-5
+        itype = (int(image_type) & 0xF) | ((int(interp) & 0x3) << 4)
         params = (np.array([loval, hival], np.float32).tobytes() +
-                  np.array([int(image_type)], np.int32).tobytes() +
+                  np.array([itype], np.int32).tobytes() +
                   np.array([obj_alpha], np.float32).tobytes())
         vk.vkCmdBindPipeline(cmd, vk.VK_PIPELINE_BIND_POINT_GRAPHICS,
                              self.pipeline)
@@ -663,12 +678,12 @@ class MultiImagePipeline:
             vk.vkFreeMemory(d, ent['mem'], None)
             ent['image'] = ent['mem'] = ent['view'] = None
 
-    def _destroy_cmap(self):
-        buf, mem, view = self._cmap
-        vk.vkDestroyBufferView(self.ctx.device, view, None)
-        vk.vkDestroyBuffer(self.ctx.device, buf, None)
-        vk.vkFreeMemory(self.ctx.device, mem, None)
-        self._cmap = None
+    def _destroy_cmap(self, cmap_key):
+        d = self.ctx.device
+        cm = self._cmaps.pop(cmap_key)
+        vk.vkDestroyBufferView(d, cm['view'], None)
+        vk.vkDestroyBuffer(d, cm['buf'], None)
+        vk.vkFreeMemory(d, cm['mem'], None)
 
     def destroy(self):
         d = self.ctx.device
@@ -676,8 +691,8 @@ class MultiImagePipeline:
         for ent in self._images.values():
             self._destroy_tex(ent)
         self._images = {}
-        if self._cmap is not None:
-            self._destroy_cmap()
+        for key in list(self._cmaps.keys()):
+            self._destroy_cmap(key)
         vk.vkDestroyPipeline(d, self.pipeline, None)
         vk.vkDestroyShaderModule(d, self.vmod, None)
         vk.vkDestroyShaderModule(d, self.fmod, None)

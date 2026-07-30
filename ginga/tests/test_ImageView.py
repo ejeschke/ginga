@@ -43,6 +43,46 @@ class TestImageView:
         pan_x, pan_y = viewer.get_pan()
         assert np.isclose(pan_x, 401.0) and np.isclose(pan_y, 501.0)
 
+    def test_per_image_rgbmap_and_cuts(self):
+        # A normimage overlay with its own rgbmap + cuts must be colormapped
+        # and cut with those, independent of the viewer.  (Regression: the
+        # NormImage constructor must forward rgbmap/cuts to NormImageP, and the
+        # standard renderer's Cuts/RGBMap stages must honor them.)
+        from ginga import RGBMap, cmap
+        from ginga.canvas.CanvasObject import get_canvas_types
+        get_canvas_types()
+
+        viewer = CanvasView(logger=self.logger)
+        # configure() (not just set_window_size()) so _imgwin_set is True and
+        # redraw actually composites -- it's what every backend's
+        # configure_window() hook and the programmatic examples call
+        viewer.configure(120, 60)
+        viewer.enable_autozoom('off')
+        viewer.enable_autocuts('off')
+        main = AstroImage.AstroImage(logger=self.logger)
+        main.set_data(np.full((40, 80), 300.0, dtype=np.float32))
+        viewer.set_image(main)
+        viewer.cut_levels(0, 1000)
+        viewer.scale_to(1.0, 1.0)
+
+        canvas = viewer.get_canvas()
+        NormImage = canvas.get_draw_class('normimage')
+        rm = RGBMap.RGBMapper(self.logger)
+        rm.set_cmap(cmap.get_cmap('rainbow'))
+        ov = AstroImage.AstroImage(logger=self.logger)
+        ov.set_data(np.full((15, 15), 900.0, dtype=np.float32))
+        obj = NormImage(5, 5, ov, rgbmap=rm, cuts=(0, 1000))
+        # the constructor must forward the per-image values
+        assert obj.rgbmap is rm and obj.cuts == (0, 1000)
+
+        canvas.add(obj)
+        viewer.redraw_now(whence=0)
+        arr = viewer.renderer.get_surface_as_array('RGB').astype(int)
+        # the overlay's rainbow map yields colored (non-gray) pixels; under the
+        # viewer's default gray map the same value would be gray
+        colored = ~((arr[..., 0] == arr[..., 1]) & (arr[..., 1] == arr[..., 2]))
+        assert int(colored.sum()) > 100
+
     def test_pan2(self):
         viewer = self.viewer
         viewer.set_window_size(400, 300)

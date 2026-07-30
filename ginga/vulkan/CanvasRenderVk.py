@@ -38,7 +38,14 @@ if have_vulkan:
 # and lets fields be added without renumbering every unpack.
 _ImageDraw = namedtuple('_ImageDraw',
                         ['image_id', 'data', 'image_type', 'quad_pos',
-                         'quad_uv', 'loval', 'hival', 'obj_alpha'])
+                         'quad_uv', 'loval', 'hival', 'obj_alpha', 'rgbmap',
+                         'interp'])
+
+# map Ginga interpolation names to the in-shader kernel code (image2.frag):
+# 0 nearest, 1 bilinear, 2 bicubic, 3 lanczos.  'area' (a downsampling average)
+# has no in-shader kernel, so it falls back to bilinear.
+_INTERP_CODE = {'nearest': 0, 'basic': 0, 'linear': 1, 'bilinear': 1,
+                'area': 1, 'bicubic': 2, 'cubic': 2, 'lanczos': 3}
 
 
 def ortho_2d_push(width, height):
@@ -190,8 +197,11 @@ class VulkanReplayEngine:
                 attachmentCount=1, pAttachments=[target.view],
                 width=self.width, height=self.height, layers=1), None)
 
-    def set_colormap(self, rgba_u8):
-        self.image.set_colormap(rgba_u8)
+    def set_colormap(self, cmap_key, rgba_u8):
+        self.image.set_colormap(cmap_key, rgba_u8)
+
+    def has_colormap(self, cmap_key):
+        return self.image.has_colormap(cmap_key)
 
     def begin(self, bg_color=(0.0, 0.0, 0.0, 1.0), push=None):
         self._push = (push if push is not None
@@ -216,10 +226,10 @@ class VulkanReplayEngine:
         return self.image.has_image(image_id)
 
     def record_image(self, image_id, quad_pos, quad_uv, loval, hival,
-                     image_type, obj_alpha):
+                     image_type, obj_alpha, cmap_key, interp):
         """Record an image draw using the cached texture for ``image_id``."""
         self.image.record(self._cmd, image_id, quad_pos, quad_uv, loval, hival,
-                          image_type, obj_alpha, self._push)
+                          image_type, obj_alpha, cmap_key, interp, self._push)
 
     def record_shapes(self, shapes):
         if len(shapes) > 0:
@@ -346,7 +356,7 @@ class CanvasRendererGPU(vec.VectorRenderMixin, render.StandardPipelineRenderer):
         self._texts = []
         # GPU upload gating (like GL: upload only on change, not on zoom/pan)
         self._img_dirty = set()       # image_ids needing (re)upload
-        self._cmap_dirty = True
+        self._cmap_dirty = set()      # colormap keys needing (re)build
 
         # 3D camera (as in the OpenGL renderer).  Off by default: 2D image
         # viewing uses the window-pixel ortho path.  When enabled (mode3d),
@@ -395,9 +405,8 @@ class CanvasRendererGPU(vec.VectorRenderMixin, render.StandardPipelineRenderer):
             self._engine = None
         if width > 0 and height > 0:
             self._engine = VulkanReplayEngine(self.ctx, width, height)
-            # a fresh engine has no colormap uploaded yet; image textures are
-            # re-uploaded lazily via the per-id engine.has_image() check
-            self._cmap_dirty = True
+            # a fresh engine has no colormaps/textures yet; both are
+            # re-uploaded lazily via the engine.has_colormap()/has_image() checks
 
     def resize(self, dims):
         self._resize(dims)
@@ -436,7 +445,8 @@ class CanvasRendererGPU(vec.VectorRenderMixin, render.StandardPipelineRenderer):
         self.viewer.redraw(whence=2.5)
 
     def rgbmap_change(self, rgbmap):
-        self._cmap_dirty = True
+        # the viewer's colormap changed -> rebuild its cached buffer
+        self._cmap_dirty.add(self._cmap_key(rgbmap))
         self.viewer.redraw(whence=2.5)
 
     def bg_change(self, bg):
@@ -487,13 +497,12 @@ class CanvasRendererGPU(vec.VectorRenderMixin, render.StandardPipelineRenderer):
             a1, b1, a2, b2 = 0, 0, image.width - 1, image.height - 1
             _scale_x, _scale_y = cvs_img.scale_x, cvs_img.scale_y
 
-            interp = cvs_img.interpolation
-            if interp is None:
-                interp = viewer.get_settings().get('interpolation', 'basic')
-            if interp not in trcalc.interpolation_methods:
-                interp = 'basic'
+            # extract the cutout with a raw ('basic') resample: the display
+            # interpolation (nearest/bilinear/bicubic/lanczos) is applied in
+            # the fragment shader, so the texture must hold the raw pixels
+            # (and 'basic' needs no optional opencv/scipy dependency)
             res = image.get_scaled_cutout2((a1, b1), (a2, b2),
-                                           (_scale_x, _scale_y), method=interp)
+                                           (_scale_x, _scale_y), method='basic')
             data = res.data
 
             ht, wd = data.shape[:2]
@@ -590,15 +599,14 @@ class CanvasRendererGPU(vec.VectorRenderMixin, render.StandardPipelineRenderer):
 
     # ---- colormap (mirror gl_set_cmap) -----------------------------------
 
-    def _make_cmap_rgba(self):
-        # TODO: support per-image RGBMaps.  All images currently share this
-        # single colormap (the viewer's rgbmap); a canvas image may specify its
-        # own ``cvs_img.rgbmap``, which is ignored here.  To honor it, the
-        # colormap would need to become per-image -- e.g. a colormap texel
-        # buffer per distinct rgbmap (cached/uploaded like the image textures)
-        # and bound per draw in MultiImagePipeline (which already uses per-image
-        # descriptor sets), instead of one shared ``set_colormap``.
-        rgbmap = self.viewer.get_rgbmap()
+    def _cmap_key(self, rgbmap):
+        # identity key for caching a colormap buffer; images sharing an rgbmap
+        # share one GPU buffer (see MultiImagePipeline)
+        return getattr(rgbmap, 'mapper_id', id(rgbmap))
+
+    def _make_cmap_rgba(self, rgbmap):
+        # bake the given rgbmap (its colors + color distribution) into an
+        # (N, 4) uint8 colormap, exactly as GL's gl_set_cmap does
         hashsize = rgbmap.get_hash_size()
         cmap_len = min(hashsize, 4096)
         idx = rgbmap.get_hasharray(np.arange(0, hashsize))
@@ -624,16 +632,25 @@ class CanvasRendererGPU(vec.VectorRenderMixin, render.StandardPipelineRenderer):
         # triangle strip: [LL, LR, UL, UR] with uv [(0,0),(1,0),(0,1),(1,1)]
         quad_pos = cp[[0, 1, 3, 2]]
         quad_uv = np.array([[0, 0], [1, 0], [0, 1], [1, 1]], dtype=np.float32)
+        # per-image cut levels, colormap and interpolation fall back to the
+        # viewer's when the canvas image does not specify its own
         loval, hival = self.viewer.get_cut_levels()
         cuts = getattr(cvs_img, 'cuts', None)
         if cuts is not None:
             loval, hival = cuts
         obj_alpha = float(getattr(cvs_img, 'alpha', 1.0))
+        rgbmap = getattr(cvs_img, 'rgbmap', None) or self.viewer.get_rgbmap()
+        interp = getattr(cvs_img, 'interpolation', None)
+        if interp is None:
+            interp = self.viewer.get_settings().get('interpolation', 'basic')
+        # map the interpolation name to the in-shader kernel (see image2.frag)
+        interp = _INTERP_CODE.get(interp, 1)
         # drawn in replay (canvas) order, each with its own cached texture
         self._images.append(_ImageDraw(
             image_id=cvs_img.image_id, data=data, image_type=image_type,
             quad_pos=quad_pos, quad_uv=quad_uv, loval=float(loval),
-            hival=float(hival), obj_alpha=obj_alpha))
+            hival=float(hival), obj_alpha=obj_alpha, rgbmap=rgbmap,
+            interp=interp))
 
     def vk_add_shape(self, kind, cpoints, line, fill):
         if self._mode3d:
@@ -746,11 +763,6 @@ class CanvasRendererGPU(vec.VectorRenderMixin, render.StandardPipelineRenderer):
         if self._engine is None:
             raise render.RenderError("no Vulkan surface (zero-size window)")
 
-        # (re)build the GPU colormap only when the rgbmap changed
-        if self._cmap_dirty:
-            self._engine.set_colormap(self._make_cmap_rgba())
-            self._cmap_dirty = False
-
         # replay the render list into GPU draw collections
         self._images = []
         self._shapes = []
@@ -764,6 +776,13 @@ class CanvasRendererGPU(vec.VectorRenderMixin, render.StandardPipelineRenderer):
         r, g, b = self.viewer.img_bg[:3]
         self._engine.begin((r, g, b, 1.0), push)
         for im in self._images:
+            # (re)build this image's colormap when its rgbmap changed or the
+            # engine was reallocated; images sharing an rgbmap share one buffer
+            ckey = self._cmap_key(im.rgbmap)
+            if (ckey in self._cmap_dirty or
+                    not self._engine.has_colormap(ckey)):
+                self._engine.set_colormap(ckey, self._make_cmap_rgba(im.rgbmap))
+                self._cmap_dirty.discard(ckey)
             # upload a texture only when its data changed (or the engine was
             # reallocated); zoom/pan reuse the cached texture
             if (im.image_id in self._img_dirty or
@@ -772,7 +791,7 @@ class CanvasRendererGPU(vec.VectorRenderMixin, render.StandardPipelineRenderer):
                 self._img_dirty.discard(im.image_id)
             self._engine.record_image(im.image_id, im.quad_pos, im.quad_uv,
                                       im.loval, im.hival, im.image_type,
-                                      im.obj_alpha)
+                                      im.obj_alpha, ckey, im.interp)
         self._engine.record_shapes(self._shapes)
         self._engine.record_texts(self._texts)     # text on top
         self._engine.end()

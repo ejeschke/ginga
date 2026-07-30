@@ -353,9 +353,10 @@ class NormImage(NormImageP):
                  optimize=True, rgbmap=None, autocuts=None, **kwdargs):
         NormImageP.__init__(self, (x, y), image, alpha=alpha,
                             scale_x=scale_x, scale_y=scale_y,
-                            interpolation=interpolation,
+                            interpolation=interpolation, cuts=cuts,
                             linewidth=linewidth, linestyle=linestyle,
                             color=color, showcap=showcap, optimize=optimize,
+                            rgbmap=rgbmap, autocuts=autocuts,
                             **kwdargs)
 
 
