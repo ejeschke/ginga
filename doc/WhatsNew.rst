@@ -2,7 +2,7 @@
 What's New
 ++++++++++
 
-Ver 7.1.0 (unreleased)
+Ver 7.1.0 (2026.07.30)
 ======================
 - Added an experimental **Vulkan renderer** (``renderer='vulkan'``), a
   GPU-accelerated, toolkit-agnostic renderer built as an alternative to the

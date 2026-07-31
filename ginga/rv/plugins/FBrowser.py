@@ -112,7 +112,7 @@ class FBrowser(GingaPlugin.LocalPlugin):
                                  use_alt_row_color=color_alternate,
                                  dragable=True)
         table.set_row_spacing(0)
-        font_name = self.settings.get('font_name', 'fixed')
+        font_name = self.settings.get('font_name', 'sans')
         font_size = self.settings.get('font_size', 12)
         table.set_font(font_name, font_size)
         table.add_callback('activated', self.item_dblclicked_cb)
