@@ -1,9 +1,9 @@
 [build-system]
-requires = ["setuptools>=82.0.1",
-            "setuptools_scm[toml]>=10.0.5",
+requires = ["setuptools>=83.0.0",
+            "setuptools_scm[toml]>=10.2.0",
             # needed to compile the gettext (.po -> .mo) translation catalogs
             # at build time (see the build_py hook in setup.py)
-            "Babel>=2.10",
+            "Babel>=2.18.0",
             "wheel"]
 build-backend = "setuptools.build_meta"
 
