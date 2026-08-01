@@ -3622,11 +3622,17 @@ class ImageViewBase(ViewerBase):
         if font_size is None:
             font_size = font_asst.calc_font_size(width)
 
-        # TODO: need some way to accurately estimate text extents
-        # without actually putting text on the canvas
-        ht, wd = font_size, font_size
-        if text is not None:
-            wd = len(text) * font_size * 1.1
+        # measure the text accurately (via PIL) for centering, rather than
+        # guessing at its extents
+        if text is None:
+            wd, ht = font_size, font_size
+        else:
+            try:
+                from ginga.pilw import PilHelp
+                wd, ht = PilHelp.text_size(
+                    text, Bunch.Bunch(fontname=font, fontsize=font_size))
+            except Exception:
+                wd, ht = int(len(text) * font_size * 1.1), int(font_size)
 
         x = (width // 2) - (wd // 2)
         y = ((height // 3) * 2) - (ht // 2)
@@ -3652,7 +3658,6 @@ class ImageViewBase(ViewerBase):
             Text = canvas.get_draw_class('text')
             canvas.add(Text(x, y, text=text,
                             font=font, fontsize=font_size,
-                            #color='black', alpha=0.0, linewidth=0,
                             fill=True, fillcolor=self.img_fg, fillalpha=1.0,
                             bgcolor='black', bgalpha=1.0,
                             borderlinewidth=0,

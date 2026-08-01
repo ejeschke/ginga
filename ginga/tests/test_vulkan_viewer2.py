@@ -480,3 +480,94 @@ def test_resize_reallocates(viewer):
     viewer.configure(48, 32)
     arr = viewer.renderer.get_surface_as_array('RGBA')
     assert arr.shape == (32, 48, 4)
+
+
+def test_window_overlay_pinned_under_3d_camera(viewer):
+    """A window-coordinate overlay (the onscreen message) stays pinned to the
+    viewport when the 3D camera is tumbled -- it is drawn through the 2D ortho
+    overlay pass rather than the camera -- while a data-space shape tracks the
+    camera."""
+    orig_fg, orig_bg = viewer.img_fg, viewer.get_bg()
+    viewer.configure(160, 120)
+    viewer.set_bg(0.1, 0.1, 0.15)
+    viewer.img_fg = 'yellow'                      # message text colour (a name;
+    # a tuple would exercise an unrelated colour-resolve path)
+    viewer.t_.set(onscreen_font='sans', onscreen_font_size=16)
+    canvas = viewer.get_canvas()
+    canvas.delete_all_objects()
+    # a data-space shape so the 3D scene visibly changes with the camera
+    Circle = canvas.get_draw_class('circle')
+    canvas.add(Circle(0, 0, 60, color='cyan', linewidth=2))
+
+    viewer.renderer.mode3d = True
+    cam = viewer.renderer.camera
+    cam.scale_2d((1.0, 1.0))
+    cam.calc_gl_transform()
+
+    def frame():
+        viewer.set_onscreen_message("PIN", redraw=False)
+        viewer.redraw_now(whence=0)
+        return viewer.renderer.get_surface_as_array('RGBA')[..., :3].astype(int)
+
+    def ymask(a):                                # the yellow message text
+        return (a[..., 0] > 170) & (a[..., 1] > 170) & (a[..., 2] < 120)
+
+    a1 = frame()
+    cam.orbit(80, 60, 120, 100)                  # tumble the camera
+    cam.calc_gl_transform()
+    a2 = frame()
+
+    m1, m2 = ymask(a1), ymask(a2)
+
+    # restore shared (module-scoped) viewer state
+    viewer.set_onscreen_message(None, redraw=False)
+    viewer.renderer.mode3d = False
+    canvas.delete_all_objects()
+    viewer.img_fg = orig_fg
+    viewer.set_bg(*orig_bg[:3])
+
+    assert int(m1.sum()) > 15                     # the message rendered
+    assert np.array_equal(m1, m2)                 # ... and is pinned (identical)
+    assert not np.array_equal(a1, a2)             # the 3D scene did move
+
+
+def test_text_bg_box_constant_under_zoom_in_3d(viewer):
+    """A Text object's background box keeps a constant pixel size when the 3D
+    camera zooms (it is built in window coordinates), instead of growing with
+    the view."""
+    orig_fg, orig_bg = viewer.img_fg, viewer.get_bg()
+    viewer.configure(160, 120)
+    viewer.set_bg(0.5, 0.5, 0.5)                  # grey, so the black box shows
+    viewer.img_fg = 'white'
+    viewer.t_.set(onscreen_font='sans', onscreen_font_size=16)
+    canvas = viewer.get_canvas()
+    canvas.delete_all_objects()
+
+    viewer.renderer.mode3d = True
+    cam = viewer.renderer.camera
+    viewer.set_onscreen_message("BOX", redraw=False)
+
+    def box_size():
+        viewer.redraw_now(whence=0)
+        a = viewer.renderer.get_surface_as_array('RGBA')[..., :3].astype(int)
+        blk = (a[..., 0] < 40) & (a[..., 1] < 40) & (a[..., 2] < 40)
+        ys, xs = np.where(blk)
+        if len(xs) == 0:
+            return (0, 0)
+        return (int(xs.max() - xs.min() + 1), int(ys.max() - ys.min() + 1))
+
+    cam.scale_2d((1.0, 1.0))
+    cam.calc_gl_transform()
+    s1 = box_size()
+    cam.scale_2d((3.0, 3.0))                      # zoom in 3x
+    cam.calc_gl_transform()
+    s3 = box_size()
+
+    viewer.set_onscreen_message(None, redraw=False)
+    viewer.renderer.mode3d = False
+    canvas.delete_all_objects()
+    viewer.img_fg = orig_fg
+    viewer.set_bg(*orig_bg[:3])
+
+    assert s1[0] > 0 and s1[1] > 0                # the box rendered
+    assert s1 == s3                              # constant pixel size at any zoom

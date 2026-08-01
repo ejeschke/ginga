@@ -21,7 +21,16 @@ from collections import namedtuple
 import numpy as np
 
 from ginga.vec import CanvasRenderVec as vec
-from ginga.canvas import render, transform, stroke
+from ginga.vec.VecHelp import IMAGE, LINE, CIRCLE, POLYGON, PATH, TEXT
+from ginga.canvas import render, transform, stroke, coordmap
+
+# Marker op pushed onto the render list (by ``setup_cr``) ahead of each
+# object's draw ops, tagging whether that object is drawn in a screen-fixed
+# coordinate space (window/percentage).  ``draw_vector`` uses it to route
+# such overlays through the 2D orthographic projection instead of the 3D
+# camera, so e.g. the onscreen message stays pinned to the window in mode3d.
+_SPACE = '__space__'
+_SCREEN_MAPPERS = (coordmap.WindowMapper, coordmap.PercentageMapper)
 from ginga.opengl.Camera import Camera
 from ginga import trcalc
 from .vkcore import have_vulkan, VulkanContext, OffscreenColorTarget, _s, \
@@ -231,14 +240,16 @@ class VulkanReplayEngine:
         self.image.record(self._cmd, image_id, quad_pos, quad_uv, loval, hival,
                           image_type, obj_alpha, cmap_key, interp, self._push)
 
-    def record_shapes(self, shapes):
+    def record_shapes(self, shapes, push=None):
         if len(shapes) > 0:
-            self.shape.record(self._cmd, shapes, self._push)
+            self.shape.record(self._cmd, shapes,
+                              self._push if push is None else push)
 
-    def record_texts(self, texts):
+    def record_texts(self, texts, push=None):
         # texts: list of (rgba_tile, quad_pos, quad_uv)
+        p = self._push if push is None else push
         for rgba, quad_pos, quad_uv in texts:
-            self.glyph.record(self._cmd, rgba, quad_pos, quad_uv, self._push)
+            self.glyph.record(self._cmd, rgba, quad_pos, quad_uv, p)
 
     def end(self):
         vk.vkCmdEndRenderPass(self._cmd)
@@ -283,6 +294,9 @@ class RenderContext(render.RenderContextBase):
 
     def __init__(self, renderer, viewer, surface):
         render.RenderContextBase.__init__(self, renderer, viewer)
+        # set by draw_vector from the render list's coordinate-space markers:
+        # True while replaying ops from a screen-fixed (window/percentage) object
+        self.cur_space_screen = False
 
     def text_extents(self, text, font=None):
         if font is None:
@@ -296,23 +310,28 @@ class RenderContext(render.RenderContextBase):
 
     def draw_text(self, cx, cy, text, rot_deg=0.0, font=None, fill=None,
                   line=None):
-        self.renderer.vk_add_text(cx, cy, text, rot_deg, font, fill, line)
+        self.renderer.vk_add_text(cx, cy, text, rot_deg, font, fill, line,
+                                  screen=self.cur_space_screen)
 
     def draw_polygon(self, cpoints, line=None, fill=None):
-        self.renderer.vk_add_shape('polygon', cpoints, line, fill)
+        self.renderer.vk_add_shape('polygon', cpoints, line, fill,
+                                   screen=self.cur_space_screen)
 
     def draw_circle(self, cx, cy, cradius, line=None, fill=None):
         # approximate a circle with a polygon (as the GL renderer does)
         theta = np.linspace(0.0, 2.0 * np.pi, 360, endpoint=False)
         cpoints = np.stack([cx + cradius * np.cos(theta),
                             cy + cradius * np.sin(theta)], axis=1)
-        self.renderer.vk_add_shape('polygon', cpoints, line, fill)
+        self.renderer.vk_add_shape('polygon', cpoints, line, fill,
+                                   screen=self.cur_space_screen)
 
     def draw_line(self, cx1, cy1, cx2, cy2, line=None):
-        self.renderer.vk_add_shape('line', [(cx1, cy1), (cx2, cy2)], line, None)
+        self.renderer.vk_add_shape('line', [(cx1, cy1), (cx2, cy2)], line, None,
+                                   screen=self.cur_space_screen)
 
     def draw_path(self, cpoints, line=None):
-        self.renderer.vk_add_shape('path', cpoints, line, None)
+        self.renderer.vk_add_shape('path', cpoints, line, None,
+                                   screen=self.cur_space_screen)
 
 
 class CanvasRendererGPU(vec.VectorRenderMixin, render.StandardPipelineRenderer):
@@ -465,10 +484,64 @@ class CanvasRendererGPU(vec.VectorRenderMixin, render.StandardPipelineRenderer):
         pass
 
     def setup_cr(self, shape):
-        # recording context: stores drawing ops into self.rl
+        # recording context: stores drawing ops into self.rl.  Tag the ops that
+        # follow with the object's coordinate space so draw_vector can route
+        # screen-fixed overlays through the 2D ortho projection (see _SPACE).
+        self.rl.append((_SPACE, self._is_screen_space(shape)))
         cr = vec.RenderContext(self, self.viewer, None)
         cr.initialize_from_shape(shape, font=False)
         return cr
+
+    @staticmethod
+    def _is_screen_space(shape):
+        """True if `shape` is drawn in a window-fixed coordinate space
+        (coord='window'/'percentage') -- i.e. an overlay that should stay
+        pinned to the viewport rather than track the 3D camera."""
+        return isinstance(getattr(shape, 'crdmap', None), _SCREEN_MAPPERS)
+
+    def _native_to_window(self, cpoints):
+        """Convert recorded 'native' coords back to window pixels, for drawing
+        screen-fixed overlays with the 2D ortho projection while in mode3d."""
+        arr = np.asarray(cpoints, dtype=float)
+        if arr.ndim == 1:
+            arr = arr[np.newaxis, :]
+        arr = arr[:, :2]
+        tf = self.viewer.tform
+        data = tf['data_to_native'].from_(arr)
+        return np.asarray(tf['data_to_window'].to_(data), dtype=np.float32)
+
+    def draw_vector(self, cr):
+        """Replay the render list.  Overrides the shared mixin so that _SPACE
+        markers toggle `cr.cur_space_screen`, routing screen-fixed overlays
+        (in mode3d) to the 2D ortho pass; all other ops replay as usual."""
+        cr.cur_space_screen = False
+        for tup in self.rl:
+            dtyp = tup[0]
+            try:
+                if dtyp == _SPACE:
+                    cr.cur_space_screen = bool(tup[1])
+                elif dtyp == IMAGE:
+                    (image_id, cpoints, rgb_arr, whence, order) = tup[1]
+                    cr.draw_image(image_id, cpoints, rgb_arr, whence,
+                                  order=self.rgb_order)
+                elif dtyp == LINE:
+                    (cx1, cy1, cx2, cy2) = tup[1]
+                    cr.draw_line(cx1, cy1, cx2, cy2, line=tup[2])
+                elif dtyp == CIRCLE:
+                    cx, cy, cradius = tup[1]
+                    cr.draw_circle(cx, cy, cradius, line=tup[2], fill=tup[3])
+                elif dtyp == POLYGON:
+                    cr.draw_polygon(tup[1], line=tup[2], fill=tup[3])
+                elif dtyp == PATH:
+                    cr.draw_path(tup[1], line=tup[2])
+                elif dtyp == TEXT:
+                    (cx, cy, text, rot_deg) = tup[1]
+                    line, fill, font = tup[2:5]
+                    cr.draw_text(cx, cy, text, rot_deg=rot_deg,
+                                 font=font, fill=fill, line=line)
+            except Exception as e:
+                self.logger.error("Error drawing '{}': {}".format(dtyp, e),
+                                  exc_info=True)
 
     def render_whence(self, whence):
         # prepare (but do not draw) images; no standard pipeline stages
@@ -652,16 +725,24 @@ class CanvasRendererGPU(vec.VectorRenderMixin, render.StandardPipelineRenderer):
             hival=float(hival), obj_alpha=obj_alpha, rgbmap=rgbmap,
             interp=interp))
 
-    def vk_add_shape(self, kind, cpoints, line, fill):
-        if self._mode3d:
+    def vk_add_shape(self, kind, cpoints, line, fill, screen=False):
+        # world-space objects in mode3d go through the camera (keep z);
+        # screen-fixed overlays are converted to window pixels and drawn 2D
+        if self._mode3d and not screen:
             self._vk_add_shape_3d(kind, cpoints, line, fill)
             return
+        target = self._shapes
+        if self._mode3d and screen:
+            cpoints = self._native_to_window(cpoints)
+            target = self._shapes_screen
+        self._vk_add_shape_2d(kind, cpoints, line, fill, target)
+
+    def _vk_add_shape_2d(self, kind, cpoints, line, fill, target):
         verts = trcalc.strip_z(np.asarray(cpoints, dtype=np.float32))
         if len(verts) == 0:
             return
         if fill is not None and getattr(fill, 'color', None) is not None:
-            self._shapes.append((pipelines.TRIANGLE_FAN, verts,
-                                 fill._color_4tup))
+            target.append((pipelines.TRIANGLE_FAN, verts, fill._color_4tup))
         if (line is not None and getattr(line, 'color', None) is not None and
                 getattr(line, 'linewidth', 1) > 0):
             color = line._color_4tup
@@ -675,10 +756,9 @@ class CanvasRendererGPU(vec.VectorRenderMixin, render.StandardPipelineRenderer):
                 if lw > 1.0:
                     tris = stroke.stroke_polyline(run_pts, lw, run_closed)
                     if len(tris) > 0:
-                        self._shapes.append((pipelines.TRIANGLE_LIST, tris,
-                                             color))
+                        target.append((pipelines.TRIANGLE_LIST, tris, color))
                 elif len(run_pts) >= 2:
-                    self._shapes.append((pipelines.LINE_STRIP, run_pts, color))
+                    target.append((pipelines.LINE_STRIP, run_pts, color))
 
             if dashed:
                 # break into "on" runs (each an open sub-polyline)
@@ -691,7 +771,7 @@ class CanvasRendererGPU(vec.VectorRenderMixin, render.StandardPipelineRenderer):
                 if lw > 1.0:
                     _emit(verts, False)
                 else:
-                    self._shapes.append((pipelines.LINE_LIST, verts, color))
+                    target.append((pipelines.LINE_LIST, verts, color))
             else:
                 _emit(verts, False)
 
@@ -730,7 +810,7 @@ class CanvasRendererGPU(vec.VectorRenderMixin, render.StandardPipelineRenderer):
             return None
         return PilHelp.rasterize_text(text, pil_font, color4)
 
-    def vk_add_text(self, cx, cy, text, rot_deg, font, fill, line):
+    def vk_add_text(self, cx, cy, text, rot_deg, font, fill, line, screen=False):
         if not text or font is None:
             return
         # text is drawn in the fill color (falling back to the line color)
@@ -744,6 +824,11 @@ class CanvasRendererGPU(vec.VectorRenderMixin, render.StandardPipelineRenderer):
         if tile is None:
             return
         rgba, w, h = tile
+        # screen-fixed text in mode3d: anchor at window pixels, drawn 2D
+        target = self._texts
+        if self._mode3d and screen:
+            cx, cy = self._native_to_window([[cx, cy]])[0]
+            target = self._texts_screen
         # place the tile so its bottom-left sits at the (cx, cy) anchor
         x0, y0 = float(cx), float(cy) - h
         corners = np.array([[x0, y0], [x0 + w, y0],
@@ -753,7 +838,7 @@ class CanvasRendererGPU(vec.VectorRenderMixin, render.StandardPipelineRenderer):
                 trcalc.rotate_coord(corners, [rot_deg], (float(cx), float(cy))),
                 dtype=np.float32)[:, :2]
         quad_uv = np.array([[0, 0], [1, 0], [0, 1], [1, 1]], dtype=np.float32)
-        self._texts.append((rgba, corners, quad_uv))
+        target.append((rgba, corners, quad_uv))
 
     # ---- GPU paint / readback --------------------------------------------
 
@@ -763,10 +848,15 @@ class CanvasRendererGPU(vec.VectorRenderMixin, render.StandardPipelineRenderer):
         if self._engine is None:
             raise render.RenderError("no Vulkan surface (zero-size window)")
 
-        # replay the render list into GPU draw collections
+        # replay the render list into GPU draw collections.  The *_screen
+        # collections hold screen-fixed overlays (window/percentage coord),
+        # populated only in mode3d; they are drawn last, with the 2D ortho
+        # projection, so they stay pinned to the window over the 3D scene.
         self._images = []
         self._shapes = []
         self._texts = []
+        self._shapes_screen = []
+        self._texts_screen = []
         cr = RenderContext(self, self.viewer, None)
         self.draw_vector(cr)
 
@@ -794,6 +884,12 @@ class CanvasRendererGPU(vec.VectorRenderMixin, render.StandardPipelineRenderer):
                                       im.obj_alpha, ckey, im.interp)
         self._engine.record_shapes(self._shapes)
         self._engine.record_texts(self._texts)     # text on top
+        # screen-fixed overlays (onscreen message, etc.): drawn last with the
+        # window-pixel ortho projection so they are not moved by the camera
+        if self._shapes_screen or self._texts_screen:
+            ortho = ortho_2d_push(wd, ht)
+            self._engine.record_shapes(self._shapes_screen, push=ortho)
+            self._engine.record_texts(self._texts_screen, push=ortho)
         self._engine.end()
 
         arr = self._engine.get_surface_as_array('RGBA')

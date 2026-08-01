@@ -16,15 +16,42 @@ from OpenGL import GL as gl
 from collections import OrderedDict
 
 from ginga.vec import CanvasRenderVec as vec
-from ginga.canvas import render, transform, stroke
+from ginga.vec.VecHelp import IMAGE, LINE, CIRCLE, POLYGON, PATH, TEXT
+from ginga.canvas import render, transform, stroke, coordmap
 from ginga.pilw import PilHelp
 from ginga import trcalc, RGBMap
 from ginga.util import rgb_cms
 
 # Local imports
 from .Camera import Camera
+from .geometry_helper import Matrix4x4
 from . import GlHelp
 from .glsl import __file__
+
+# Marker op pushed onto the render list (by setup_cr) ahead of each object's
+# draw ops, tagging whether that object is drawn in a screen-fixed coordinate
+# space (window/percentage).  draw_vector uses it to route such overlays
+# through a 2D orthographic projection instead of the 3D camera, so e.g. the
+# onscreen message stays pinned to the window even when the camera is tumbled.
+_SPACE = '__space__'
+_SCREEN_MAPPERS = (coordmap.WindowMapper, coordmap.PercentageMapper)
+
+
+def _gl_ortho_2d(width, height):
+    """A 2D orthographic projection mapping window pixels [0,w]x[0,h] (origin
+    top-left, y down) to GL clip space [-1,1] (origin center, y up).  Built via
+    Matrix4x4 so its layout matches the camera's projection matrix."""
+    m = Matrix4x4([(2.0 / width, 0.0, 0.0, -1.0),
+                   (0.0, -2.0 / height, 0.0, 1.0),
+                   (0.0, 0.0, -1.0, 0.0),
+                   (0.0, 0.0, 0.0, 1.0)]).get()
+    # GL reads the uniform column-major, i.e. transposed w.r.t. Matrix4x4's row
+    # layout, so transpose to match (the camera's matrices are already in this
+    # orientation)
+    return np.ascontiguousarray(m.T, dtype=np.float32)
+
+
+_IDENTITY_4 = np.eye(4, dtype=np.float32)
 shader_dir, _ = os.path.split(__file__)
 
 # NOTE: we update the version later in gl_initialize()
@@ -44,6 +71,9 @@ class RenderContext(render.RenderContextBase):
         self.cr = GlHelp.GlContext(surface)
 
         self._font_scale_factor = _font_scale_factor
+        # set by draw_vector from the render list's coordinate-space markers:
+        # True while replaying ops from a screen-fixed (window/percentage) object
+        self.cur_space_screen = False
 
     # def set_font(self, fontname, fontsize):
     #     fontsize = self.scale_fontsize(fontsize)
@@ -84,10 +114,12 @@ class RenderContext(render.RenderContextBase):
             color = fill._color_4tup
         elif line is not None and getattr(line, 'color', None) is not None:
             color = line._color_4tup
-        self.renderer.gl_draw_text(cx, cy, text, rot_deg, font, color)
+        self.renderer.gl_draw_text(cx, cy, text, rot_deg, font, color,
+                                   screen=self.cur_space_screen)
 
     def draw_polygon(self, cpoints, line=None, fill=None):
-        self.renderer.gl_draw_shape(gl.GL_LINE_LOOP, cpoints, fill, line)
+        self.renderer.gl_draw_shape(gl.GL_LINE_LOOP, cpoints, fill, line,
+                                    screen=self.cur_space_screen)
 
     def draw_circle(self, cx, cy, cradius, line=None, fill=None):
         # we have to approximate a circle in OpenGL
@@ -101,14 +133,17 @@ class RenderContext(render.RenderContextBase):
             dy = cradius * np.sin(theta)
             cpoints.append((cx + dx, cy + dy))
 
-        self.renderer.gl_draw_shape(gl.GL_LINE_LOOP, cpoints, fill, line)
+        self.renderer.gl_draw_shape(gl.GL_LINE_LOOP, cpoints, fill, line,
+                                    screen=self.cur_space_screen)
 
     def draw_line(self, cx1, cy1, cx2, cy2, line=None):
         cpoints = [(cx1, cy1), (cx2, cy2)]
-        self.renderer.gl_draw_shape(gl.GL_LINES, cpoints, None, line)
+        self.renderer.gl_draw_shape(gl.GL_LINES, cpoints, None, line,
+                                    screen=self.cur_space_screen)
 
     def draw_path(self, cpoints, line=None):
-        self.renderer.gl_draw_shape(gl.GL_LINE_STRIP, cpoints, None, line)
+        self.renderer.gl_draw_shape(gl.GL_LINE_STRIP, cpoints, None, line,
+                                    screen=self.cur_space_screen)
 
 
 class CanvasRenderer(vec.VectorRenderMixin, render.StandardPipelineRenderer):
@@ -720,19 +755,17 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPipelineRenderer):
                                     loval=loval, hival=hival)
 
     def _gl_draw_textured_quad(self, tex_id, cp, image_type, interp=0,
-                               loval=0.0, hival=0.0):
+                               loval=0.0, hival=0.0, screen=False):
         """Draw a textured quad (image shader) over the 4 corner points ``cp``,
         with texcoords (0,0),(1,0),(1,1),(0,1).  Shared by image and text
-        drawing."""
+        drawing.  `screen` selects the 2D ortho projection (window-fixed) over
+        the camera."""
         rgbmap = self.viewer.get_rgbmap()
         map_id = self.get_texture_id(rgbmap.mapper_id)
         self.pgm_mgr.setup_program('image')
         gl.glBindVertexArray(self.vao_img)
 
-        _loc = self.pgm_mgr.get_uniform_loc("projection")
-        gl.glUniformMatrix4fv(_loc, 1, False, self.camera.proj_mtx)
-        _loc = self.pgm_mgr.get_uniform_loc("view")
-        gl.glUniformMatrix4fv(_loc, 1, False, self.camera.view_mtx)
+        self._bind_proj_view(screen)
 
         gl.glActiveTexture(gl.GL_TEXTURE0 + 0)
         gl.glBindTexture(gl.GL_TEXTURE_2D, tex_id)
@@ -800,15 +833,19 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPipelineRenderer):
             gl.glDeleteTextures([old_tex])
         return (tex_id, w, h)
 
-    def gl_draw_text(self, cx, cy, text, rot_deg, font, color):
+    def gl_draw_text(self, cx, cy, text, rot_deg, font, color, screen=False):
         if not self._drawing or not text:
             return
         tex_id, w, h = self._get_text_texture(text, font, color)
 
+        # screen-fixed text: anchor in window pixels, drawn with the 2D ortho
+        if screen:
+            cx, cy = self._native_to_window([[cx, cy]])[0]
         # size the quad by 1/scale so the text stays a constant pixel size
-        # (the camera applies the zoom); anchor bottom-left at (cx, cy) with
-        # the text extending right (+x) and up (-y), matching the CPU renderers
-        scale = self.viewer.get_scale()
+        # (the camera applies the zoom; ortho is 1:1 so scale = 1); anchor
+        # bottom-left at (cx, cy) with the text extending right (+x) and up
+        # (-y), matching the CPU renderers
+        scale = 1.0 if screen else self.viewer.get_scale()
         wc, hc = w / scale, h / scale
         cp = np.array([(cx, cy - hc), (cx + wc, cy - hc),
                        (cx + wc, cy), (cx, cy)], dtype=np.float32)
@@ -816,14 +853,21 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPipelineRenderer):
         if rot != 0.0:
             cp = trcalc.rotate_coord(cp, [rot], (cx, cy))
 
-        self._gl_draw_textured_quad(tex_id, cp, 0x0)   # native RGBA, no map
+        self._gl_draw_textured_quad(tex_id, cp, 0x0,   # native RGBA, no map
+                                    screen=screen)
 
-    def gl_draw_shape(self, gl_shape, cpoints, fill, line):
+    def gl_draw_shape(self, gl_shape, cpoints, fill, line, screen=False):
 
         if not self._drawing:
             # this test ensures that we are not trying to draw before
             # the OpenGL context is set for us correctly
             return
+
+        # screen-fixed overlays are drawn in window pixels with the 2D ortho
+        # projection (see _bind_proj_view); everything else uses the camera
+        cpoints = np.asarray(cpoints, dtype=np.float32)
+        if screen:
+            cpoints = self._native_to_window(cpoints)
 
         # pad with z=0 coordinate if lacking
         z_pts = trcalc.pad_z(cpoints, dtype=np.float32)
@@ -842,10 +886,10 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPipelineRenderer):
         #gl.glBufferData(gl.GL_ARRAY_BUFFER, None, gl.GL_DYNAMIC_DRAW)
         gl.glBufferData(gl.GL_ARRAY_BUFFER, vertices, gl.GL_DYNAMIC_DRAW)
 
-        _loc = self.pgm_mgr.get_uniform_loc("projection")
-        gl.glUniformMatrix4fv(_loc, 1, False, self.camera.proj_mtx)
-        _loc = self.pgm_mgr.get_uniform_loc("view")
-        gl.glUniformMatrix4fv(_loc, 1, False, self.camera.view_mtx)
+        self._bind_proj_view(screen)
+        # under the ortho projection, pixel sizes map 1:1 (no camera zoom to
+        # cancel); under the camera, divide by the scale as usual
+        px_scale = 1.0 if screen else self.viewer.get_scale()
 
         # update color uniform
         _loc = self.pgm_mgr.get_uniform_loc("fg_clr")
@@ -874,7 +918,7 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPipelineRenderer):
                 # expand the stroke into filled triangles.  Widths/patterns
                 # are in *pixels*; divide by the scale so the line keeps a
                 # constant pixel size as the camera zooms (as text does).
-                scale = self.viewer.get_scale()
+                scale = px_scale
                 width_c = lw / scale
                 pts2d = np.asarray(cpoints, dtype=np.float32)[:, :2]
                 if dashed:
@@ -1053,11 +1097,91 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPipelineRenderer):
         pass
 
     def setup_cr(self, shape):
-        # special cr that just stores up a render list
+        # special cr that just stores up a render list.  Tag the ops that
+        # follow with the object's coordinate space (see _SPACE) so draw_vector
+        # can route screen-fixed overlays through the 2D ortho projection.
+        self.rl.append((_SPACE, self._is_screen_space(shape)))
         cr = vec.RenderContext(self, self.viewer, self.surface)
         cr._font_scale_factor = _font_scale_factor
         cr.initialize_from_shape(shape, font=False)
         return cr
+
+    @staticmethod
+    def _is_screen_space(shape):
+        """True if `shape` is drawn in a window-fixed coordinate space
+        (coord='window'/'percentage') -- an overlay that should stay pinned to
+        the viewport rather than track the (possibly tumbled) 3D camera."""
+        return isinstance(getattr(shape, 'crdmap', None), _SCREEN_MAPPERS)
+
+    def _native_to_window(self, cpoints):
+        """Convert recorded 'native' coords to window pixels, for drawing
+        screen-fixed overlays with the 2D ortho projection."""
+        arr = np.asarray(cpoints, dtype=float)
+        if arr.ndim == 1:
+            arr = arr[np.newaxis, :]
+        arr = arr[:, :2]
+        tf = self.viewer.tform
+        data = tf['data_to_native'].from_(arr)
+        return np.asarray(tf['data_to_window'].to_(data), dtype=np.float32)
+
+    def _bind_proj_view(self, screen):
+        """Bind the projection + view uniforms for the currently-bound shader:
+        the camera for world-space ops, or a 2D window-pixel ortho for
+        screen-fixed overlays."""
+        if screen:
+            proj, view = _gl_ortho_2d(self.wd, self.ht), _IDENTITY_4
+        else:
+            proj, view = self.camera.proj_mtx, self.camera.view_mtx
+        _loc = self.pgm_mgr.get_uniform_loc("projection")
+        gl.glUniformMatrix4fv(_loc, 1, False, proj)
+        _loc = self.pgm_mgr.get_uniform_loc("view")
+        gl.glUniformMatrix4fv(_loc, 1, False, view)
+
+    def draw_vector(self, cr):
+        """Replay the render list in two passes so screen-fixed overlays
+        (window/percentage coord) draw on top of the 3D scene, with the 2D
+        ortho projection and depth-testing off.  Overrides the shared mixin."""
+        for screen_pass in (False, True):
+            if screen_pass:
+                gl.glDisable(gl.GL_DEPTH_TEST)
+            cur_screen = False
+            for tup in self.rl:
+                dtyp = tup[0]
+                if dtyp == _SPACE:
+                    cur_screen = bool(tup[1])
+                    continue
+                if cur_screen != screen_pass:
+                    continue
+                cr.cur_space_screen = cur_screen
+                try:
+                    self._replay_op(cr, tup)
+                except Exception as e:
+                    self.logger.error("Error drawing '{}': {}".format(dtyp, e),
+                                      exc_info=True)
+            if screen_pass:
+                gl.glEnable(gl.GL_DEPTH_TEST)
+
+    def _replay_op(self, cr, tup):
+        dtyp = tup[0]
+        if dtyp == IMAGE:
+            (image_id, cpoints, rgb_arr, whence, order) = tup[1]
+            cr.draw_image(image_id, cpoints, rgb_arr, whence,
+                          order=self.rgb_order)
+        elif dtyp == LINE:
+            (cx1, cy1, cx2, cy2) = tup[1]
+            cr.draw_line(cx1, cy1, cx2, cy2, line=tup[2])
+        elif dtyp == CIRCLE:
+            cx, cy, cradius = tup[1]
+            cr.draw_circle(cx, cy, cradius, line=tup[2], fill=tup[3])
+        elif dtyp == POLYGON:
+            cr.draw_polygon(tup[1], line=tup[2], fill=tup[3])
+        elif dtyp == PATH:
+            cr.draw_path(tup[1], line=tup[2])
+        elif dtyp == TEXT:
+            (cx, cy, text, rot_deg) = tup[1]
+            line, fill, font = tup[2:5]
+            cr.draw_text(cx, cy, text, rot_deg=rot_deg, font=font, fill=fill,
+                         line=line)
 
     def text_extents(self, text, font):
         cr = RenderContext(self, self.viewer, self.surface)

@@ -2,6 +2,18 @@
 What's New
 ++++++++++
 
+Ver 7.2.0 (unreleased)
+======================
+- Window-fixed overlays now stay pinned to the viewport under a 3D camera in
+  the OpenGL and Vulkan renderers.  Objects drawn in window/percentage
+  coordinates (the onscreen message, mode indicator, color bar, etc.) are
+  routed through a 2D orthographic projection instead of the (possibly
+  tumbled) camera, so they no longer drift or scale with the 3D view.
+  Relatedly, a ``Text`` object's background/border box is now built in window
+  coordinates (matching the mode indicator and color bar) so it keeps a
+  constant pixel size instead of growing with zoom under the camera, and
+  ``set_onscreen_message()`` measures text extents accurately via Pillow.
+
 Ver 7.1.0 (2026.07.30)
 ======================
 - Added an experimental **Vulkan renderer** (``renderer='vulkan'``), a

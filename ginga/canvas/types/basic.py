@@ -204,13 +204,22 @@ class TextP(OnePointMixin, CanvasObjectBase):
         if self.borderalpha + self.bgalpha > 0.0:
             cwd, cht = cr.text_extents(self.text)
             pad = self.borderpadding
-            bbox = np.array([(cx - pad, cy + pad), (cx + cwd + pad, cy + pad),
-                             (cx + cwd + pad, cy - cht - pad),
-                             (cx - pad, cy - cht - pad)])
+            # The background/border is a fixed pixel-size box around the text.
+            # Build it in *window* coordinates around the text's window anchor
+            # and map to the renderer's native space via 'window_to_native'
+            # (as the mode indicator and color bar do).  Building it directly
+            # in native space (anchor + pixel offsets) makes the box scale with
+            # zoom under a 3D camera, since native is then the scene space.
+            wx, wy = viewer.tform['data_to_window'].to_(
+                np.asarray([(x, y)], dtype=float))[0][:2]
+            bbox = np.array([(wx - pad, wy + pad), (wx + cwd + pad, wy + pad),
+                             (wx + cwd + pad, wy - cht - pad),
+                             (wx - pad, wy - cht - pad)])
             x_arr, y_arr = bbox.T
             xa, ya = trcalc.rotate_pt(x_arr, y_arr, -self.rot_deg,
-                                      xoff=cx, yoff=cy)
-            cpoints = np.array((xa, ya)).T
+                                      xoff=wx, yoff=wy)
+            cpoints = viewer.tform['window_to_native'].to_(
+                np.array((xa, ya)).T)
             cr.set_line(self.bordercolor, alpha=self.borderalpha,
                         linewidth=self.borderlinewidth)
             cr.set_fill(self.bgcolor, alpha=self.bgalpha)
