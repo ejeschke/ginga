@@ -30,6 +30,12 @@ Ver 7.2.0 (unreleased)
   directly.  A *specific* request (``qt5``/``qt6``/``pyside2``/``pyside6``)
   still forces that binding and warns if it is missing, and a user-set
   ``$QT_API`` is respected.
+- The ``mkapp`` folder for building a standalone desktop application (a macOS
+  ``.app`` or Windows ``.exe``) has been modernized to use **PyInstaller**
+  (replacing the obsolete py2app/py2exe ``setup.py``): a single ``ginga.spec``
+  builds either platform, driven by a cross-platform ``build.py``.  Install
+  the tooling with the new ``pyinstaller`` extra (``pip install
+  ginga[pyinstaller]``).  See ``mkapp/README.rst``.
 
 Ver 7.1.0 (2026.07.30)
 ======================

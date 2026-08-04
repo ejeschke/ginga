@@ -42,6 +42,10 @@ From source code, you should also use `pip`, e.g.:
 
 The program can then be run using the command "ginga".
 
+To build a standalone desktop application (a macOS `.app` or a Windows
+`.exe`) that end users can run without installing Python, see the
+instructions in [`mkapp/README.rst`](mkapp/README.rst).
+
 For further information, please see the detailed installation
 instructions in the documentation.
 
