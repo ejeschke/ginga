@@ -13,6 +13,16 @@ Ver 7.2.0 (unreleased)
   coordinates (matching the mode indicator and color bar) so it keeps a
   constant pixel size instead of growing with zoom under the camera, and
   ``set_onscreen_message()`` measures text extents accurately via Pillow.
+- The **agg** renderer (``renderer='agg'``) has been reimplemented on top of
+  matplotlib's Anti-Grain Geometry rasterizer (``backend_agg.RendererAgg``)
+  instead of the unmaintained ``aggdraw`` package, dropping that dependency
+  (matplotlib is already required).  The port also restores native drawing of
+  Bezier curves and (rotated) ellipses -- ellipses now take a direct
+  ``draw_ellipse`` path instead of a 13-point Bezier approximation -- and adds
+  rotated text.
+- The **pil** renderer now draws rotated text (previously rotation was
+  ignored) by rasterizing the string to a scratch tile and rotating it; the
+  common unrotated case still uses the fast direct-draw path.
 
 Ver 7.1.0 (2026.07.30)
 ======================

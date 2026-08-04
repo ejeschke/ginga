@@ -1,20 +1,47 @@
 #
-# CanvasRenderAgg.py -- for rendering into Ginga widget with aggdraw
+# CanvasRenderAgg.py -- for rendering into a Ginga widget with matplotlib's
+#                       Anti-Grain Geometry (AGG) rasterizer
 #
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
+"""AGG canvas renderer for Ginga.
 
-import math
-from itertools import chain
+This backend draws the vector overlays (canvas objects) on top of the
+color-mapped image using the low-level AGG rasterizer bundled with
+matplotlib (``matplotlib.backends.backend_agg.RendererAgg``).  It replaces
+the previous implementation built on the unmaintained ``aggdraw`` package;
+the pixel output is equivalent (both are the same AGG library) while the
+dependency (matplotlib) is one Ginga already requires.
+
+Coordinate systems
+------------------
+Ginga's window coordinates put the origin at the top-left with y growing
+*downward*.  matplotlib's AGG drawing coordinates put the origin at the
+bottom-left with y growing *upward*, but ``buffer_rgba()`` returns rows
+top-to-bottom.  We therefore draw every path/marker through a single
+y-flip affine (``self.flip``) so that a Ginga point (x, y) lands on output
+row y.  Text is positioned by passing the flipped y directly (glyphs are
+always rasterized upright in screen space).
+"""
+
 import numpy as np
 
-import aggdraw as agg
+from matplotlib.backends.backend_agg import RendererAgg
+from matplotlib.transforms import Affine2D
+from matplotlib.path import Path
 
 from . import AggHelp
 from ginga.canvas import render
 # force registration of all canvas types
 import ginga.canvas.types.all  # noqa
 from ginga import trcalc
+
+
+def _rgba(color4):
+    """Convert a ginga 8-bpp (0..255) color 4-tuple to matplotlib's
+    (r, g, b, a) floats in 0..1."""
+    r, g, b, a = color4
+    return (r / 255.0, g / 255.0, b / 255.0, a / 255.0)
 
 
 class RenderContext(render.RenderContextBase):
@@ -26,47 +53,60 @@ class RenderContext(render.RenderContextBase):
         self.ctx = AggHelp.AggContext(surface)
 
         # special scaling for Agg text drawing to normalize it relative
-        # to other backends
+        # to the other backends (matches the pilw backend's convention)
         self._font_scale_factor = 1.75
+
+        # y-flip: map Ginga top-left/y-down window coords into matplotlib's
+        # bottom-left/y-up drawing frame.  Rebuilt from the live surface so
+        # it always matches the current window height.
+        if surface is not None:
+            ht = surface.height
+        else:
+            ht = 0
+        self.flip = Affine2D().scale(1.0, -1.0).translate(0.0, ht)
 
     def get_line(self, color, alpha=1.0, linewidth=1, linestyle='solid'):
         line = super().get_line(color, alpha=alpha, linewidth=linewidth,
                                 linestyle=linestyle)
-
-        _color = line.get_bpp_color(8)
-        line.render.color = _color
-        line.render.pen = agg.Pen(_color[:3], width=line.linewidth,
-                                  opacity=_color[3])
+        line.render.rgba = _rgba(line.get_bpp_color(8))
         return line
 
     def get_fill(self, color, alpha=1.0):
         fill = super().get_fill(color, alpha=alpha)
-
-        _color = fill.get_bpp_color(8)
-        fill.render.color = _color
-        fill.render.brush = agg.Brush(_color[:3], opacity=_color[3])
+        fill.render.rgba = _rgba(fill.get_bpp_color(8))
         return fill
+
+    def get_font(self, fontname, **kwargs):
+        font = super().get_font(fontname, **kwargs)
+        font.render.prop = self.ctx._get_font(font)
+        return font
 
     def text_extents(self, text, font=None):
         if font is None:
             font = self.font
-        fill = self.get_fill('black')
-        _font = self.ctx._get_font(font, fill)
-        return self.ctx.text_extents(text, _font)
+        if getattr(font.render, 'prop', None) is None:
+            font.render.prop = self.ctx._get_font(font)
+        return self.ctx.text_extents(text, font.render.prop)
 
-    def get_affine_transform(self, cx, cy, rot_deg):
-        x, y = cx, cy        # old center
-        nx, ny = cx, cy      # new center
-        sx = sy = 1.0        # new scale
-        cosine = math.cos(math.radians(rot_deg))
-        sine = math.sin(math.radians(rot_deg))
-        a = cosine / sx
-        b = sine / sx
-        c = x - nx * a - ny * b
-        d = -sine / sy
-        e = cosine / sy
-        f = y - nx * d - ny * e
-        return (a, b, c, d, e, f)
+    # --- graphics-context / path helpers -----------------------------------
+
+    def _get_gc(self, line):
+        """Build a matplotlib GraphicsContext from a ginga Line (or None)."""
+        gc = self.ctx.canvas.new_gc()
+        if line is None:
+            # invisible stroke (used when only a fill is wanted)
+            gc.set_linewidth(0)
+            gc.set_foreground((0, 0, 0, 0), isRGBA=True)
+            return gc
+        gc.set_linewidth(line.linewidth)
+        # carry alpha in the RGBA foreground/face colors rather than via
+        # gc.set_alpha(): set_alpha() sets a *forced* alpha that overrides
+        # the per-color alpha of both the stroke and the rgbFace fill.
+        gc.set_foreground(line.render.rgba, isRGBA=True)
+        if line.linestyle in ('dash', 'dashed'):
+            # (offset, on/off sequence) in points; 1pt == 1px at dpi=72
+            gc.set_dashes(0, [4, 4])
+        return gc
 
     ##### DRAWING OPERATIONS #####
 
@@ -76,77 +116,118 @@ class RenderContext(render.RenderContextBase):
 
     def draw_text(self, cx, cy, text, rot_deg=0.0, font=None, fill=None,
                   line=None):
+        if font is None:
+            font = self.font
+        if getattr(font.render, 'prop', None) is None:
+            font.render.prop = self.ctx._get_font(font)
+        prop = font.render.prop
+        rgba = (fill.render.rgba if fill is not None else (0, 0, 0, 1))
 
-        _font = self.ctx._get_font(font, fill)
-        wd, ht = self.ctx.text_extents(text, _font)
+        gc = self.ctx.canvas.new_gc()
+        gc.set_foreground(rgba, isRGBA=True)
 
-        affine = self.get_affine_transform(cx, cy, rot_deg)
-        self.ctx.canvas.settransform(affine)
-        try:
-            self.ctx.canvas.text((cx, cy - ht), text, _font)
-        finally:
-            # reset default transform
-            self.ctx.canvas.settransform()
+        # Unlike draw_path (which we feed y-up coords via self.flip),
+        # RendererAgg.draw_text positions glyphs in top-left/y-down window
+        # space directly (buffer row ~= the y passed in), so we do NOT apply
+        # the flip here.  Ginga's (cx, cy) anchors the bottom-left of the
+        # text box; matplotlib positions by the baseline, so drop by the
+        # descent to put the box bottom on the anchor (matching the other
+        # backends).
+        _wd, _ht, descent = self.ctx.canvas.get_text_width_height_descent(
+            text, prop, False)
+        y = cy - descent
+        self.ctx.canvas.draw_text(gc, cx, y, text, prop, rot_deg,
+                                  ismath=False)
 
     def draw_polygon(self, cpoints, line=None, fill=None):
-        pen = None if line is None else line.render.pen
-        brush = None if fill is None else fill.render.brush
-
         cpoints = trcalc.strip_z(cpoints)
-        self.ctx.canvas.polygon(list(chain.from_iterable(cpoints)),
-                                pen, brush)
+        verts = list(cpoints) + [cpoints[0]]
+        codes = ([Path.MOVETO] +
+                 [Path.LINETO] * (len(cpoints) - 1) +
+                 [Path.CLOSEPOLY])
+        path = Path(verts, codes)
+        rgb_face = fill.render.rgba if fill is not None else None
+        self.ctx.canvas.draw_path(self._get_gc(line), path, self.flip,
+                                  rgbFace=rgb_face)
 
     def draw_circle(self, cx, cy, cradius, line=None, fill=None):
-        pen = None if line is None else line.render.pen
-        brush = None if fill is None else fill.render.brush
+        if line is None and fill is None:
+            return
+        # unit circle placed and scaled, then y-flipped into the AGG frame
+        tform = (Affine2D().scale(cradius).translate(cx, cy) + self.flip)
+        path = Path.unit_circle()
+        rgb_face = fill.render.rgba if fill is not None else None
+        self.ctx.canvas.draw_path(self._get_gc(line), path, tform,
+                                  rgbFace=rgb_face)
 
-        if line is not None and fill is not None:
-            self.ctx.canvas.ellipse(
-                (cx - cradius, cy - cradius, cx + cradius, cy + cradius),
-                pen, brush)
+    def draw_ellipse(self, cx, cy, cxradius, cyradius, rot_deg,
+                     line=None, fill=None):
+        if line is None and fill is None:
+            return
+        # a unit circle scaled to the two radii, rotated, moved to the
+        # center, then y-flipped into the AGG frame.  Lets the Ellipse canvas
+        # type take the direct-draw branch instead of building 13 bezier
+        # control points every redraw.
+        # NOTE: self.flip (scale 1,-1) reverses rotation handedness, so negate
+        # the angle to match the y-down window convention used elsewhere.
+        tform = (Affine2D().scale(cxradius, cyradius).rotate_deg(-rot_deg)
+                 .translate(cx, cy) + self.flip)
+        path = Path.unit_circle()
+        rgb_face = fill.render.rgba if fill is not None else None
+        self.ctx.canvas.draw_path(self._get_gc(line), path, tform,
+                                  rgbFace=rgb_face)
 
-    # NOTE: recent versions of aggdraw are not rendering Bezier curves
-    # correctly--we comment out these temporarily so that we fall back to
-    # a version that generates our own Beziers
-    #
-    # def draw_bezier_curve(self, cp, line=None):
-    #     pen = None if line is None else line.render.pen
-    #     brush = None if fill is None else fill.render.brush
-    #
-    #     path = agg.Path()
-    #     path.moveto(cp[0][0], cp[0][1])
-    #     path.curveto(cp[1][0], cp[1][1], cp[2][0], cp[2][1], cp[3][0], cp[3][1])
-    #     self.ctx.canvas.path(path, pen, brush)
+    def draw_bezier_curve(self, cpoints, line=None):
+        if line is None:
+            return
+        cp = trcalc.strip_z(cpoints)
+        if len(cp) < 4:
+            return
+        # a single cubic from the first 4 control points.  This matches the
+        # other backends' fallback (ginga.util.bezier.get_4pt_bezier only
+        # consumes points[0:4]) so the BezierCurve type renders identically
+        # across backends.
+        path = Path([cp[0], cp[1], cp[2], cp[3]],
+                    [Path.MOVETO, Path.CURVE4, Path.CURVE4, Path.CURVE4])
+        self.ctx.canvas.draw_path(self._get_gc(line), path, self.flip,
+                                  rgbFace=None)
 
-    # def draw_ellipse_bezier(self, cp, line=None, fill=None):
-    #     # draw 4 bezier curves to make the ellipse because there seems
-    #     # to be a bug in aggdraw ellipse drawing function
-    #     pen = None if line is None else line.render.pen
-    #     brush = None if fill is None else fill.render.brush
-
-    #     path = agg.Path()
-    #     path.moveto(cp[0][0], cp[0][1])
-    #     path.curveto(cp[1][0], cp[1][1], cp[2][0], cp[2][1], cp[3][0], cp[3][1])
-    #     path.curveto(cp[4][0], cp[4][1], cp[5][0], cp[5][1], cp[6][0], cp[6][1])
-    #     path.curveto(cp[7][0], cp[7][1], cp[8][0], cp[8][1], cp[9][0], cp[9][1])
-    #     path.curveto(cp[10][0], cp[10][1], cp[11][0], cp[11][1], cp[12][0], cp[12][1])
-    #     self.ctx.canvas.path(path, pen, brush)
+    def draw_ellipse_bezier(self, cpoints, line=None, fill=None):
+        # 13 control points == 4 closed cubic segments (see
+        # ginga.util.bezier.get_bezier_ellipse)
+        cp = trcalc.strip_z(cpoints)
+        n_seg = (len(cp) - 1) // 3
+        if n_seg < 1:
+            return
+        verts = [cp[0]]
+        codes = [Path.MOVETO]
+        for i in range(n_seg):
+            base = 1 + i * 3
+            verts.extend([cp[base], cp[base + 1], cp[base + 2]])
+            codes.extend([Path.CURVE4, Path.CURVE4, Path.CURVE4])
+        verts.append(cp[0])
+        codes.append(Path.CLOSEPOLY)
+        path = Path(verts, codes)
+        rgb_face = fill.render.rgba if fill is not None else None
+        self.ctx.canvas.draw_path(self._get_gc(line), path, self.flip,
+                                  rgbFace=rgb_face)
 
     def draw_line(self, cx1, cy1, cx2, cy2, line=None):
-        if line is not None:
-            self.ctx.canvas.line((cx1, cy1, cx2, cy2), line.render.pen)
+        if line is None:
+            return
+        path = Path([(cx1, cy1), (cx2, cy2)],
+                    [Path.MOVETO, Path.LINETO])
+        self.ctx.canvas.draw_path(self._get_gc(line), path, self.flip,
+                                  rgbFace=None)
 
     def draw_path(self, cpoints, line=None):
-        if line is not None:
-            cp = trcalc.strip_z(cpoints)
-            # TODO: is there a more efficient way in aggdraw to do this?
-            path = agg.Path()
-            path.moveto(cp[0][0], cp[0][1])
-            for pt in cp[1:]:
-                path.lineto(pt[0], pt[1])
-            #brush = agg.Brush(line._color[:3], opacity=line._color[3])
-            brush = agg.Brush(line._color[:3], opacity=0)
-            self.ctx.canvas.path(path, line.render.pen, brush)
+        if line is None:
+            return
+        cp = trcalc.strip_z(cpoints)
+        codes = [Path.MOVETO] + [Path.LINETO] * (len(cp) - 1)
+        path = Path(list(cp), codes)
+        self.ctx.canvas.draw_path(self._get_gc(line), path, self.flip,
+                                  rgbFace=None)
 
 
 class CanvasRenderer(render.StandardPipelineRenderer):
@@ -157,6 +238,9 @@ class CanvasRenderer(render.StandardPipelineRenderer):
         self.kind = 'agg'
         self.rgb_order = 'RGBA'
         self.surface = None
+        # color-mapped background image (RGBA, top-left origin), composited
+        # under the vector overlays in get_surface_as_array()
+        self.image_arr = None
         self.dims = ()
 
     def resize(self, dims):
@@ -166,8 +250,9 @@ class CanvasRenderer(render.StandardPipelineRenderer):
         width, height = dims[:2]
         self.logger.debug("renderer reconfigured to %dx%d" % (
             width, height))
-        # create agg surface the size of the window
-        self.surface = agg.Draw(self.rgb_order, (width, height), 'black')
+        # create AGG surface the size of the window
+        self.surface = RendererAgg(width, height, AggHelp.dpi)
+        self.image_arr = None
 
         super(CanvasRenderer, self).resize(dims)
 
@@ -180,29 +265,36 @@ class CanvasRenderer(render.StandardPipelineRenderer):
             return
         self.logger.debug("redraw surface")
 
-        # get window contents as a buffer and load it into the AGG surface
-        rgb_buf = data.tobytes(order='C')
-        self.surface.frombytes(rgb_buf)
-
-        # for debugging
-        # import os.path, tempfile
-        # self.save_rgb_image_as_file(os.path.join(tempfile.gettempdir(),
-        #                                          'agg_out.png', format='png'))
+        # Stash the color-mapped background and clear the overlay surface for
+        # this frame.  The vector overlays are drawn on the (now transparent)
+        # AGG surface afterward and composited over this array on readout.
+        self.surface.clear()
+        self.image_arr = np.ascontiguousarray(data)
 
     def get_surface_as_array(self, order=None):
         if self.surface is None:
             raise render.RenderError("No AGG surface defined")
 
-        # TODO: could these have changed between the time that self.surface
-        # was last updated?
-        wd, ht = self.dims
+        wd, ht = self.dims[:2]
 
-        # Get agg surface as a numpy array
-        arr8 = np.frombuffer(self.surface.tobytes(), dtype=np.uint8)
-        arr8 = arr8.reshape((ht, wd, len(self.rgb_order)))
+        # AGG overlay buffer (straight-alpha RGBA, top-left origin)
+        overlay = np.asarray(self.surface.buffer_rgba()).reshape((ht, wd, 4))
+
+        if self.image_arr is None:
+            arr8 = overlay
+        else:
+            # alpha-composite the overlay over the background image
+            base = self.image_arr
+            oa = overlay[..., 3:4].astype(np.float32) / 255.0
+            out = np.empty((ht, wd, 4), dtype=np.uint8)
+            out[..., :3] = (overlay[..., :3].astype(np.float32) * oa +
+                            base[..., :3].astype(np.float32) * (1.0 - oa)
+                            ).astype(np.uint8)
+            out[..., 3] = 255
+            arr8 = out
 
         # adjust according to viewer's needed order
-        return self.reorder(order, arr8)
+        return self.reorder(order, arr8, 'RGBA')
 
     def setup_cr(self, shape):
         cr = RenderContext(self, self.viewer, self.surface)

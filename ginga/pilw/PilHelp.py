@@ -4,6 +4,8 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 
+import math
+
 import numpy as np
 from PIL import Image, ImageFont, ImageDraw
 
@@ -186,6 +188,49 @@ class PilContext:
             kwargs['stroke_width'] = int(line.linewidth)
             kwargs['stroke_fill'] = line.render.color
         self.ctx.text((x, y), text, **kwargs)
+
+    def text_rotated(self, pt, wd, ht, text, font, line, fill, rot_deg):
+        """Draw ``text`` rotated by ``rot_deg`` degrees about the anchor
+        ``pt`` (the bottom-left of the unrotated text box).
+
+        PIL's ``ImageDraw.text`` cannot rotate, so we render the string onto
+        a transparent square scratch tile with the anchor at the tile's
+        center, rotate the tile about that center (``expand=False`` keeps the
+        center fixed), and paste it so the center lands on the anchor.  Only
+        used when a rotation is actually requested; unrotated text takes the
+        fast direct-draw path in :meth:`text`.
+        """
+        cx, cy = pt
+        kwargs = dict()
+        if font is not None:
+            kwargs['font'] = font.render.font
+        if fill is not None:
+            kwargs['fill'] = fill.render.color
+        if line is not None:
+            kwargs['stroke_width'] = int(line.linewidth)
+            kwargs['stroke_fill'] = line.render.color
+
+        # Square tile big enough to hold the string at any rotation.  The
+        # anchor sits at the tile center and the text box extends up to
+        # hypot(wd, ht) away from it (its far corner), so the tile radius
+        # must be that far corner distance, plus a margin for the stroke.
+        pad = int(line.linewidth) + 2 if line is not None else 2
+        radius = int(math.ceil(math.hypot(wd, ht))) + pad
+        side = 2 * radius
+        ctr = radius
+
+        tile = Image.new('RGBA', (side, side), (0, 0, 0, 0))
+        # place the text box so its bottom-left (the anchor) is at the center
+        ImageDraw.Draw(tile, 'RGBA').text((ctr, ctr - ht), text, **kwargs)
+
+        # PIL rotates counter-clockwise for a positive angle, matching Ginga's
+        # rot_deg convention (cf. the cairo/agg backends).  expand=False keeps
+        # the tile size (and thus the center) fixed.
+        tile = tile.rotate(rot_deg, resample=Image.BICUBIC, expand=False)
+
+        # paste so the tile center (= the anchor) lands on (cx, cy)
+        self.surface.paste(tile, (int(round(cx - ctr)), int(round(cy - ctr))),
+                           tile)
 
     def line(self, pt1, pt2, line):
         if line is not None:

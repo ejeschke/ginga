@@ -84,8 +84,13 @@ class RenderContext(render.RenderContextBase):
                   line=None):
         wd, ht = self.ctx.text_extents(text, font=font)
 
-        # NOTE: rotation ignored in PIL, for now
-        self.ctx.text((cx, cy - ht), text, font, line, fill)
+        if rot_deg == 0.0:
+            # fast path: draw directly onto the surface
+            self.ctx.text((cx, cy - ht), text, font, line, fill)
+        else:
+            # rotate about the anchor (cx, cy) via a scratch tile
+            self.ctx.text_rotated((cx, cy), wd, ht, text, font, line, fill,
+                                  rot_deg)
 
     def draw_polygon(self, cpoints, line=None, fill=None):
         cpoints = trcalc.strip_z(cpoints)
@@ -102,6 +107,19 @@ class RenderContext(render.RenderContextBase):
         self.ctx.path(cpoints, line)
 
 
+# NOTE: antialiasing of the vector overlays.
+# Pillow's ImageDraw shape primitives (line/ellipse/polygon/arc) do NOT
+# antialias -- they render hard-edged -- and Pillow exposes no AA flag for
+# them (only text is antialiased, via FreeType).  If smoother overlays are
+# wanted here, the only pure-PIL route is supersampling (SSAA): draw the
+# overlays onto a separate transparent RGBA layer at N x resolution (scale
+# every coordinate, linewidth, and font size by N), downscale that layer
+# with Image.LANCZOS, then alpha-composite it over the 1x base image in
+# get_surface_as_array().  Best done behind an optional viewer setting
+# (e.g. 'pil_aa_factor', default 1 = off) since the overlay layer costs
+# N**2 x memory and a LANCZOS downscale per redraw.  Note that the aggw
+# (matplotlib-Agg) backend antialiases natively, so switching backends is
+# the cheaper option when AA quality is the goal.
 class CanvasRenderer(render.StandardPipelineRenderer):
 
     def __init__(self, viewer):
