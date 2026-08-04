@@ -4,7 +4,9 @@
 # NOTE: You need the Astropy "regions" package for this to work.
 #
 from ginga import toolkit
-toolkit.use('qt5')
+# generic 'qt' lets ginga use whichever Qt binding is installed
+# (PyQt5/PyQt6/PySide2/PySide6) instead of forcing one
+toolkit.use('qt')
 
 from astropy.utils.data import get_pkg_data_filename
 import regions

@@ -24,7 +24,9 @@ configured = False
 
 toolkit = ginga.toolkit.toolkit
 
-# if user wants to force a toolkit
+# A specific request forces that qtpy binding via $QT_API.  If it isn't
+# installed, qtpy emits a PythonQtWarning and falls back -- which is what we
+# want the user to see, since they asked for a particular binding.
 if toolkit == 'qt6':
     os.environ['QT_API'] = 'pyqt6'
 
@@ -36,6 +38,19 @@ elif toolkit == 'pyside6':
 
 elif toolkit == 'pyside2':
     os.environ['QT_API'] = 'pyside2'
+
+elif toolkit in ('qt', 'choose') and 'QT_API' not in os.environ:
+    # No particular binding was requested.  qtpy defaults to trying 'pyqt5'
+    # and warns when it falls back to another binding, so point $QT_API at a
+    # binding that is actually installed (first found wins, preserving the
+    # historical pyqt5-first order) to select it directly and silently.  If
+    # none is installed, leave $QT_API unset and let the import below fail
+    # with our own clear error message.
+    for _binding, _mod in (('pyqt5', 'PyQt5'), ('pyqt6', 'PyQt6'),
+                           ('pyside6', 'PySide6'), ('pyside2', 'PySide2')):
+        if ginga.toolkit._installed(_mod):
+            os.environ['QT_API'] = _binding
+            break
 
 have_pyqt5 = False
 have_pyqt6 = False

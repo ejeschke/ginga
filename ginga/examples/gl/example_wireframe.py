@@ -9,7 +9,7 @@ Plots an octahedron within a wireframe sphere.
 
 Run with no parameters.  Scroll to zoom in/out, click and drag to orbit.
 
-Requirements: Qt5, OpenGL, numpy
+Requirements: Qt, OpenGL, numpy
 """
 
 import sys
@@ -17,7 +17,9 @@ import sys
 import numpy as np
 
 from ginga import toolkit
-toolkit.use('qt5')
+# generic 'qt' lets ginga use whichever Qt binding is installed
+# (PyQt5/PyQt6/PySide2/PySide6) instead of forcing one
+toolkit.use('qt')
 
 from ginga.gw import Widgets  # noqa
 from ginga.qtw.ImageViewQt import CanvasView  # noqa

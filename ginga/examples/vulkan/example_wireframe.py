@@ -20,7 +20,9 @@ import sys
 import numpy as np
 
 from ginga import toolkit
-toolkit.use('qt5')
+# generic 'qt' lets ginga use whichever Qt binding is installed
+# (PyQt5/PyQt6/PySide2/PySide6) instead of forcing one
+toolkit.use('qt')
 
 from ginga.gw import Widgets  # noqa
 from ginga.qtw.ImageViewQt import CanvasView  # noqa

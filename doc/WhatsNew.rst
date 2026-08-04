@@ -23,6 +23,13 @@ Ver 7.2.0 (unreleased)
 - The **pil** renderer now draws rotated text (previously rotation was
   ignored) by rasterizing the string to a scratch tile and rotating it; the
   common unrotated case still uses the fast direct-draw path.
+- Requesting the generic ``qt`` toolkit (``-t qt``, or letting Ginga
+  auto-choose) no longer emits a ``qtpy`` ``PythonQtWarning`` about falling
+  back from ``pyqt5`` when that binding is absent: Ginga now points
+  ``$QT_API`` at whichever Qt binding is actually installed and selects it
+  directly.  A *specific* request (``qt5``/``qt6``/``pyside2``/``pyside6``)
+  still forces that binding and warns if it is missing, and a user-set
+  ``$QT_API`` is respected.
 
 Ver 7.1.0 (2026.07.30)
 ======================

@@ -27,9 +27,10 @@ def use(name):
 
     elif name.startswith('qt') or name.startswith('pyside'):
         family = 'qt'
-        if name == 'qt':
-            name = 'qt5'
-        if name not in ('qt5', 'pyside2', 'qt6', 'pyside6'):
+        # 'qt' is a *generic* request: leave it unresolved so QtHelp lets
+        # qtpy select whichever binding is installed (silently).  A specific
+        # request (qt5/qt6/pyside2/pyside6) forces that particular binding.
+        if name not in ('qt', 'qt5', 'pyside2', 'qt6', 'pyside6'):
             raise ToolKitError("ToolKit '%s' not supported!" % (name))
 
     elif name.startswith('gtk'):
