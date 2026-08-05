@@ -4,6 +4,11 @@ What's New
 
 Ver 7.2.0 (unreleased)
 ======================
+- Fixed the qt ``TableView`` selection becoming unreadable (white text on a
+  white background) when ``show_grid=True``.  The grid-line stylesheet forces
+  Qt into stylesheet-based item rendering, which ignored the palette-based
+  selection highlight; the selection colours are now also stated in the
+  stylesheet so the blue highlight stays visible under the grid.
 - Added a ``pixi.toml`` manifest (https://pixi.sh) for a reproducible
   conda-forge based development environment: ``pixi run ginga`` launches the
   viewer and ``pixi run -e dev test`` runs the test suite.

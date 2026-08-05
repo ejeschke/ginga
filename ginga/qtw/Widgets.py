@@ -3245,8 +3245,10 @@ class TableView(TreeView):
         # selected rows stay readable when focus moves off the
         # tree (context menu open, cell editor up, etc.).
         palette = self.widget.palette()
-        sel_bg = QtHelp.QColor('#2a64c8')
-        sel_fg = QtHelp.QColor('white')
+        sel_bg_hex = '#2a64c8'
+        sel_fg_hex = 'white'
+        sel_bg = QtHelp.QColor(sel_bg_hex)
+        sel_fg = QtHelp.QColor(sel_fg_hex)
         # ``QPalette.Highlight`` / ``HighlightedText`` are the role
         # enums; qtpy normalises Qt5/Qt6 access so this form works
         # under all bindings.
@@ -3264,10 +3266,18 @@ class TableView(TreeView):
         # quirk).  Callers who need both grid AND per-item
         # colouring should leave grid off; see the docstring.
         if self._show_grid:
+            # The ``::item`` rule forces Qt into QStyleSheetStyle item
+            # rendering, which ignores the Highlight palette we just set --
+            # so a selected cell would otherwise fall back to the CSS
+            # default (white on white, unreadable).  Re-state the selection
+            # colours (matching the palette) in the stylesheet so selection
+            # stays visible under the grid.
             self.widget.setStyleSheet(
                 "QTreeView::item { "
                 "border-right: 1px solid #d0d0d0; "
-                "border-bottom: 1px solid #d0d0d0; }")
+                "border-bottom: 1px solid #d0d0d0; }"
+                f"QTreeView::item:selected {{ "
+                f"background: {sel_bg_hex}; color: {sel_fg_hex}; }}")
         else:
             self.widget.setStyleSheet("")
 
