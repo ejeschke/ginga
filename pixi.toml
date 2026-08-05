@@ -1,0 +1,73 @@
+# pixi manifest for Ginga -- https://pixi.sh
+#
+# Quick start:
+#   pixi install              # resolve + create the default environment
+#   pixi run ginga            # launch the reference viewer
+#   pixi run -e dev test      # run the test suite
+#
+# The default environment bundles PyQt6 (conda-forge `pyqt`) as the Qt
+# binding; swap the `pyqt` dependency below for `pyside6`, or use a gtk
+# binding, to run under a different toolkit.
+
+[workspace]
+name = "ginga"
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-64", "osx-arm64", "win-64"]
+
+# --- runtime dependencies (mirror setup.cfg install_requires) -------------
+[dependencies]
+python = ">=3.11"
+numpy = ">=1.26"
+qtpy = ">=2.4.1"
+astropy = ">=7.2"
+puremagic = ">=1.28"
+pillow = ">=12.3.0"
+pyyaml = ">=6.0"
+packaging = ">=23.1"
+# default GUI toolkit binding (conda-forge `pyqt` is PyQt6)
+pyqt = ">=6"
+
+# install Ginga itself (this checkout) in editable mode, so `pixi run ginga`
+# uses the working tree
+[pypi-dependencies]
+ginga = { path = ".", editable = true }
+
+[tasks]
+ginga = "ginga"
+ggrc = "ggrc"
+test = "pytest"
+
+# --- optional dependency groups (mirror setup.cfg extras) -----------------
+
+[feature.recommended.dependencies]
+scipy = ">=1.16"
+matplotlib-base = ">=3.8"
+opencv = ">=4.5.4"
+exifread = ">=2.3.2"
+astroquery = ">=0.4.7"
+pyvo = ">=1.5"
+python-dateutil = ">=2.8.2"
+photutils = ">=1.13"
+
+[feature.recommended.pypi-dependencies]
+pillow-heif = ">=0.21.0"
+
+[feature.test.dependencies]
+pytest = "*"
+pytest-doctestplus = "*"
+pytest-remotedata = "*"
+scipy = "*"
+pyvo = ">=1.5"
+photutils = ">=1.13"
+attrs = ">=19.2.0"
+
+[feature.docs.dependencies]
+sphinx = "*"
+sphinx-astropy = "*"
+sphinx_rtd_theme = "*"
+
+# Named environments combine the feature groups with the default feature
+# (which is always included).  e.g. `pixi run -e dev test`.
+[environments]
+dev = ["recommended", "test"]
+docs = ["docs"]

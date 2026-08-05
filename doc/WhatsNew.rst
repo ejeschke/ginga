@@ -4,6 +4,9 @@ What's New
 
 Ver 7.2.0 (unreleased)
 ======================
+- Added a ``pixi.toml`` manifest (https://pixi.sh) for a reproducible
+  conda-forge based development environment: ``pixi run ginga`` launches the
+  viewer and ``pixi run -e dev test`` runs the test suite.
 - Window-fixed overlays now stay pinned to the viewport under a 3D camera in
   the OpenGL and Vulkan renderers.  Objects drawn in window/percentage
   coordinates (the onscreen message, mode indicator, color bar, etc.) are
