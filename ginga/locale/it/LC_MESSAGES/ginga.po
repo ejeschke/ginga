@@ -333,8 +333,8 @@ msgid "Language"
 msgstr "Lingua"
 
 #: ginga/rv/GenericControl.py:599
-msgid "Please restart Ginga for the new language to take effect."
-msgstr "Riavvia Ginga affinché la nuova lingua abbia effetto."
+msgid "Please restart {} for the new language to take effect."
+msgstr "Riavvia {} affinché la nuova lingua abbia effetto."
 
 #: ginga/rv/plugins/AutoLoad.py:85
 msgid "Watched folder:"

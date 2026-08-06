@@ -596,7 +596,8 @@ class GenericShell(GwMain.GwMain, Widgets.Application):
         self.w.language_dialog = dialog
         dialog.set_message(
             'info',
-            _tr("Please restart Ginga for the new language to take effect."))
+            _tr("Please restart {} for the new language to take effect.").format(
+                self.appname.capitalize()))
         dialog.add_callback('activated', self._language_dialog_cb)
         dialog.add_callback('close', lambda w: self._language_dialog_cb(w, 0))
         dialog.show()

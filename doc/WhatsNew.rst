@@ -4,6 +4,11 @@ What's New
 
 Ver 7.2.0 (unreleased)
 ======================
+- The "restart to apply the new language" dialog now names the running
+  application (from the ``appname`` setting) instead of hardcoding "Ginga",
+  so an application built on Ginga shows its own name.  The translated
+  message catalogs were updated accordingly (the message id now takes a
+  ``{}`` placeholder).
 - Fixed the qt ``TableView`` selection becoming unreadable (white text on a
   white background) when ``show_grid=True``.  The grid-line stylesheet forces
   Qt into stylesheet-based item rendering, which ignored the palette-based
