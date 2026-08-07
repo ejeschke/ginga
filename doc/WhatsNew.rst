@@ -4,6 +4,18 @@ What's New
 
 Ver 7.2.0 (unreleased)
 ======================
+- ``TableView`` gained spreadsheet-style cell editing.  A new
+  ``set_editable(tf)`` makes every text column editable in one call (instead
+  of per-column ``editable`` flags), and a new ``set_header_font()`` sets the
+  column-header font (headers are now non-bold by default for a more compact
+  table; pass a bold font to embolden).  On the ``qt`` and ``pg`` backends the
+  table also has a current-cell cursor with arrow/Tab navigation and
+  spreadsheet editing (type to replace, Delete/Backspace to clear, and
+  commit-and-move on Tab/Enter/arrow).  The qt ``TableView`` was reimplemented
+  on ``QTableWidget`` (from ``QTreeWidget``) to get native cell navigation,
+  grid lines, row-number header and per-cell editability.  The gtk backends
+  get ``set_editable()`` and ``set_header_font()``; their spreadsheet cursor/
+  editing is a later refactor.
 - The web (``pg``) backend's ``Timer`` is now a *server-side* timer for the
   websocket case instead of a browser-side JavaScript timer.  The old timer
   only fired while a browser was connected and every tick round-tripped the

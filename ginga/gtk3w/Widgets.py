@@ -1684,6 +1684,27 @@ class TreeView(WidgetBase):
         css_provider.load_from_data(style.encode())
         context.add_provider(css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
 
+    def set_header_font(self, font, size=10):
+        """Set the column-header font.  Headers use the default font unless
+        set here; pass a bold font to embolden them.  Accepts a font spec
+        string or a ``font_asst.Font``."""
+        if isinstance(font, str):
+            font = font_asst.parse_font(font)
+        family = font_asst.get_css_family_list(font.family)
+        myname = self._get_name()
+        style = (".%s header button { font-family: %s; font-size: %spt; "
+                 "font-style: %s; font-weight: %s; }" %
+                 (myname, family, size, font.style, font.weight))
+        context = self.widget.get_style_context()
+        context.add_class(myname)
+        old = getattr(self, '_header_css_provider', None)
+        if old is not None:
+            context.remove_provider(old)
+        provider = Gtk.CssProvider()
+        provider.load_from_data(style.encode())
+        context.add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
+        self._header_css_provider = provider
+
     def sort_cb(self, column, idx):
         treeview = column.get_tree_view()
         model = treeview.get_model()
@@ -1866,6 +1887,9 @@ class TableView(TreeView):
         # Per-column editable flags (user-space indices, excluding
         # the synthetic row-number column).
         self._editable_cols = set()
+        # table-wide editable (set_editable); when True every text column
+        # is editable regardless of its per-column flag
+        self._editable_all = False
         # User-supplied (normalised) column descriptors.
         self._user_columns = []
         self._show_row_numbers = bool(show_row_numbers)
@@ -2068,6 +2092,8 @@ class TableView(TreeView):
         # ``colDef.editable`` directly).
         self._editable_cols = {i for i, c in enumerate(self._user_columns)
                                if c.get('editable')}
+        if self._editable_all:
+            self._editable_cols = set(range(len(self._user_columns)))
         self._rebuild_table()
 
     def insert_column(self, idx, column):
@@ -2103,6 +2129,18 @@ class TableView(TreeView):
             if isinstance(cell, Gtk.CellRendererText):
                 cell.set_property("editable", tf)
         self.editable = bool(self._editable_cols)
+
+    def set_editable(self, tf):
+        """Make every text column editable (or revert to the per-column
+        ``editable`` flags).  Icon/widget columns are unaffected."""
+        self._editable_all = bool(tf)
+        if self._editable_all:
+            self._editable_cols = set(range(len(self._user_columns)))
+        else:
+            self._editable_cols = {i for i, c in enumerate(self._user_columns)
+                                   if c.get('editable')}
+        self.editable = bool(self._editable_cols)
+        self._post_setup_columns()
 
     def get_column_count(self):
         return len(self._user_columns)

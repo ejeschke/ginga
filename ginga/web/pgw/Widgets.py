@@ -928,6 +928,19 @@ class TreeView(WidgetMixin, PGW.TreeView):
         self.set_row_spacing(px)
         self.set_column_spacing(px)
 
+    def set_header_font(self, font, size=10):
+        """Set the column-header font.  Headers are non-bold by default;
+        pass a bold font to embolden them.  Accepts a font spec string, a
+        ``font_asst.Font``, or a CSS-style dict (family/size/weight/style)."""
+        font_info = font
+        if isinstance(font_info, (str, font_asst.Font)):
+            font_info = PgHelp.get_font(font_info, size)
+        family = font_info.get('family', 'sans-serif')
+        pts = font_info.get('size', size)
+        weight = font_info.get('weight', 'normal')
+        style = font_info.get('style', 'normal')
+        super().set_header_font(family, pts, weight, style)
+
     def set_tree(self, tree_dict):
         super().set_tree(_treedata_to_plain(tree_dict))
 
@@ -1188,6 +1201,19 @@ class TableView(WidgetMixin, PGW.TableView):
         # from the underlying pgwidgets TableView (a TreeView subclass).
         self.set_row_spacing(px)
         self.set_column_spacing(px)
+
+    def set_header_font(self, font, size=10):
+        """Set the column-header font.  Headers are non-bold by default;
+        pass a bold font to embolden them.  Accepts a font spec string, a
+        ``font_asst.Font``, or a CSS-style dict (family/size/weight/style)."""
+        font_info = font
+        if isinstance(font_info, (str, font_asst.Font)):
+            font_info = PgHelp.get_font(font_info, size)
+        family = font_info.get('family', 'sans-serif')
+        pts = font_info.get('size', size)
+        weight = font_info.get('weight', 'normal')
+        style = font_info.get('style', 'normal')
+        super().set_header_font(family, pts, weight, style)
 
     def append_row(self, row):
         key = self._next_row_key()

@@ -1951,6 +1951,13 @@ class TreeView(WidgetBase):
 
     def __apply_font(self):
         self.widget.setFont(self.font)
+
+    def set_header_font(self, font, size=10):
+        """Set the column-header font.  Headers use the widget's default
+        (non-bold) font unless set here; pass a bold font to embolden."""
+        if not isinstance(font, QFont):
+            font = self.get_font(font, size)
+        self.widget.header().setFont(font)
         # render the header in the same typeface/size, but bold
         hdr_font = QFont(self.font)
         hdr_font.setBold(True)
@@ -2045,8 +2052,14 @@ class _CellWrapper(QtGui.QWidget):
         super().paintEvent(event)
 
 
-class TableView(TreeView):
-    """Flat tabular view, API-compatible with the pgw TableView.
+class _TableViewQTree(TreeView):
+    """DEPRECATED QTreeWidget-based TableView, kept for reference/rollback.
+
+    Superseded by the QTableWidget-based ``TableView`` in
+    ``ginga.qtw._tableview`` (imported at the bottom of this module).  This
+    class is no longer exported.
+
+    Flat tabular view, API-compatible with the pgw TableView.
 
     Backed by a ``QTreeWidget`` configured for single-level display
     (no expand/collapse hierarchy, no indentation), so it visually
@@ -5388,5 +5401,12 @@ def wrap(native_widget):
     wrapper = WidgetBase()
     wrapper.widget = native_widget
     return wrapper
+
+
+# The public TableView is the QTableWidget-based implementation.  It lives in
+# its own module and imports the shared symbols above (WidgetBase,
+# _CellWrapper, _CELL_WIDGETS); importing it here -- after those are defined
+# -- both exposes ``Widgets.TableView`` and avoids an import cycle.
+from ginga.qtw._tableview import TableView  # noqa: E402,F401
 
 # END
