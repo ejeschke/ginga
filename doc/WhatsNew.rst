@@ -4,7 +4,18 @@ What's New
 
 Ver 7.2.0 (unreleased)
 ======================
-- The "restart to apply the new language" dialog now names the running
+- The web (``pg``) backend's ``Timer`` is now a *server-side* timer for the
+  websocket case instead of a browser-side JavaScript timer.  The old timer
+  only fired while a browser was connected and every tick round-tripped the
+  websocket, so a deferred redraw scheduled before the browser connected was
+  lost and the viewer's redraw could wedge (e.g. a plugin's plot not updating
+  until you zoomed).  Timers now schedule on a ``heaptimer`` heap owned by the
+  ``Application`` and fire their callbacks on the GUI thread regardless of
+  browser state, matching the qt/gtk/tk backends; async (single event loop)
+  mode uses the asyncio timer heap so it stays thread-free, and in-situ
+  (Pyodide) keeps the browser timer.  Also fixed ``Application.make_timer()``
+  (it returned a raw pgwidgets timer) and ``Application.quit()`` (it raised
+  instead of shutting down via ``GwMain.gui_quit()``).
   application (from the ``appname`` setting) instead of hardcoding "Ginga",
   so an application built on Ginga shows its own name.  The translated
   message catalogs were updated accordingly (the message id now takes a

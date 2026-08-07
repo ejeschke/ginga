@@ -80,14 +80,19 @@ class ImageViewPg(ImageView.ImageViewBase):
         canvas_w.add_callback('map', self.canvas_map_cb)
         canvas_w.add_callback('resize', self.canvas_resize_cb)
 
+        # Use Ginga's Timer wrapper (not the raw pgwidgets one): for the
+        # websocket backend it is a *server-side* timer that fires on the GUI
+        # thread regardless of browser state, instead of a browser JS timer
+        # whose start() is lost if issued before the browser connects.
+        from ginga.web.pgw.Widgets import Timer as GingaTimer
         if in_situ_web:
-            self.timer_resize = Widgets.Timer()
-            self.timer_redraw = Widgets.Timer()
-            self.timer_msg = Widgets.Timer()
+            self.timer_resize = GingaTimer()
+            self.timer_redraw = GingaTimer()
+            self.timer_msg = GingaTimer()
         else:
-            self.timer_resize = Widgets.Timer(canvas_w.session)
-            self.timer_redraw = Widgets.Timer(canvas_w.session)
-            self.timer_msg = Widgets.Timer(canvas_w.session)
+            self.timer_resize = GingaTimer(canvas_w.session)
+            self.timer_redraw = GingaTimer(canvas_w.session)
+            self.timer_msg = GingaTimer(canvas_w.session)
 
         self.timer_resize.add_callback('expired',
                                        lambda *args: self.delayed_resize_cb())
@@ -630,10 +635,11 @@ class ScrolledViewPg(Widgets.AbstractScrollArea):
         self.set_expanding(True, True)
 
         self.timer_scroll_lock = threading.RLock()
+        from ginga.web.pgw.Widgets import Timer as GingaTimer
         if in_situ_web:
-            self.timer_scroll = Widgets.Timer()
+            self.timer_scroll = GingaTimer()
         else:
-            self.timer_scroll = Widgets.Timer(session)
+            self.timer_scroll = GingaTimer(session)
         self.timer_scroll.add_callback('expired', self.delayed_scrolled_cb)
 
         # callback when the user scrolls

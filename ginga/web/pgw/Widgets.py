@@ -6,6 +6,7 @@
 #
 from functools import reduce
 import os.path
+import time
 
 in_situ_web = False
 try:
@@ -218,6 +219,10 @@ class ApplicationBase(Callbacks):
         self._windows = []
         _app = self
 
+        # server-side timer heap (created lazily; used by the websocket
+        # backend's Timer -- in-situ/Pyodide uses browser JS timers instead)
+        self._timer_heap = None
+
         if settings is None:
             settings = Settings.SettingGroup(logger=self.logger)
         self.settings = settings
@@ -263,12 +268,41 @@ class ApplicationBase(Callbacks):
     def make_timer(self):
         return Timer()
 
+    def get_timer_heap(self):
+        """Return this application's server-side timer heap, creating it on
+        first use.  Only the websocket (non-in-situ) ``Timer`` schedules on
+        it; in-situ/Pyodide uses browser JS timers and never calls this.
+
+        In async mode (a single event loop -- e.g. ``--task-pool=async``,
+        signalled by the GwMain mixin's ``async_mode``) use the asyncio heap,
+        which drives expirations via ``loop.call_later`` on that one loop
+        rather than spawning ``threading.Timer`` threads.
+        """
+        if self._timer_heap is None:
+            if getattr(self, 'async_mode', False):
+                from ginga.util.heaptimer_aio import TimerHeap
+            else:
+                from ginga.util.heaptimer import TimerHeap
+            self._timer_heap = TimerHeap(desc="pg app timer heap",
+                                         logger=self.logger)
+        return self._timer_heap
+
     def process_events(self, timeout=0.0):
         # In the browser (in-situ) there is nothing to pump: the JS event
         # loop dispatches widget events directly.  Provided so the GUI
         # event pump (GwMain.update_pending) can call it unconditionally.
         # The websocket Application overrides this with a real impl.
         pass
+
+    def process_end(self):
+        # Hook invoked by GwMain.gui_quit() during shutdown.  The pg backends
+        # have no separate toolkit event loop to stop here (GwMain owns the
+        # mainloop via ev_quit; gtk/qt implement this to stop their native
+        # loop).  We do use it to cancel any pending server-side timers so
+        # their (non-daemon) heap threads don't linger past shutdown.
+        if self._timer_heap is not None:
+            self._timer_heap.quit()
+            self._timer_heap = None
 
     def close(self):
         """Called when someone is asking the application to close.
@@ -278,13 +312,22 @@ class ApplicationBase(Callbacks):
         self.make_callback('close')
 
     def quit(self):
-        """Called when someone is forcibly quitting the application.
-        Can register for this callback if you want an application-wide
-        event to clean up before shutdown.
-        """
-        self.make_callback('shutdown')
+        """Terminate the application and break out of its mainloop.
 
-        super().close()
+        Concrete Ginga apps mix :class:`ginga.gw.GwMain.GwMain` into the
+        Application; its ``gui_quit()`` sets ``ev_quit`` to stop the
+        mainloop, fires the ``'shutdown'`` callback, and calls
+        :meth:`process_end`.  Delegate to it so sync, async, and in-situ all
+        shut down the same way -- and, since ``gui_quit`` fires the
+        ``'shutdown'`` callback itself, we don't repeat it here.
+        """
+        gui_quit = getattr(self, 'gui_quit', None)
+        if gui_quit is not None:
+            gui_quit()
+        else:
+            # Application used standalone, without a GwMain mixin.
+            self.make_callback('shutdown')
+            self.process_end()
 
     def mainloop(self, timeout=None):
         self.start()
@@ -375,6 +418,13 @@ else:
 
         def process_events(self, timeout=0.1):
             super().process_events(timeout=timeout)
+
+        def make_timer(self):
+            # Override PGW_Application.make_timer (earlier in the MRO), which
+            # would hand back a raw browser-side pgwidgets timer, so callers
+            # (e.g. plugins via ``fv.make_timer()``) get Ginga's server-side
+            # Timer -- same reason process_events() is overridden above.
+            return Timer()
 
 
 # BASIC WIDGETS
@@ -1827,30 +1877,138 @@ class MessageDialog(Dialog):
         vbox.add_widget(tw)
 
 
-class Timer(CallbackMixin, PGW.Timer):
-    def __init__(self, *args, **kwargs):
-        CallbackMixin.__init__(self)
-        if in_situ_web:
+if in_situ_web:
+
+    class Timer(CallbackMixin, PGW.Timer):
+        """Browser-side timer (in-situ / Pyodide).
+
+        Under Pyodide the Python interpreter *is* the browser, so the
+        pgwidgets JS timer fires on the single browser event loop -- which
+        is also the GUI thread -- and is the natural mechanism.
+        """
+        def __init__(self, *args, **kwargs):
+            CallbackMixin.__init__(self)
             PGW.Timer.__init__(self, **kwargs)
-        else:
-            PGW.Timer.__init__(self, *get_args(args), **kwargs)
 
-        # for storing random data in a timer
-        self.data = Bunch.Bunch()
+            # for storing random data in a timer
+            self.data = Bunch.Bunch()
 
-        # remapping 'expired'
-        for name in ['expired', 'cancelled']:
-            self.on(name, self._cb_redirect, name)
-            self._enable_callback(name)
+            # remapping 'expired'
+            for name in ['expired', 'cancelled']:
+                self.on(name, self._cb_redirect, name)
+                self._enable_callback(name)
 
-    def _cb_redirect(self, value, name):
-        self._make_callback(name)
+        def _cb_redirect(self, value, name):
+            self._make_callback(name)
 
-    def set(self, val):
-        self.start(val)
+        def set(self, val):
+            self.start(val)
 
-    def clear(self):
-        self.cancel()
+        def clear(self):
+            self.cancel()
+
+else:
+
+    from ginga.util.heaptimer import Timer as HeapTimer
+
+    # Fallback heap for the (unusual) case of creating a Timer before any
+    # Application exists; normally the heap is owned by the Application
+    # (``_app.get_timer_heap()``).
+    _fallback_timer_heap = None
+
+    def _get_timer_heap():
+        # prefer the application's heap so its lifetime is tied to the app
+        if _app is not None:
+            return _app.get_timer_heap()
+        global _fallback_timer_heap
+        if _fallback_timer_heap is None:
+            from ginga.util.heaptimer import TimerHeap
+            _fallback_timer_heap = TimerHeap(desc="pg server-side timers")
+        return _fallback_timer_heap
+
+    class Timer(Callbacks):
+        """Server-side timer for the websocket (remote-browser) pg backend.
+
+        pgwidgets JS timers are browser-side: they only fire while a browser
+        is connected, every tick round-trips the websocket, and they are
+        ambiguous with more than one client.  Instead we schedule on a
+        shared, thread-driven heap on the *server*.  The expiration fires on
+        the heap's background thread and is marshaled onto the GUI/dispatch
+        thread via the session's ``gui_do`` -- the same thread that
+        ``GwMain.update_pending`` (or a standalone ``Application.run``)
+        drains callbacks on -- so the callback runs where it is safe to
+        touch widgets and push frames.  This matches the toolkit-native
+        timers of the qt/gtk/tk backends (callbacks on the GUI thread) and
+        lets timers work regardless of whether a browser is attached.
+        """
+        def __init__(self, session=None, duration=0.0):
+            super().__init__()
+            if session is None:
+                session = _session
+            self.session = session
+            self.duration = duration
+            # for storing arbitrary data with the timer
+            self.data = Bunch.Bunch()
+            self.start_time = 0.0
+
+            self._timer = HeapTimer(_get_timer_heap(), 0, self._expired)
+
+            for name in ('expired', 'canceled'):
+                self.enable_callback(name)
+
+        def _expired(self):
+            # In async mode the (asyncio) heap fires us on the single event
+            # loop, which is the GUI thread, so call back directly.  In
+            # threaded mode we run on a heap background thread, so marshal
+            # onto the GUI thread via the session.
+            app = _app
+            if (app is not None and getattr(app, 'async_mode', False)) \
+                    or self.session is None:
+                self.make_callback('expired')
+            else:
+                self.session.gui_do(self.make_callback, 'expired')
+
+        def set(self, duration):
+            self.start_time = time.time()
+            self._timer.start(duration)
+
+        def start(self, duration=None):
+            if duration is None:
+                duration = self.duration
+            self.set(duration)
+
+        def stop(self):
+            self._timer.stop()
+
+        def cancel(self):
+            # cancel() is invoked by the caller (on the GUI thread), not fired
+            # from the heap, so make the callback directly -- like the
+            # qt/gtk/misc Timer implementations.
+            self.stop()
+            self.make_callback('canceled')
+
+        clear = cancel
+
+        def is_set(self):
+            return self._timer.is_scheduled()
+
+        def cond_set(self, duration):
+            self._timer.cond_start(duration)
+
+        def elapsed_time(self):
+            return self._timer.elapsed_time()
+
+        def time_left(self):
+            return self._timer.remaining_time()
+
+        def get_deadline(self):
+            return time.time() + self.time_left()
+
+        def set_duration(self, duration):
+            self.duration = duration
+
+        def get_duration(self):
+            return self.duration
 
 
 # MODULE FUNCTIONS
