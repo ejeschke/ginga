@@ -1781,6 +1781,59 @@ def get_image(iconpath, size=None, adjust_width=True):
 get_icon = get_image
 
 
+_bundled_fonts_registered = False
+
+
+def register_bundled_fonts():
+    """Register Ginga's shipped TrueType fonts with fontconfig so Pango can
+    use them even when they are not installed system-wide.
+
+    GTK/Pango resolve fonts by family name through fontconfig and have no
+    application-font API of their own (the qt backend, by contrast, loads the
+    same shipped files via ``QFontDatabase.addApplicationFont``).  We call
+    fontconfig's ``FcConfigAppFontAddFile`` -- from the already-present
+    ``libfontconfig``, via stdlib ``ctypes``, so no new dependency -- for each
+    bundled face.  This must run *before* Pango builds its default fontmap
+    (hence the call at import time); additions made afterward are not seen.
+
+    A safe no-op when fontconfig can't be located (e.g. a platform where GTK
+    doesn't use it): ``get_font`` then simply falls back to the generic
+    aliases (monospace/sans/...), which fontconfig resolves to real faces.
+    """
+    global _bundled_fonts_registered
+    if _bundled_fonts_registered:
+        return
+    _bundled_fonts_registered = True
+    try:
+        import ctypes
+        import ctypes.util
+
+        libname = ctypes.util.find_library('fontconfig')
+        if libname is None:
+            return
+        fc = ctypes.CDLL(libname)
+        fc.FcConfigGetCurrent.restype = ctypes.c_void_p
+        fc.FcConfigAppFontAddFile.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+        fc.FcConfigAppFontAddFile.restype = ctypes.c_int
+        cfg = fc.FcConfigGetCurrent()
+        seen = set()
+        for font_tup in font_asst.get_loadable_fonts():
+            try:
+                path = font_asst.get_font_info(font_tup).font_path
+            except Exception:
+                continue
+            if path in seen or not os.path.exists(path):
+                continue
+            seen.add(path)
+            fc.FcConfigAppFontAddFile(cfg, path.encode('utf-8'))
+    except Exception:
+        # font registration must never break backend startup
+        pass
+
+
+register_bundled_fonts()
+
+
 def _gtk_has_family(family):
     """Return True if Pango has the named font family available.
 
@@ -1837,6 +1890,15 @@ def get_font(font_spec, font_size):
     else:
         families = font_asst.get_substitutes(font_tup.family) + [font_tup.family]
     for family in families:
+        # Pango silently substitutes a fallback for an unknown family, so
+        # accept a candidate only if Pango actually has it.  Otherwise an
+        # unavailable substitute (e.g. our bundled 'ubuntu mono' on a host
+        # without a system copy -- gtk registers shipped fonts with font_asst
+        # but not with fontconfig) would render as the default sans instead of
+        # falling through to the 'monospace' generic that fontconfig resolves
+        # to a real fixed-pitch face.
+        if not _gtk_has_family(family):
+            continue
         try:
             font_str = f'"{family}" {font_tup.style} {font_tup.weight} {font_size}'
             font_desc = Pango.FontDescription(font_str)
@@ -1851,6 +1913,9 @@ def get_font(font_spec, font_size):
         except Exception:
             continue
 
+    # None of our substitutes is a concrete Pango family; hand the original
+    # request to Pango so a registered generic alias (monospace/sans/...) is
+    # resolved by fontconfig to a real face.
     font_str = f'"{font_tup.family}" {font_tup.style} {font_tup.weight} {font_size}'
     return Pango.FontDescription(font_str)
 

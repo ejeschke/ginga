@@ -599,25 +599,45 @@ def get_font(font_spec, font_size):
         families = [family]
     else:
         families = font_asst.get_substitutes(font_tup.family) + [family]
+
+    def _finalize(fam):
+        font = QFont(fam, font_size)
+        if font_tup.style == 'italic':
+            font.setStyle(QFont.StyleItalic)
+        font.setWeight(font_weight_dct[font_tup.weight])
+        font.setStyleStrategy(QFont.PreferAntialias)
+        font_asst.add_cache(key, font)
+        if isinstance(font_spec, str):
+            # also store the font under a secondary key with full font tuple
+            key2 = ('qt', font_tup, font_size)
+            font_asst.add_cache(key2, font)
+        return font
+
     for family in families:
-        try:
-            font = QFont(family, font_size)
-            if font_tup.style == 'italic':
-                font.setStyle(QFont.StyleItalic)
-            font.setWeight(font_weight_dct[font_tup.weight])
-            font.setStyleStrategy(QFont.PreferAntialias)
-            font_asst.add_cache(key, font)
-            if isinstance(font_spec, str):
-                # also store the font under a secondary key with full font tuple
-                key2 = ('qt', font_tup, font_size)
-                font_asst.add_cache(key2, font)
-            return font
+        # A substitute may itself name one of our bundled, loadable fonts
+        # (e.g. the 'monospace' alias substitutes to 'ubuntu mono').  Load it
+        # so Qt genuinely has the family -- otherwise QFont silently falls back
+        # to the default (sans) face, which is why 'monospace' rendered as sans
+        # on hosts that lack a system copy of the shipped font.
+        sub_tup = font_asst.Font(family=family, style=font_tup.style,
+                                 weight=font_tup.weight)
+        if sub_tup in qt_fonts:
+            family = qt_fonts[sub_tup].family
+        elif font_asst.have_loadable_font(sub_tup):
+            try:
+                family = load_font(sub_tup).family
+            except Exception:
+                pass
 
-        except Exception:
-            continue
+        # Only accept a family Qt actually has, so an unavailable substitute
+        # falls through to the next candidate instead of a silent mismatch.
+        if _qt_has_family(family):
+            return _finalize(family)
 
-    raise ValueError(f"Couldn't create font for family '{font_tup.family}', "
-                     f"style={font_tup.style}, weight={font_tup.weight}")
+    # Nothing matched exactly; fall back to the requested family and let Qt
+    # pick its closest match (the previous behavior, e.g. the 'monospace'
+    # generic resolved by fontconfig).
+    return _finalize(font_tup.family)
 
 
 def load_font(font_tup):
