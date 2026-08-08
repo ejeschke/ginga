@@ -4118,9 +4118,27 @@ class MenuAction(WidgetBase):
     def get_state(self):
         return self.action.get_state()
 
+    def set_enabled(self, tf):
+        # The widget is a Gio.MenuItem (a model item, not a Gtk widget), so
+        # WidgetBase.set_enabled's set_sensitive() doesn't apply.  A menu
+        # item's enabled state is driven by its backing GAction.
+        self.action.set_enabled(bool(tf))
+
+    def get_enabled(self):
+        return self.action.get_enabled()
+
     def _cb_redirect(self, *args):
         if self.checkable:
-            tf = self.widget.get_active()
+            # 'change-state' fires as (action, requested_value); a stateful
+            # action doesn't update its own state, so commit it here (the
+            # Gio.MenuItem widget has no get_active()).
+            value = args[1] if len(args) > 1 else None
+            if value is not None:
+                self.action.set_state(value)
+                tf = value.get_boolean()
+            else:
+                cur = self.action.get_state()
+                tf = cur.get_boolean() if cur is not None else False
             self.make_callback('activated', tf)
         else:
             self.make_callback('activated')
