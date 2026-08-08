@@ -1890,6 +1890,11 @@ class TableView(TreeView):
         # table-wide editable (set_editable); when True every text column
         # is editable regardless of its per-column flag
         self._editable_all = False
+        # spreadsheet-editing state: _enter_mode True means the current edit
+        # began by typing (so arrow keys commit-and-move, Excel-style);
+        # _pending_prefill is the character to seed a type-started editor with
+        self._enter_mode = False
+        self._pending_prefill = None
         # User-supplied (normalised) column descriptors.
         self._user_columns = []
         self._show_row_numbers = bool(show_row_numbers)
@@ -1929,8 +1934,32 @@ class TableView(TreeView):
         sw.get_hadjustment().connect('value-changed', self._scroll_cb)
         sw.get_vadjustment().connect('value-changed', self._scroll_cb)
 
-        # Keyboard Ctrl+C / X / V (GTK3 style key-press-event).
+        # Keyboard: Ctrl+C/X/V, cell-cursor navigation, Delete-clear and
+        # type-to-edit (GTK3 key-press-event).
         self.tv.connect('key-press-event', self._on_key_press_clipboard)
+        # Disable the built-in type-ahead search so typing a character starts
+        # a cell edit instead of popping up the search entry.
+        self.tv.set_enable_search(False)
+
+        # Visible current-cell cursor.  GtkTreeView highlights the selected
+        # row but not the current *cell*, so we paint the cursor cell's
+        # background ourselves (see _mkcolfnN) and repaint on cursor moves.
+        self._cursor_path_str = None
+        self._cursor_column = None
+        self._cursor_bg = '#93b8e8'
+        self.tv.connect('cursor-changed', self._on_cursor_changed)
+
+        # Spreadsheet-style selection (cell modes only): rather than letting
+        # GtkTreeView highlight a whole row on any cell click (which hides the
+        # cursor), we disable native selection and paint our own cell/row/
+        # column selection -- a click selects the cell, a row-number click the
+        # row, a header click the column.  Tracked as {(row_idx, col_key)}.
+        self._sel_cells = set()
+        self._sel_anchor = None          # (row_idx, user_col) for Shift-extend
+        self._sel_bg = '#e3edfa'
+        if self._is_cell_mode():
+            self.tv.get_selection().set_mode(Gtk.SelectionMode.NONE)
+            self.tv.connect('button-press-event', self._on_cell_select_press)
 
         if show_grid:
             self.set_show_grid(True)
@@ -2032,6 +2061,13 @@ class TableView(TreeView):
                     cell.set_property(
                         "editable",
                         user_idx >= 0 and user_idx in self._editable_cols)
+                    # Hook the inline editor (once) for prefill +
+                    # commit-and-move; the column index is bound so the
+                    # handler knows which cell is being edited.
+                    if not getattr(cell, '_ginga_edit_hooked', False):
+                        cell.connect('editing-started',
+                                     self._editing_started_cb, n)
+                        cell._ginga_edit_hooked = True
                     # Apply halign if specified for this column.
                     if 0 <= user_idx < len(self._user_columns):
                         halign = self._user_columns[user_idx].get('halign')
@@ -2052,6 +2088,14 @@ class TableView(TreeView):
             self.tv.connect('button-press-event',
                             self._on_tv_button_press_for_widget_cells)
             self._widget_btn_handler = True
+        # cell-mode: a header click selects the whole column (only on
+        # non-sortable tables; sortable ones keep header-click-to-sort)
+        if self._is_cell_mode() and not self.sortable:
+            for tvc in self.tv.get_columns():
+                if not getattr(tvc, '_ginga_hdr_sel', False):
+                    tvc.set_clickable(True)
+                    tvc.connect('clicked', self._on_header_clicked)
+                    tvc._ginga_hdr_sel = True
 
     def _configure_row_number_column(self):
         tvc = self.tv.get_column(0)
@@ -2224,9 +2268,13 @@ class TableView(TreeView):
     def clear(self):
         # Drop per-cell / per-row colour entries — they reference
         # dict identities about to be discarded.  Column / table
-        # layers persist across a clear.
+        # layers persist across a clear.  The cell selection is keyed by
+        # row index, so drop it too (rows are going away).
         self._cell_colors.clear()
         self._row_colors.clear()
+        if getattr(self, '_sel_cells', None):
+            self._sel_cells = set()
+            self._sel_anchor = None
         super().clear()
 
     def get_row_count(self):
@@ -2286,6 +2334,8 @@ class TableView(TreeView):
     # ----- selection -------------------------------------------
 
     def get_selected(self):
+        if self._is_cell_mode():
+            return [self.get_row(p[0]) for p in self.get_selected_paths()]
         treeselection = self.tv.get_selection()
         model, pathlist = treeselection.get_selected_rows()
         out = []
@@ -2297,7 +2347,14 @@ class TableView(TreeView):
         return out
 
     def get_selected_paths(self):
-        """Return selected rows as a list of ``[row_index]`` paths."""
+        """Return selected rows as a list of ``[row_index]`` paths.  In cell
+        modes a row counts as selected only when all its cells are."""
+        if self._is_cell_mode():
+            keys = set(self._sel_col_keys())
+            byrow = {}
+            for (r, k) in self._sel_cells:
+                byrow.setdefault(r, set()).add(k)
+            return [[r] for r in sorted(byrow) if byrow[r] >= keys]
         treeselection = self.tv.get_selection()
         _model, pathlist = treeselection.get_selected_rows()
         out = []
@@ -2545,59 +2602,309 @@ class TableView(TreeView):
     def _on_key_press_clipboard(self, widget, event):
         # GDK Ctrl+C / X / V → widget-level clipboard shortcuts.
         ctrl = bool(event.state & Gdk.ModifierType.CONTROL_MASK)
-        if not ctrl:
-            return False  # let other handlers run
-        keyname = Gdk.keyval_name(event.keyval) or ''
-        keyname = keyname.lower()
-        if keyname == 'c':
-            self.copy_selection()
+        keyname = (Gdk.keyval_name(event.keyval) or '').lower()
+        if ctrl:
+            if keyname == 'c':
+                self.copy_selection()
+                return True
+            if keyname == 'x':
+                self.cut_selection()
+                return True
+            if keyname == 'v':
+                self.paste_selection()
+                return True
+            return False
+
+        # ----- spreadsheet cell cursor + editing (not while editing) -----
+        path, tvcol = self.tv.get_cursor()
+        if path is None:
+            return False
+        cols = self.tv.get_columns()
+        try:
+            cur = cols.index(tvcol) if tvcol is not None else self._col_offset()
+        except ValueError:
+            cur = self._col_offset()
+        offset = self._col_offset()
+        last = offset + len(self._user_columns) - 1
+
+        if keyname in ('left', 'iso_left_tab'):
+            self.tv.set_cursor(path, cols[max(offset, cur - 1)], False)
             return True
-        if keyname == 'x':
-            self.cut_selection()
+        if keyname in ('right', 'tab'):
+            self.tv.set_cursor(path, cols[min(last, cur + 1)], False)
             return True
-        if keyname == 'v':
-            self.paste_selection()
+        if keyname in ('delete', 'backspace'):
+            return self._clear_cursor_cell(path, cur)
+        # a printable character opens the editor pre-filled with it (replace)
+        ch = event.string
+        if (ch and len(ch) == 1 and ch.isprintable() and
+                keyname not in ('tab', 'iso_left_tab')):
+            return self._begin_cell_edit(path, cur, prefill=ch)
+        return False
+
+    def _cell_is_editable(self, user_col):
+        if not (0 <= user_col < len(self._user_columns)):
+            return False
+        col = self._user_columns[user_col]
+        if col.get('widget') or col['type'] == 'icon':
+            return False
+        return user_col in self._editable_cols
+
+    def _begin_cell_edit(self, path, col_idx, prefill=None):
+        user_col = col_idx - self._col_offset()
+        if not self._cell_is_editable(user_col):
+            return False
+        self._pending_prefill = prefill
+        self._enter_mode = (prefill is not None)
+        cols = self.tv.get_columns()
+        # start_editing=True opens the inline editor; _editing_started_cb
+        # then seeds the prefill and hooks the editor's keys.
+        self.tv.set_cursor(path, cols[col_idx], True)
+        return True
+
+    def _clear_cursor_cell(self, path, col_idx):
+        user_col = col_idx - self._col_offset()
+        if not self._cell_is_editable(user_col):
+            return False
+        datakey = self._user_columns[user_col]['key']
+        self._edited_cb(None, str(path), '', datakey, col_idx)
+        return True
+
+    def _editing_started_cb(self, renderer, editable, path_str, col_idx):
+        """Seed a type-started editor with the pending character and hook its
+        keys for Tab/Enter/arrow commit-and-move."""
+        if not isinstance(editable, Gtk.Entry):
+            return
+        if self._pending_prefill is not None:
+            editable.set_text(self._pending_prefill)
+            editable.set_position(-1)
+            self._pending_prefill = None
+        editable.connect('key-press-event',
+                         self._editor_key_press, col_idx)
+
+    def _editor_key_press(self, entry, event, col_idx):
+        keyname = (Gdk.keyval_name(event.keyval) or '').lower()
+        if keyname in ('return', 'kp_enter'):
+            self._commit_and_move(entry, col_idx, 1, 0)
+            return True
+        if keyname == 'tab':
+            self._commit_and_move(entry, col_idx, 0, 1)
+            return True
+        if keyname == 'iso_left_tab':
+            self._commit_and_move(entry, col_idx, 0, -1)
+            return True
+        if keyname == 'escape':
+            self._enter_mode = False
+            return False       # let GTK cancel the edit
+        if self._enter_mode and keyname in ('up', 'down', 'left', 'right'):
+            d = {'up': (-1, 0), 'down': (1, 0),
+                 'left': (0, -1), 'right': (0, 1)}[keyname]
+            self._commit_and_move(entry, col_idx, *d)
             return True
         return False
+
+    def _commit_and_move(self, entry, col_idx, drow, dcol):
+        path, _tvcol = self.tv.get_cursor()
+        if path is None:
+            return
+        new_text = entry.get_text()
+        user_col = col_idx - self._col_offset()
+        datakey = (self._user_columns[user_col]['key']
+                   if 0 <= user_col < len(self._user_columns) else None)
+        # commit through the normal edit path (updates model + cell_edited)
+        self._edited_cb(None, str(path), new_text, datakey, col_idx)
+        # move the cursor; set_cursor also tears down the open editor
+        cols = self.tv.get_columns()
+        offset = self._col_offset()
+        last = offset + len(self._user_columns) - 1
+        new_col = min(last, max(offset, col_idx + dcol))
+        rows = self.tv.get_model().iter_n_children(None)
+        indices = path.get_indices()
+        new_row = min(rows - 1, max(0, indices[0] + drow)) if rows else 0
+        new_path = Gtk.TreePath.new_from_indices([new_row])
+        self._enter_mode = False
+        GLib.idle_add(self._set_cursor_after_commit, new_path, cols[new_col])
+
+    def _set_cursor_after_commit(self, new_path, tvcol):
+        self.tv.set_cursor(new_path, tvcol, False)
+        self.tv.grab_focus()
+        return False
+
+    def _on_cursor_changed(self, tv):
+        # 'cursor-changed' can fire mid-move with a transient cursor (e.g. the
+        # row-number column) before the target column settles, so read the
+        # cursor on the next idle when it's final.
+        GLib.idle_add(self._update_cursor_cache)
+
+    def _update_cursor_cache(self):
+        path, col = self.tv.get_cursor()
+        self._cursor_path_str = path.to_string() if path is not None else None
+        self._cursor_column = col
+        self.tv.queue_draw()
+        return False
+
+    # ----- spreadsheet cell/row/column selection (cell modes) --
+
+    def _is_cell_mode(self):
+        return self._selection_mode_arg in ('single-cell', 'multiple-cell')
+
+    def _sel_col_keys(self):
+        return [c['key'] for c in self._user_columns]
+
+    def _on_cell_select_press(self, tv, event):
+        if event.button != 1:
+            return False
+        res = tv.get_path_at_pos(int(event.x), int(event.y))
+        if res is None:
+            return False
+        path, column, _cx, _cy = res
+        cols = tv.get_columns()
+        try:
+            col_idx = cols.index(column)
+        except ValueError:
+            return False
+        row_idx = path.get_indices()[0]
+        ctrl = bool(event.state & Gdk.ModifierType.CONTROL_MASK)
+        shift = bool(event.state & Gdk.ModifierType.SHIFT_MASK)
+        if self._show_row_numbers and col_idx == 0:
+            self._select_row(row_idx, ctrl, shift)
+            return True          # keep the cursor off the row-number gutter
+        user_col = col_idx - self._col_offset()
+        if not (0 <= user_col < len(self._user_columns)):
+            return False
+        self._select_cell(row_idx, user_col, ctrl, shift)
+        return False             # let the default move the cursor here
+
+    def _select_cell(self, row_idx, user_col, ctrl=False, shift=False):
+        keys = self._sel_col_keys()
+        key = (row_idx, keys[user_col])
+        if shift and self._sel_anchor is not None:
+            ar, ac = self._sel_anchor
+            self._sel_cells = {(r, keys[c])
+                               for r in range(min(ar, row_idx),
+                                              max(ar, row_idx) + 1)
+                               for c in range(min(ac, user_col),
+                                              max(ac, user_col) + 1)}
+        elif ctrl:
+            self._sel_cells ^= {key}
+            self._sel_anchor = (row_idx, user_col)
+        else:
+            self._sel_cells = {key}
+            self._sel_anchor = (row_idx, user_col)
+        self._after_selection_change()
+
+    def _select_row(self, row_idx, ctrl=False, shift=False):
+        keys = self._sel_col_keys()
+        rowcells = {(row_idx, k) for k in keys}
+        if shift and self._sel_anchor is not None:
+            ar, _ac = self._sel_anchor
+            self._sel_cells = {(r, k)
+                               for r in range(min(ar, row_idx),
+                                              max(ar, row_idx) + 1)
+                               for k in keys}
+        elif ctrl:
+            if rowcells & self._sel_cells:
+                self._sel_cells -= rowcells
+            else:
+                self._sel_cells |= rowcells
+            self._sel_anchor = (row_idx, 0)
+        else:
+            self._sel_cells = rowcells
+            self._sel_anchor = (row_idx, 0)
+        self._after_selection_change()
+
+    def _select_column(self, user_col, ctrl=False, shift=False):
+        keys = self._sel_col_keys()
+        col_key = keys[user_col]
+        n = self.get_row_count()
+        colcells = {(r, col_key) for r in range(n)}
+        if shift and self._sel_anchor is not None:
+            _ar, ac = self._sel_anchor
+            self._sel_cells = {(r, keys[c])
+                               for c in range(min(ac, user_col),
+                                              max(ac, user_col) + 1)
+                               for r in range(n)}
+        elif ctrl:
+            if colcells & self._sel_cells:
+                self._sel_cells -= colcells
+            else:
+                self._sel_cells |= colcells
+            self._sel_anchor = (0, user_col)
+        else:
+            self._sel_cells = colcells
+            self._sel_anchor = (0, user_col)
+        self._after_selection_change()
+
+    def _after_selection_change(self):
+        self.tv.queue_draw()
+        self.make_callback('cell_selected', self.get_selected_cells())
+
+    def _on_header_clicked(self, tvc):
+        # In cell modes on a non-sortable table, a header click selects the
+        # whole column.  (Sortable tables keep header-click-to-sort.)
+        cols = self.tv.get_columns()
+        try:
+            col_idx = cols.index(tvc)
+        except ValueError:
+            return
+        user_col = col_idx - self._col_offset()
+        if 0 <= user_col < len(self._user_columns):
+            self._select_column(user_col)
+
+    def _clear_cell_sel(self):
+        if self._sel_cells:
+            self._sel_cells = set()
+            self._sel_anchor = None
+            self.tv.queue_draw()
 
     # ----- cell-selection API (row-only fallback on gtk) ------
 
     def get_selected_cells(self):
-        """Return cells in selected rows as ``[{path, col_key, value}, ...]``.
+        """Return the selected cells as ``[{path, col_key, value}, ...]``.
 
-        GtkTreeView doesn't expose native rectangular-cell selection,
-        so on this backend cell-mode selections snap to whole rows
-        and we expand each selected row into one entry per column.
+        In cell modes this is the true per-cell selection; in row modes it
+        falls back to expanding each selected row into one entry per column.
         """
+        keys = self._sel_col_keys()
+        if not self._is_cell_mode():
+            out = []
+            for path in self.get_selected_paths():
+                row_dict = self.get_row(path[0])
+                for key in keys:
+                    out.append({'path': [path[0]], 'col_key': key,
+                                'value': row_dict.get(key, '')})
+            return out
+        n = self.get_row_count()
         out = []
-        for path in self.get_selected_paths():
-            row_idx = path[0]
-            row_dict = self.get_row(row_idx)
-            for col in self._user_columns:
-                key = col['key']
-                value = row_dict.get(key, '')
-                out.append({'path': [row_idx],
-                            'col_key': key, 'value': value})
+        for (r, col_key) in self._sel_cells:
+            if 0 <= r < n and col_key in keys:
+                out.append({'path': [r], 'col_key': col_key,
+                            'value': self.get_row(r).get(col_key, '')})
+        out.sort(key=lambda d: (d['path'][0], keys.index(d['col_key'])))
         return out
 
     def select_cell(self, path, col_key, state=True):
-        # Row-level fallback — selects (or deselects) the whole row.
-        self.select_path(path, state=state)
+        if not self._is_cell_mode():
+            self.select_path(path, state=state)
+            return
+        if not path or col_key not in self._sel_col_keys():
+            return
+        key = (path[0], col_key)
+        if state:
+            self._sel_cells.add(key)
+        else:
+            self._sel_cells.discard(key)
+        self.tv.queue_draw()
 
     def select_cells(self, cells, state=True):
-        seen = set()
         for c in (cells or []):
-            p = c.get('path')
-            if not p:
-                continue
-            key = tuple(p)
-            if key in seen:
-                continue
-            seen.add(key)
-            self.select_path(p, state=state)
+            self.select_cell(c.get('path'), c.get('col_key'), state)
 
     def clear_cell_selection(self):
-        self.clear_selection()
+        if self._is_cell_mode():
+            self._clear_cell_sel()
+        else:
+            self.clear_selection()
 
     # ----- colour overrides (per-cell / row / column / table) ---
     #
@@ -2634,6 +2941,17 @@ class TableView(TreeView):
                 fg, bg, bold = self._resolve_cell_color_gtk(None, kwd)
             if bg is None and self._alternate_row_colors:
                 bg = self._alt_row_bg_for(model, iter)
+            tpath = model.get_path(iter)
+            row_idx = tpath.get_indices()[0]
+            # Cell selection paints over content colours; the current-cell
+            # cursor then wins over the selection so it's always visible.
+            if (row_idx, kwd) in self._sel_cells:
+                bg = self._sel_bg
+            if (self._cursor_path_str is not None and
+                    self._cursor_column is not None and
+                    column == self._cursor_column and
+                    tpath.to_string() == self._cursor_path_str):
+                bg = self._cursor_bg
             self._apply_color_to_cell_gtk(cell, fg, bg, bold)
         return fn
 
@@ -3027,17 +3345,32 @@ class TableView(TreeView):
     # ----- clipboard (system + widget-level callbacks) --------
 
     def _build_selection_tsv(self):
-        paths = self.get_selected_paths()
-        if not paths:
+        cells = self.get_selected_cells()
+        if not cells:
             return ''
-        rows = sorted(p[0] for p in paths)
-        lines = []
-        for r in rows:
-            d = self.get_row(r)
-            lines.append('\t'.join(
-                ('' if d.get(c['key']) is None else str(d[c['key']]))
-                for c in self._user_columns))
-        return '\n'.join(lines)
+        keys = self._sel_col_keys()
+        keyed = {(c['path'][0], c['col_key']):
+                 ('' if c['value'] is None else str(c['value']))
+                 for c in cells}
+        rows = sorted({r for (r, _) in keyed})
+        cols_used = sorted({keys.index(k) for (_, k) in keyed if k in keys})
+        if not cols_used:
+            return ''
+        cmin, cmax = cols_used[0], cols_used[-1]
+        return '\n'.join(
+            '\t'.join(keyed.get((r, keys[c]), '')
+                      for c in range(cmin, cmax + 1))
+            for r in rows)
+
+    def _selection_top_left(self):
+        cells = self.get_selected_cells()
+        if not cells:
+            return None
+        keys = self._sel_col_keys()
+        r_min = min(c['path'][0] for c in cells)
+        c_min = min(keys.index(c['col_key'])
+                    for c in cells if c['col_key'] in keys)
+        return (r_min, c_min)
 
     def copy_selection(self):
         tsv = self._build_selection_tsv()
@@ -3053,16 +3386,18 @@ class TableView(TreeView):
             return
         clip = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
         clip.set_text(tsv, -1)
-        # Clear editable cells in selected rows.
-        for path in self.get_selected_paths():
-            r = path[0]
-            for user_col in range(len(self._user_columns)):
-                if user_col not in self._editable_cols:
-                    continue
-                col_key = self._user_columns[user_col]['key']
-                old = self.get_row(r).get(col_key, '')
-                self.set_cell(r, user_col, '')
-                self.make_callback('cell_edited', [r], col_key, old, '')
+        keys = self._sel_col_keys()
+        for c in self.get_selected_cells():
+            col_key = c['col_key']
+            if col_key not in keys:
+                continue
+            uc = keys.index(col_key)
+            if uc not in self._editable_cols:
+                continue
+            r = c['path'][0]
+            old = c['value']
+            self.set_cell(r, uc, '')
+            self.make_callback('cell_edited', [r], col_key, old, '')
         self.make_callback('cut', tsv)
 
     def paste_selection(self):
@@ -3070,10 +3405,10 @@ class TableView(TreeView):
         text = clip.wait_for_text()
         if not text:
             return
-        paths = self.get_selected_paths()
-        if not paths:
+        anchor = self._selection_top_left()
+        if anchor is None:
             return
-        anchor_row = min(p[0] for p in paths)
+        anchor_row, anchor_col = anchor
         text = text.replace('\r\n', '\n').replace('\r', '\n')
         rows = text.split('\n')
         while rows and rows[-1] == '':
@@ -3084,15 +3419,15 @@ class TableView(TreeView):
             r = anchor_row + i
             if r >= n_rows:
                 break
-            cells = line.split('\t')
-            for j, val in enumerate(cells):
-                if j >= n_cols:
+            for j, val in enumerate(line.split('\t')):
+                c = anchor_col + j
+                if c >= n_cols:
                     break
-                if j not in self._editable_cols:
+                if c not in self._editable_cols:
                     continue
-                col_key = self._user_columns[j]['key']
+                col_key = self._user_columns[c]['key']
                 old = self.get_row(r).get(col_key, '')
-                self.set_cell(r, j, val)
+                self.set_cell(r, c, val)
                 self.make_callback('cell_edited', [r], col_key, old, val)
         self.make_callback('paste', text)
 
