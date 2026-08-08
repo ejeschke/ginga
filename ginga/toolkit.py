@@ -34,15 +34,17 @@ def use(name):
             raise ToolKitError("ToolKit '%s' not supported!" % (name))
 
     elif name.startswith('gtk'):
-        # default for "gtk" is gtk3
-        if name in ('gtk', 'gtk3'):
-            name = 'gtk3'
-            family = 'gtk3'
-        elif name == 'gtk4':
-            name = 'gtk4'
-            family = 'gtk4'
-        assert name in ['gtk3', 'gtk4'], \
-            ToolKitError("ToolKit '%s' not supported!" % (name))
+        # "gtk" is a *generic* request: resolve it to whichever Gtk version is
+        # actually installed -- preferring gtk3 (the historical default) but
+        # falling back to gtk4 -- so a bare "-t gtk" works in a gtk4-only
+        # environment instead of hardcoding gtk3 and failing on import.
+        # Explicit gtk3/gtk4 are honored as given.
+        if name == 'gtk':
+            versions = _installed_gtk_versions()
+            name = 'gtk3' if ('3.0' in versions or not versions) else 'gtk4'
+        if name not in ('gtk3', 'gtk4'):
+            raise ToolKitError("ToolKit '%s' not supported!" % (name))
+        family = name
 
     elif name.startswith('tk'):
         family = 'tk'
@@ -70,7 +72,7 @@ def get_family():
 
 def get_rv_toolkits():
     """Returns a list of reference viewer supported toolkits."""
-    return ['qt5', 'qt6', 'pyside2', 'pyside6', 'gtk3', 'pg']
+    return ['qt5', 'qt6', 'pyside2', 'pyside6', 'gtk3', 'gtk4', 'pg']
 
 
 def _installed(name):
@@ -80,6 +82,23 @@ def _installed(name):
     except (ImportError, ValueError):
         # a parent package that fails while locating the spec
         return False
+
+
+def _installed_gtk_versions():
+    """Return the set of installed Gtk typelib versions (e.g. {'3.0', '4.0'}).
+
+    Both GTK3 and GTK4 are driven by PyGObject ('gi'), so a plain module
+    check can't tell them apart; ask gi's typelib repository (this loads the
+    light 'gi' module but not Gtk itself).  Returns an empty set if gi or the
+    Gtk typelib is unavailable.
+    """
+    if not _installed('gi'):
+        return set()
+    try:
+        import gi
+        return set(gi.Repository.get_default().enumerate_versions('Gtk'))
+    except Exception:
+        return set()
 
 
 def choose():
@@ -108,15 +127,13 @@ def choose():
     # find_spec alone can't tell them apart; ask gi's typelib repository
     # which Gtk versions are installed (this loads the light 'gi' module
     # but not Gtk itself).  Prefer GTK3, matching the previous order.
-    if _installed('gi'):
-        import gi
-        versions = set(gi.Repository.get_default().enumerate_versions('Gtk'))
-        if '3.0' in versions:
-            use('gtk3')
-            return
-        if '4.0' in versions:
-            use('gtk4')
-            return
+    gtk_versions = _installed_gtk_versions()
+    if '3.0' in gtk_versions:
+        use('gtk3')
+        return
+    if '4.0' in gtk_versions:
+        use('gtk4')
+        return
 
     # Web (pgwidgets) backend as a last resort.  The remote/websocket
     # backend needs pgwidgets-python (imported as ``pgwidgets``), which in
