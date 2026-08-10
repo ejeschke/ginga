@@ -2,7 +2,7 @@
 What's New
 ++++++++++
 
-Ver 7.2.0 (unreleased)
+Ver 7.2.0 (2026.08.10)
 ======================
 - Fixed gtk4 application shutdown.  Confirming a quit popped the
   confirmation dialog a *second* time and then crashed while recording
