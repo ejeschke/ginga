@@ -4,6 +4,17 @@ What's New
 
 Ver 7.2.0 (unreleased)
 ======================
+- Fixed gtk4 application shutdown.  Confirming a quit popped the
+  confirmation dialog a *second* time and then crashed while recording
+  window sizes on already-deleted widgets, and the application could fail
+  to terminate.  Two causes: a toplevel window's ``destroy`` signal
+  re-entered the close-confirmation flow while the window was being torn
+  down deliberately, and the gtk4 main loop (``Gtk.Application.run``) does
+  not poll ``ev_quit`` the way the other backends' loops do.  The
+  deliberate teardown now disconnects its ``destroy`` handler, ``get_size``
+  tolerates a torn-down widget, and ``Application.process_end()`` stops the
+  Gtk loop -- so ``gui_quit()`` / ``ev_quit``-driven shutdown works as on
+  the other backends.
 - ``TableView`` gained spreadsheet-style cell editing.  A new
   ``set_editable(tf)`` makes every text column editable in one call (instead
   of per-column ``editable`` flags), and a new ``set_header_font()`` sets the

@@ -413,8 +413,17 @@ class GwMain(Callback.Callbacks):
             return
 
         if toolkit == 'gtk4':
-            self.app.add_periodic_callback(0.1,
-                                           lambda: self.update_pending(timeout=timeout))
+            # gtk4 runs its own blocking loop (_gtkapp.run), which -- unlike
+            # the ev_quit-driven loop below -- won't notice ev_quit on its own.
+            # Have the periodic tick stop the Gtk loop once ev_quit is set, so
+            # a plain stop()/ev_quit.set() shuts the application down (as it
+            # does on the other backends) instead of hanging.
+            def _gtk4_tick():
+                if self.ev_quit.is_set():
+                    self.app.process_end()
+                    return
+                self.update_pending(timeout=timeout)
+            self.app.add_periodic_callback(0.1, _gtk4_tick)
             self.app._mainloop()
             return
 

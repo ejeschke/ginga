@@ -4233,7 +4233,7 @@ class TopLevelMixin:
     def __init__(self, title=None):
         self._fullscreen = False
 
-        self.widget.connect("destroy", self._quit)
+        self._destroy_id = self.widget.connect("destroy", self._quit)
         # TODO
         self.widget.connect("close-request", self._close_event)
         #self.widget.connect("window_state_event", self._window_event)
@@ -4288,9 +4288,21 @@ class TopLevelMixin:
         super().delete()
         window = widget.get_root()
         if window is not None:
+            # We are tearing the window down deliberately, so disconnect our
+            # "destroy" handler first: otherwise window.destroy() re-enters
+            # _quit -> close() -> the 'close' callback, which pops the quit
+            # confirmation dialog a second time and then records sizes on the
+            # already-deleted widgets.
+            if getattr(self, '_destroy_id', None) is not None:
+                widget.handler_disconnect(self._destroy_id)
+                self._destroy_id = None
             window.destroy()
 
     def get_size(self):
+        if self.widget is None:
+            # window already torn down -- fall back to the last recorded size
+            ed = self.extdata
+            return ed.get('width', 0), ed.get('height', 0)
         try:
             wd = self.widget.get_width()
             ht = self.widget.get_height()
@@ -4524,7 +4536,8 @@ class Application(Callback.Callbacks):
         pass
 
     def process_end(self):
-        pass
+        # stop the Gtk main loop (_gtkapp.run) so the application can exit
+        self._gtkapp.quit()
 
     def _process_custom_events(self, bnch):
         try:
