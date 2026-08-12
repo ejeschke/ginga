@@ -173,21 +173,21 @@ class Bunch:
         foo.BaR => 4
         """
 
+        # Populate instance state directly, bypassing our own __setattr__
+        # (which would otherwise run its init/routing check on each assignment).
+        d = self.__dict__
         if caseless:
-            self.tbl = caselessDict(inDict=inDict)
+            tbl = caselessDict(inDict=inDict)
         else:
-            self.tbl = {}
-            if inDict is not None:
-                self.tbl.update(inDict)
-
-        self.tbl.update(kwdargs)
-
-        self.iterPosition = 0
-        self.keyList = self.tbl.keys()
+            tbl = {} if inDict is None else dict(inDict)
+        tbl.update(kwdargs)
+        d['tbl'] = tbl
+        d['iterPosition'] = 0
+        d['keyList'] = tbl.keys()
 
         # after initialisation, setting attributes is the same as setting
         # an item.
-        self.__initialised = True
+        d['_Bunch__initialised'] = True
 
     def __getitem__(self, key):
         """Maps dictionary keys to values.
@@ -204,35 +204,32 @@ class Bunch:
     def __delitem__(self, key):
         del self.tbl[key]
 
-    def __getattr__(self, *args):
+    def __getattr__(self, attr, *default):
         """Maps values to attributes.
         Only called if there *isn't* an attribute with this name.
         Called for attribute style access of this object.
         """
-        attr = args[0]
-        if attr in self.tbl:
+        # single dict lookup (vs. `in` + subscript).  `*default` preserves the
+        # legacy explicit-call form __getattr__(name, alt) -> alt on miss.
+        try:
             return self.tbl[attr]
-        elif len(args) > 1:
-            return args[1]
-        raise AttributeError(attr)
+        except KeyError:
+            if default:
+                return default[0]
+            raise AttributeError(attr)
 
     def __setattr__(self, attr, value):
         """Maps attributes to values for assignment.
         Called for attribute style access of this object for assignment.
         """
-
-        # this test allows attributes to be set in the __init__ method
-        # (self.__dict__[_Bunch__initialised] same as self.__initialized)
-        if '_Bunch__initialised' not in self.__dict__:
-            self.__dict__[attr] = value
-
+        # Before __init__ finishes, or for our own internal attributes (which
+        # live in __dict__), set normally; everything else is a table entry.
+        # (self.__dict__[_Bunch__initialised] same as self.__initialised)
+        d = self.__dict__
+        if '_Bunch__initialised' not in d or attr in d:
+            d[attr] = value
         else:
-            # Any normal attributes are handled normally
-            if attr in self.__dict__:
-                self.__dict__[attr] = value
-            # Others are entries in the table
-            else:
-                self.tbl[attr] = value
+            self.tbl[attr] = value
 
     def __str__(self):
         return self.tbl.__str__()
@@ -241,10 +238,23 @@ class Bunch:
         return self.tbl.__repr__()
 
     def __getstate__(self):
-        return self.tbl.__repr__()
+        # Serialize the table itself (values must be picklable).  The other
+        # instance attributes are rebuilt in __setstate__; keyList is a dict
+        # view and is not itself picklable, which is why we don't pickle
+        # __dict__ directly.  (The previous version serialized repr(tbl) and
+        # rebuilt it with ast.literal_eval, which broke for any non-literal
+        # value and did not restore the __initialised flag.)
+        return self.tbl
 
     def __setstate__(self, state):
-        self.tbl = ast.literal_eval(state)
+        if isinstance(state, str):
+            # legacy pickle format: a repr() string of the table
+            state = ast.literal_eval(state)
+        d = self.__dict__
+        d['tbl'] = state
+        d['iterPosition'] = 0
+        d['keyList'] = state.keys()
+        d['_Bunch__initialised'] = True
 
     def __iter__(self):
         return iter(self.tbl.keys())
@@ -256,10 +266,13 @@ class Bunch:
         return key in self.tbl
 
     def __eq__(self, other):
-        if not isinstance(other, self.__class__):
+        # Two Bunches are equal iff they have the same keys and values.  The
+        # previous version iterated only `other`'s keys, so it was asymmetric
+        # and raised KeyError when `self` lacked one of `other`'s keys.
+        if not isinstance(other, Bunch) or len(self) != len(other):
             return False
         for key in other:
-            if not self[key] == other[key]:
+            if key not in self or self[key] != other[key]:
                 return False
         return True
 
@@ -299,16 +312,10 @@ class Bunch:
         return key in self.tbl
 
     def get(self, key, alt=None):
-        if key in self:
-            return self.__getitem__(key)
-        return alt
+        return self.tbl.get(key, alt)
 
     def setdefault(self, key, val):
-        if key in self:
-            return self.__getitem__(key)
-        else:
-            self.__setitem__(key, val)
-            return val
+        return self.tbl.setdefault(key, val)
 
     def items(self):
         return self.tbl.items()

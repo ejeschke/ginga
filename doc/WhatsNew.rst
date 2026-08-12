@@ -2,6 +2,21 @@
 What's New
 ++++++++++
 
+Ver 7.3.0 (unreleased)
+======================
+- ``Bunch`` (``ginga.misc.Bunch``) is faster and two latent bugs are
+  fixed.  Construction now populates the instance directly instead of
+  going through ``Bunch``'s own ``__setattr__``, and attribute lookup does
+  a single table lookup, so -- since ``Bunch`` is used pervasively --
+  construction is ~35% faster and attribute/``get()`` access ~35-55%
+  faster.  ``__eq__`` is now symmetric and no longer raises ``KeyError``
+  when the two Bunches have different keys (it previously iterated only one
+  side).  Pickling now serializes the table directly instead of a
+  ``repr()`` string, so non-literal values (datetimes, numpy scalars,
+  arbitrary objects) survive a round trip and the unpickled Bunch is fully
+  functional; legacy string-format pickles still load.  Added a test suite
+  (there was none).
+
 Ver 7.2.0 (2026.08.10)
 ======================
 - Fixed gtk4 application shutdown.  Confirming a quit popped the
