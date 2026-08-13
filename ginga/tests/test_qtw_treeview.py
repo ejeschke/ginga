@@ -114,3 +114,242 @@ def test_interior_colours_still_resolve(tree):
     item = tree._path_to_item(['ob1'])
     idx = tree.datakeys.index('grade')
     assert item.data(idx, QtCore.Qt.ForegroundRole) is not None
+
+
+# ----- per-column editing -------------------------------------------
+
+def _editor(tree, path, col_key):
+    """The editor Qt would create for a cell, or None if it refuses."""
+    from ginga.qtw.QtHelp import QtGui
+    item = tree._path_to_item(path)
+    col = tree.datakeys.index(col_key)
+    idx = tree.widget.indexFromItem(item, col)
+    delegate = tree.widget.itemDelegate()
+    editor = delegate.createEditor(tree.widget, QtGui.QStyleOptionViewItem(),
+                                   idx)
+    if editor is not None:
+        editor.deleteLater()
+    return editor
+
+
+@pytest.fixture
+def edit_tree(app):
+    tree = Widgets.TreeView()
+    tree.setup_table([
+        dict(label='Name', key='name'),
+        dict(label='Seeing', key='seeing'),
+        dict(label='Note', key='note', editable=True),
+        dict(label='QA', key='qa', widget='combobox',
+             choices=['', 'Good', 'Bad']),
+    ], 2, 'name')
+    # the interior supplies note and qa; the leaf supplies only note
+    tree.set_tree({'ob1': {'name': 'OB-042', 'note': '', 'qa': 'Good',
+                           'e1': {'name': 'e1', 'seeing': '0.6',
+                                  'note': 'hi'}}})
+    return tree
+
+
+def test_only_editable_columns_get_an_editor(edit_tree):
+    assert _editor(edit_tree, ['ob1'], 'note') is not None
+    assert _editor(edit_tree, ['ob1'], 'name') is None
+    assert _editor(edit_tree, ['ob1', 'e1'], 'seeing') is None
+
+
+def _cell_widget(tree, path, col_key):
+    item = tree._path_to_item(path)
+    return tree.widget.itemWidget(item, tree.datakeys.index(col_key))
+
+
+def test_widget_column_shows_a_live_control(edit_tree):
+    """The control sits in the cell ready to use, as on the pg backend
+    and the qt TableView -- not hidden behind a double-click."""
+    from ginga.qtw.QtHelp import QtGui
+    combo = _cell_widget(edit_tree, ['ob1'], 'qa')
+    assert isinstance(combo, QtGui.QComboBox)
+    assert [combo.itemText(i) for i in range(combo.count())] == \
+        ['', 'Good', 'Bad']
+    assert combo.currentText() == 'Good'
+
+
+def test_no_control_where_the_row_did_not_supply_the_column(edit_tree):
+    assert _cell_widget(edit_tree, ['ob1', 'e1'], 'qa') is None
+
+
+def test_visible_key_confines_the_control(app):
+    """A column can name a row field that gates its control, which is
+    how a control is confined to parent rows."""
+    tree = Widgets.TreeView()
+    tree.setup_table([
+        dict(label='Name', key='name'),
+        dict(label='QA', key='qa', widget='combobox',
+             choices=['', 'Good'], visible_key='qa_ctl'),
+    ], 2, 'name')
+    tree.set_tree({'ob1': {'name': 'OB', 'qa': 'Good', 'qa_ctl': True,
+                           'e1': {'name': 'e1', 'qa': '', 'qa_ctl': False}}})
+    assert _cell_widget(tree, ['ob1'], 'qa') is not None
+    assert _cell_widget(tree, ['ob1', 'e1'], 'qa') is None
+
+
+def test_using_the_control_fires_cell_edited(edit_tree):
+    got = []
+    edit_tree.add_callback('cell_edited', lambda w, *args: got.append(args))
+    combo = _cell_widget(edit_tree, ['ob1'], 'qa')
+    combo.setCurrentText('Bad')
+    combo.activated.emit(combo.currentIndex())      # as a user click would
+    assert got == [(['ob1'], 'qa', 'Good', 'Bad')]
+
+
+def test_a_refresh_updates_the_control_without_firing(edit_tree):
+    """Re-reading the same value from a refresh is not a user edit."""
+    got = []
+    edit_tree.add_callback('cell_edited', lambda w, *args: got.append(args))
+    edit_tree.update_tree({'ob1': {'name': 'OB-042', 'note': '',
+                                   'qa': 'Bad',
+                                   'e1': {'name': 'e1', 'seeing': '0.6',
+                                          'note': 'hi'}}})
+    combo = _cell_widget(edit_tree, ['ob1'], 'qa')
+    assert combo.currentText() == 'Bad'
+    assert got == []
+
+
+def test_no_duplicate_editor_over_a_live_control(edit_tree):
+    """The delegate must not open a second combobox on top of one."""
+    assert _editor(edit_tree, ['ob1'], 'qa') is None
+
+
+def test_interior_blank_filler_is_not_editable(edit_tree):
+    """A column the row never supplied is padding, not content -- so an
+    editable column is still refused there."""
+    assert _editor(edit_tree, ['ob1', 'e1'], 'qa') is None
+
+
+def test_supplied_but_empty_is_editable(edit_tree):
+    """The interior's note is '' and must still be editable, or a row
+    with no note yet could never be given one."""
+    assert _editor(edit_tree, ['ob1'], 'note') is not None
+
+
+def test_cell_edited_fires_with_the_portable_signature(edit_tree):
+    got = []
+    edit_tree.add_callback('cell_edited',
+                           lambda w, *args: got.append(args))
+    from ginga.qtw.QtHelp import QtGui
+    item = edit_tree._path_to_item(['ob1'])
+    col = edit_tree.datakeys.index('note')
+    idx = edit_tree.widget.indexFromItem(item, col)
+    delegate = edit_tree.widget.itemDelegate()
+    editor = delegate.createEditor(edit_tree.widget,
+                                   QtGui.QStyleOptionViewItem(), idx)
+    editor.setText('a new note')
+    delegate.setModelData(editor, edit_tree.widget.model(), idx)
+    assert got == [(['ob1'], 'note', '', 'a new note')]
+    assert item.text(col) == 'a new note'
+
+
+def test_double_click_edits_instead_of_toggling(edit_tree):
+    """Otherwise a double-click on a parent row just expands it."""
+    assert edit_tree.widget.expandsOnDoubleClick() is False
+
+
+def test_tuple_descriptors_still_work(app):
+    """The portable form must behave exactly as it always did."""
+    tree = Widgets.TreeView()
+    tree.setup_table([('Name', 'name'), ('Seeing', 'seeing')], 2, 'name')
+    tree.set_tree({'ob1': {'e1': {'name': 'e1', 'seeing': '0.6'}}})
+    assert tree.datakeys == ['name', 'seeing']
+    assert tree._col_editable == set()
+    assert tree.widget.expandsOnDoubleClick() is True
+
+
+def test_leaf_tolerates_a_missing_column(app):
+    """A leaf that omits a column renders blank rather than raising."""
+    tree = Widgets.TreeView()
+    tree.setup_table([('Name', 'name'), ('Seeing', 'seeing')], 2, 'name')
+    tree.set_tree({'ob1': {'e1': {'name': 'e1'}}})
+    assert _row(tree, ['ob1', 'e1']) == ['e1', '']
+
+
+# ----- the other embeddable cell widgets ----------------------------
+
+@pytest.fixture
+def widget_tree(app):
+    tree = Widgets.TreeView()
+    tree.setup_table([
+        dict(label='Name', key='name'),
+        dict(label='Mute', key='mute', widget='checkbox'),
+        dict(label='QA', key='qa', widget='combobox',
+             choices=['', 'Good', 'Bad']),
+        dict(label='Done', key='pct', widget='progress', min=0, max=100),
+        dict(label='', key='go', widget='button', text='Reset'),
+    ], 2, 'name')
+    tree.set_tree({'ob1': {'name': 'OB', 'mute': True, 'qa': 'Good',
+                           'pct': 40, 'go': None,
+                           'e1': {'name': 'e1', 'mute': False, 'qa': '',
+                                  'pct': 90, 'go': None}}})
+    return tree
+
+
+def test_every_widget_type_is_supported(widget_tree):
+    """checkbox / combobox / progress / button, the same set the pg
+    backend and the qt TableView take."""
+    from ginga.qtw.QtHelp import QtGui
+    expected = {'mute': QtGui.QCheckBox, 'qa': QtGui.QComboBox,
+                'pct': QtGui.QProgressBar, 'go': QtGui.QPushButton}
+    for col_key, cls in expected.items():
+        for path in (['ob1'], ['ob1', 'e1']):
+            assert isinstance(_cell_widget(widget_tree, path, col_key), cls)
+
+
+def test_widget_values_are_bound(widget_tree):
+    assert _cell_widget(widget_tree, ['ob1'], 'mute').isChecked() is True
+    assert _cell_widget(widget_tree, ['ob1', 'e1'],
+                        'mute').isChecked() is False
+    assert _cell_widget(widget_tree, ['ob1'], 'pct').value() == 40
+    assert _cell_widget(widget_tree, ['ob1'], 'go').text() == 'Reset'
+
+
+def test_checkbox_and_combobox_fire_cell_edited_with_typed_values(
+        widget_tree):
+    """old_value must be the same type as new_value, or a caller
+    comparing them sees a spurious change."""
+    got = []
+    widget_tree.add_callback('cell_edited', lambda w, *a: got.append(a))
+    _cell_widget(widget_tree, ['ob1'], 'mute').setChecked(False)
+    _cell_widget(widget_tree, ['ob1'], 'qa').setCurrentText('Bad')
+    assert got == [(['ob1'], 'mute', True, False),
+                   (['ob1'], 'qa', 'Good', 'Bad')]
+
+
+def test_button_fires_cell_action(widget_tree):
+    got = []
+    widget_tree.add_callback('cell_action', lambda w, *a: got.append(a))
+    _cell_widget(widget_tree, ['ob1'], 'go').click()
+    assert got == [(['ob1'], 'go')]
+
+
+def test_enabled_key_gates_the_control(app):
+    tree = Widgets.TreeView()
+    tree.setup_table([
+        dict(label='Name', key='name'),
+        dict(label='Mute', key='mute', widget='checkbox',
+             enabled_key='can_mute'),
+    ], 2, 'name')
+    tree.set_tree({'ob1': {'name': 'OB', 'mute': False, 'can_mute': True,
+                           'e1': {'name': 'e1', 'mute': False,
+                                  'can_mute': False}}})
+    assert _cell_widget(tree, ['ob1'], 'mute').isEnabled() is True
+    assert _cell_widget(tree, ['ob1', 'e1'], 'mute').isEnabled() is False
+
+
+def test_refresh_updates_controls_without_firing(widget_tree):
+    got = []
+    widget_tree.add_callback('cell_edited', lambda w, *a: got.append(a))
+    widget_tree.update_tree({'ob1': {'name': 'OB', 'mute': False,
+                                     'qa': 'Bad', 'pct': 75, 'go': None,
+                                     'e1': {'name': 'e1', 'mute': False,
+                                            'qa': '', 'pct': 90,
+                                            'go': None}}})
+    assert _cell_widget(widget_tree, ['ob1'], 'mute').isChecked() is False
+    assert _cell_widget(widget_tree, ['ob1'], 'qa').currentText() == 'Bad'
+    assert _cell_widget(widget_tree, ['ob1'], 'pct').value() == 75
+    assert got == []

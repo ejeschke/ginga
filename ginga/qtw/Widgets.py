@@ -24,6 +24,9 @@ from ginga.util import treehelper
 # value rather than its key, so the key can't be recovered from
 # the text any more.
 _TREE_KEY_ROLE = 0x0100 + 1     # Qt.UserRole + 1
+# Columns a row actually supplied, as opposed to the blanks an
+# interior row is padded with.  Only supplied cells are editable.
+_TREE_SUPPLIED_ROLE = 0x0100 + 2
 from ginga.misc import Callback, Bunch, Settings, LineHistory
 from ginga.util.paths import icondir, app_icon_path
 from ginga.fonts import font_asst
@@ -1407,6 +1410,153 @@ class TreeWidgetItem(QtGui.QTreeWidgetItem):
             return a.lower() < b.lower()
 
 
+
+def _build_cell_widget(col, value, on_changed=None, on_action=None):
+    """Create the control for a ``widget`` column's cell.
+
+    Shared by the TreeView and TableView so the two can't diverge on
+    what a ``checkbox`` / ``combobox`` / ``progress`` / ``button``
+    column looks like.  ``on_changed`` is called when the user alters a
+    value-bearing control; ``on_action`` when a button is clicked.
+    """
+    wtype = col['widget']
+    if wtype == 'checkbox':
+        w = QtGui.QCheckBox()
+        w.setChecked(bool(value))
+        w.setStyleSheet('background: transparent;')
+        if on_changed is not None:
+            w.stateChanged.connect(lambda _state: on_changed())
+        return w
+    if wtype == 'combobox':
+        w = QtGui.QComboBox()
+        choices = col.get('choices') or []
+        w.addItems([str(c) for c in choices])
+        text = '' if value is None else str(value)
+        pos = w.findText(text)
+        w.setCurrentIndex(max(pos, 0))
+        if on_changed is not None:
+            w.currentIndexChanged.connect(lambda _i: on_changed())
+        return w
+    if wtype == 'progress':
+        w = QtGui.QProgressBar()
+        lo = col.get('min', 0) or 0
+        hi = col.get('max', 100) if col.get('max') is not None else 100
+        w.setRange(int(lo), int(hi))
+        try:
+            w.setValue(int(value) if value is not None else int(lo))
+        except (TypeError, ValueError):
+            w.setValue(int(lo))
+        return w
+    if wtype == 'button':
+        label = str(value) if value is not None else (col.get('text') or '')
+        w = QtGui.QPushButton(label)
+        if on_action is not None:
+            w.clicked.connect(lambda _checked=False: on_action())
+        return w
+    raise WidgetError(f"unknown cell widget type: {wtype!r}")
+
+
+def _read_cell_widget(col, w):
+    """The current value of a cell control built by _build_cell_widget."""
+    wtype = col['widget']
+    if wtype == 'checkbox':
+        return bool(w.isChecked())
+    if wtype == 'combobox':
+        return w.currentText()
+    if wtype == 'progress':
+        return int(w.value())
+    if wtype == 'button':
+        # No persistent value -- the label, so a round-trip through
+        # get_row() preserves it.
+        return w.text()
+    return None
+
+
+def _normalize_column(col, index):
+    """Normalise a TreeView column descriptor.
+
+    Accepts the portable ``(label, key[, type])`` tuple, a bare string,
+    or the full dict the pg backend takes -- so ``editable``, ``widget``
+    / ``choices`` and ``visible_key`` survive instead of being dropped
+    on the way to a desktop backend.
+    """
+    if isinstance(col, dict):
+        key = col.get('key') or col.get('label') or f'col{index}'
+        dtype = col.get('type') or ('icon' if key == 'icon' else 'str')
+        if dtype == 'string':
+            dtype = 'str'
+        spec = dict(col)
+        spec.update(label=col.get('label', key), key=key, type=dtype)
+        return spec
+
+    if isinstance(col, str):
+        return dict(label=col, key=col,
+                    type=('icon' if col == 'icon' else 'str'))
+
+    label = col[0]
+    key = col[1] if len(col) > 1 else label
+    dtype = col[2] if len(col) > 2 else ('icon' if key == 'icon' else 'str')
+    return dict(label=label, key=key, type=dtype)
+
+
+class _TreeItemDelegate(QtGui.QStyledItemDelegate):
+    """Gives the TreeView per-column editing, which plain item flags
+    can't express -- ``ItemIsEditable`` is per item, so without this a
+    row is editable in every column or none.
+
+    Refusing to create an editor is what makes a column read-only, and
+    it is also where an interior row's blank filler cells are refused:
+    only a column the node actually supplied can be edited.
+    """
+
+    def __init__(self, tree, parent=None):
+        super(_TreeItemDelegate, self).__init__(parent)
+        self._tree = tree
+
+    def createEditor(self, parent, option, index):
+        tree = self._tree
+        col = index.column()
+        if col not in tree._col_editable:
+            return None
+        item = tree.widget.itemFromIndex(index)
+        if item is not None and not tree._cell_is_supplied(item, col):
+            # a blank filler cell on an interior row, not real content
+            return None
+        if tree.widget.itemWidget(item, col) is not None:
+            # a live control already occupies the cell
+            return None
+        if col in tree._col_widgets:
+            # served by a live control in the cell
+            return None
+        return super(_TreeItemDelegate, self).createEditor(parent, option,
+                                                          index)
+
+    def setEditorData(self, editor, index):
+        if isinstance(editor, QtGui.QComboBox):
+            value = index.data(QtCore.Qt.DisplayRole)
+            pos = editor.findText('' if value is None else str(value))
+            editor.setCurrentIndex(max(pos, 0))
+            return
+        super(_TreeItemDelegate, self).setEditorData(editor, index)
+
+    def setModelData(self, editor, model, index):
+        tree = self._tree
+        item = tree.widget.itemFromIndex(index)
+        col = index.column()
+        old_value = item.text(col) if item is not None else None
+
+        if isinstance(editor, QtGui.QComboBox):
+            new_value = editor.currentText()
+            if item is not None:
+                item.setText(col, new_value)
+        else:
+            super(_TreeItemDelegate, self).setModelData(editor, model, index)
+            new_value = item.text(col) if item is not None else None
+
+        if item is not None and new_value != old_value:
+            tree._fire_cell_edited(item, col, old_value, new_value)
+
+
 class TreeView(WidgetBase):
     def __init__(self, auto_expand=False, sortable=False,
                  selection='single', use_alt_row_color=False,
@@ -1430,6 +1580,13 @@ class TreeView(WidgetBase):
         # the items) so they can be re-applied to rows added later, and
         # so the cascade cell > row > column > table can be resolved per
         # channel -- a row-level fg composes with a column-level bg.
+        # Per-column editing / widget-cell configuration, filled in by
+        # setup_table from the column descriptors.
+        self.col_specs = []
+        self._col_editable = set()
+        self._col_widgets = {}      # col index -> column spec
+        self._cell_widgets = {}     # (id(item), col_key) -> control
+        self._delegate = None
         self._cell_styles = {}      # (path, col_key) -> dict(fg, bg, bold)
         self._row_styles = {}       # path -> dict(fg, bg, bold)
         self._column_styles = {}    # col_key -> dict(fg, bg, bold)
@@ -1468,7 +1625,8 @@ class TreeView(WidgetBase):
             tv.startDrag = self._start_drag
 
         for cbname in ('selected', 'activated', 'drag-start', 'expanded',
-                       'collapsed', 'changed', 'sorted'):
+                       'collapsed', 'changed', 'sorted', 'cell_edited',
+                       'cell_action'):
             self.enable_callback(cbname)
 
     def setup_table(self, columns, levels, leaf_key):
@@ -1485,19 +1643,25 @@ class TreeView(WidgetBase):
         treeview.setUniformRowHeights(True)
 
         # create the column headers
-        if not isinstance(columns[0], str):
-            # columns specifies a mapping
-            headers = [col[0] for col in columns]
-            datakeys = [col[1] for col in columns]
-            if len(columns[0]) > 2:
-                datatypes = [col[2] for col in columns]
-            else:
-                datatypes = ['icon' if _key == 'icon' else 'str'
-                             for _key in datakeys]
-        else:
-            headers = datakeys = columns
-            datatypes = ['icon' if _key == 'icon' else 'str'
-                         for _key in datakeys]
+        specs = [_normalize_column(col, i) for i, col in enumerate(columns)]
+        self.col_specs = specs
+        headers = [spec['label'] for spec in specs]
+        datakeys = [spec['key'] for spec in specs]
+        datatypes = [spec['type'] for spec in specs]
+
+        # Per-column editability and widget cells, as the pg backend
+        # takes them.  Tuple/str descriptors set neither, so a caller
+        # that passes those behaves exactly as before.
+        self._col_editable = set(i for i, spec in enumerate(specs)
+                                 if spec.get('editable'))
+        self._col_widgets = {i: spec for i, spec in enumerate(specs)
+                             if spec.get('widget') in _CELL_WIDGETS}
+        # A widget column is interactive by nature -- the pg backend
+        # renders a real control there without needing `editable` -- so
+        # don't make callers say it twice.
+        self._col_editable |= set(self._col_widgets)
+        if self._col_editable or self._col_widgets:
+            self._install_edit_delegate()
 
         self.datakeys = datakeys
         self.datatypes = datatypes
@@ -1678,28 +1842,36 @@ class TreeView(WidgetBase):
                     bnch = Bunch.Bunch(node=node, item=item, terminal=True)
                     shadow[key] = bnch
 
-                # update leaf item
+                # update leaf item.  Columns the node omits render
+                # blank rather than raising, matching interior rows.
+                shown = treehelper.row_values(node, self.datakeys)
+                self._mark_supplied(item, set(node.keys()))
                 for i, _key in enumerate(self.datakeys):
                     datatype = self.datatypes[i]
+                    value = shown[_key]
                     if datatype == 'icon':
-                        item.setIcon(i, node[_key])
+                        # the blank fallback isn't an icon, so only
+                        # when the node actually supplied one
+                        if _key in node:
+                            item.setIcon(i, value)
                     elif datatype == 'check':
-                        state = QtCore.Qt.Checked if node[_key] else \
-                            QtCore.Qt.Unchecked
+                        state = (QtCore.Qt.Checked if value
+                                 else QtCore.Qt.Unchecked)
                         item.setCheckState(i, state)
-                        # if self.editable:
-                        #     item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)
-                        # else:
-                        #     item.setFlags(item.flags() & ~QtCore.Qt.ItemIsUserCheckable)
                     elif datatype == 'widget':
-                        qt_w = node[_key].get_widget()
-                        self.widget.setItemWidget(item, i, qt_w)
+                        if _key in node:
+                            self.widget.setItemWidget(item, i,
+                                                      value.get_widget())
                     else:
-                        item.setText(i, str(node[_key]))
-                        if self.editable:
-                            item.setFlags(item.flags() | QtCore.Qt.ItemIsEditable)
-                        else:
-                            item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEditable)
+                        item.setText(i, str(value))
+
+                # the widget-wide editable flag predates per-column
+                # editability; honour it as "every column"
+                if self.editable:
+                    item.setFlags(item.flags() | QtCore.Qt.ItemIsEditable)
+
+                if self._col_widgets:
+                    self._install_widget_cells(item, node)
 
             else:
                 try:
@@ -1738,9 +1910,158 @@ class TreeView(WidgetBase):
                 # recurse for non-leaf interior node
                 self._add_subtree(level + 1, d, item, children)
 
+    def _install_edit_delegate(self):
+        """Route editing through our delegate, which is what makes
+        editability per column rather than per row."""
+        if self._delegate is None:
+            self._delegate = _TreeItemDelegate(self, self.widget)
+            self.widget.setItemDelegate(self._delegate)
+        # Items must carry ItemIsEditable for Qt to consult the
+        # delegate at all; the delegate then refuses the columns and
+        # cells that aren't editable.
+        if self._col_editable:
+            # Otherwise a double-click on a parent row toggles it open
+            # instead of starting an edit.
+            self.widget.setExpandsOnDoubleClick(False)
+
+    def _install_widget_cells(self, item, values):
+        """Put a real control in a ``widget`` column's cells.
+
+        The pg backend renders these as live controls the user clicks
+        straight away, and the qt TableView does the same, so a tree
+        shouldn't need a double-click to reveal one.  A cell gets its
+        control when the row supplied that column and, if the column
+        names a ``visible_key``, when that field of the row is truthy --
+        which is how a control is confined to (say) parent rows only.
+        """
+        for col, spec in self._col_widgets.items():
+            col_key = self.datakeys[col]
+            wanted = col_key in values
+            vis_key = spec.get('visible_key')
+            if wanted and vis_key is not None:
+                wanted = bool(values.get(vis_key))
+
+            widget = self.widget.itemWidget(item, col)
+            if not wanted:
+                if widget is not None:
+                    self.widget.removeItemWidget(item, col)
+                    self._cell_widgets.pop((id(item), col_key), None)
+                continue
+
+            value = values.get(col_key)
+            if widget is None:
+                widget = _build_cell_widget(
+                    spec, value,
+                    on_changed=(lambda item=item, col=col:
+                                self._cell_widget_changed(item, col)),
+                    on_action=(lambda item=item, col=col:
+                               self._cell_widget_clicked(item, col)))
+                self._cell_widgets[(id(item), col_key)] = widget
+                self.widget.setItemWidget(item, col, widget)
+                item.setText(col, '' if value is None else str(value))
+                # keep the typed value too, so cell_edited reports an
+                # old_value of the same type as the new one
+                item.setData(col, QtCore.Qt.UserRole, value)
+            else:
+                self._refresh_cell_widget(item, col, spec, widget, value)
+
+            enabled_key = spec.get('enabled_key')
+            if enabled_key is not None:
+                widget.setEnabled(bool(values.get(enabled_key, True)))
+
+    def _refresh_cell_widget(self, item, col, spec, widget, value):
+        """Push a new value into an existing control without letting it
+        look like the user changed it."""
+        current = _read_cell_widget(spec, widget)
+        if value is None or current == value:
+            return
+        widget.blockSignals(True)
+        try:
+            wtype = spec['widget']
+            if wtype == 'checkbox':
+                widget.setChecked(bool(value))
+            elif wtype == 'combobox':
+                pos = widget.findText(str(value))
+                widget.setCurrentIndex(max(pos, 0))
+            elif wtype == 'progress':
+                try:
+                    widget.setValue(int(value))
+                except (TypeError, ValueError):
+                    pass
+            elif wtype == 'button':
+                widget.setText(str(value))
+        finally:
+            widget.blockSignals(False)
+        item.setText(col, '' if value is None else str(value))
+        item.setData(col, QtCore.Qt.UserRole, value)
+
+    def _cell_widget_changed(self, item, col):
+        """A value-bearing control was altered by the user."""
+        col_key = self.datakeys[col]
+        widget = self._cell_widgets.get((id(item), col_key))
+        if widget is None:
+            return
+        new_value = _read_cell_widget(self._col_widgets[col], widget)
+        old_value = item.data(col, QtCore.Qt.UserRole)
+        if old_value is None:
+            old_value = item.text(col)
+        if new_value == old_value:
+            return
+        item.setText(col, '' if new_value is None else str(new_value))
+        item.setData(col, QtCore.Qt.UserRole, new_value)
+        self._fire_cell_edited(item, col, old_value, new_value)
+
+    def _cell_widget_clicked(self, item, col):
+        """A button cell was clicked."""
+        path = self._get_path(item)
+        self.make_callback('cell_action', path, self.datakeys[col])
+
+    def _mark_supplied(self, item, supplied):
+        """Record which columns this row actually provided, so blank
+        filler cells on an interior row can be refused for editing."""
+        item.setData(0, _TREE_SUPPLIED_ROLE, sorted(supplied))
+        if self._col_editable:
+            item.setFlags(item.flags() | QtCore.Qt.ItemIsEditable)
+
+    def _cell_is_supplied(self, item, col):
+        supplied = item.data(0, _TREE_SUPPLIED_ROLE)
+        if supplied is None:
+            return True         # rows from before this was tracked
+        if not (0 <= col < len(self.datakeys)):
+            return False
+        return self.datakeys[col] in supplied
+
+    def _fire_cell_edited(self, item, col, old_value, new_value):
+        path = self._get_path(item)
+        col_key = self.datakeys[col]
+        self.make_callback('cell_edited', path, col_key, old_value,
+                           new_value)
+
+    def set_column_editable(self, col, tf):
+        """Mark a column editable.  `col` may be an index or a key."""
+        idx = col if isinstance(col, int) else self.datakeys.index(col)
+        if tf:
+            self._col_editable.add(idx)
+        else:
+            self._col_editable.discard(idx)
+        self._install_edit_delegate()
+
+    def set_editable(self, tf):
+        """Mark every text column editable (or none)."""
+        if tf:
+            self._col_editable = set(
+                i for i, dtype in enumerate(self.datatypes)
+                if dtype not in ('icon', 'check', 'widget'))
+        else:
+            self._col_editable = set()
+        self._install_edit_delegate()
+
     def _set_interior_values(self, item, values, key):
         """Show an interior node's own column values on its row."""
         shown = treehelper.row_values(values, self.datakeys, key=key)
+        self._mark_supplied(item, set(values.keys()))
+        if self._col_widgets:
+            self._install_widget_cells(item, values)
         for i, datakey in enumerate(self.datakeys):
             value = shown[datakey]
             datatype = self.datatypes[i]
@@ -3082,59 +3403,13 @@ class _TableViewQTree(TreeView):
         return container
 
     def _make_cell_widget(self, col, value, item, col_key):
-        wtype = col['widget']
-        if wtype == 'checkbox':
-            w = QtGui.QCheckBox()
-            w.setChecked(bool(value))
-            w.setStyleSheet('background: transparent;')
-            w.stateChanged.connect(
-                lambda _state, it=item, ck=col_key:
-                    self._on_cell_widget_changed(it, ck))
-            return w
-        if wtype == 'combobox':
-            w = QtGui.QComboBox()
-            choices = col.get('choices') or []
-            for ch in choices:
-                w.addItem(str(ch))
-            if value is not None and str(value) in [str(c) for c in choices]:
-                w.setCurrentText(str(value))
-            w.currentIndexChanged.connect(
-                lambda _i, it=item, ck=col_key:
-                    self._on_cell_widget_changed(it, ck))
-            return w
-        if wtype == 'progress':
-            w = QtGui.QProgressBar()
-            lo = col.get('min', 0) or 0
-            hi = col.get('max', 100) if col.get('max') is not None else 100
-            w.setRange(int(lo), int(hi))
-            try:
-                w.setValue(int(value) if value is not None else int(lo))
-            except (TypeError, ValueError):
-                w.setValue(int(lo))
-            return w
-        if wtype == 'button':
-            label = (str(value) if value is not None
-                     else (col.get('text') or ''))
-            w = QtGui.QPushButton(label)
-            w.clicked.connect(
-                lambda _checked=False, it=item, ck=col_key:
-                    self._on_cell_widget_clicked(it, ck))
-            return w
-        raise WidgetError(f"unknown cell widget type: {wtype!r}")
+        return _build_cell_widget(
+            col, value,
+            on_changed=lambda: self._on_cell_widget_changed(item, col_key),
+            on_action=lambda: self._on_cell_widget_clicked(item, col_key))
 
     def _read_widget_value(self, col, w):
-        wtype = col['widget']
-        if wtype == 'checkbox':
-            return bool(w.isChecked())
-        if wtype == 'combobox':
-            return w.currentText()
-        if wtype == 'progress':
-            return int(w.value())
-        if wtype == 'button':
-            # No persistent value — return the current label so
-            # round-trips through get_row() preserve it.
-            return w.text()
-        return None
+        return _read_cell_widget(col, w)
 
     def _on_cell_widget_changed(self, item, col_key):
         """Fire cell_edited(table, [row], col_key, old, new) when
