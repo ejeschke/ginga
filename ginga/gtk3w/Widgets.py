@@ -5,6 +5,7 @@
 # Please see the file LICENSE.txt for details.
 #
 
+import contextlib
 import os.path
 import pathlib
 from functools import reduce
@@ -83,6 +84,26 @@ class WidgetBase(Callback.Callbacks):
 
     def get_widget(self):
         return self.widget
+
+    def batch(self):
+        """Group a burst of updates so the backend can apply them as one.
+
+        Backends that ship updates to a remote view (currently ``pg``,
+        which drives a browser over a websocket) send everything done
+        inside the block as a single message and redraw once, instead of
+        one message and one redraw per call.  That makes a bulk update --
+        rewriting a few hundred cells of a tree, say -- cost about what
+        one update costs.
+
+        On the desktop backends there is nothing to coalesce, so this is
+        a no-op context manager.  It is defined on every backend so
+        application code can use it unconditionally::
+
+            with tree.batch():
+                for path, col_key, value in changes:
+                    tree.set_cell(path, col_key, value)
+        """
+        return contextlib.nullcontext()
 
     def set_tooltip(self, text):
         self.widget.set_tooltip_text(text)
@@ -1102,6 +1123,41 @@ class StatusBar(WidgetBase):
                                                self.clear_message)
 
 
+
+def _apply_color_to_cell_gtk(cell, fg, bg, bold=None):
+    """Paint one cell renderer from resolved fg/bg/bold values.
+
+    Shared by the TreeView and TableView data functions -- GTK draws
+    cells through renderers, so a colour override is applied here at
+    render time rather than stored on an item.
+    """
+    """Apply the resolved colour + weight to a single cell
+    renderer.  ``foreground`` only makes sense on
+    CellRendererText (icon / toggle cells ignore it);
+    ``cell-background`` works on all renderer types."""
+    if isinstance(cell, Gtk.CellRendererText):
+        if fg is not None:
+            cell.set_property('foreground', fg)
+            cell.set_property('foreground-set', True)
+        else:
+            cell.set_property('foreground-set', False)
+        # Pango weight: 700 == bold, 400 == normal.  Only set
+        # the property when bold is explicitly True/False so
+        # cells without a weight override keep theme defaults.
+        if bold is True:
+            cell.set_property('weight', 700)
+            cell.set_property('weight-set', True)
+        elif bold is False:
+            cell.set_property('weight', 400)
+            cell.set_property('weight-set', True)
+        else:
+            cell.set_property('weight-set', False)
+    if bg is not None:
+        cell.set_property('cell-background', bg)
+        cell.set_property('cell-background-set', True)
+    else:
+        cell.set_property('cell-background-set', False)
+
 class TreeView(WidgetBase):
     def __init__(self, auto_expand=False, sortable=False, selection='single',
                  use_alt_row_color=False, dragable=False):
@@ -1119,6 +1175,17 @@ class TreeView(WidgetBase):
         self.datatypes = []
         # shadow index
         self.shadow = {}
+        # Per-cell / row / column / table colour overrides, matching
+        # the pg and qt backends.  Rows are identified by their key
+        # path, which -- unlike a tree path -- survives sorting.
+        self._cell_styles = {}      # (path, col_key) -> dict(fg, bg, bold)
+        self._row_styles = {}       # path -> dict(fg, bg, bold)
+        self._column_styles = {}    # col_key -> dict(fg, bg, bold)
+        self._table_style = None    # dict(fg, bg, bold) or None
+        # id(leaf node object) -> its key, so a row's key path can be
+        # recovered inside the cell data function (the model stores the
+        # node object for leaves and the key string for interiors)
+        self._leaf_keys = {}
         # a font_asst.Font(family, style, weight) tuple; we only need the
         # CSS attributes here, not a native font object
         self.font = font_asst.parse_font('sans')
@@ -1263,6 +1330,9 @@ class TreeView(WidgetBase):
 
         self.tv.set_fixed_height_mode(True)
 
+        # rows added just now aren't in the leaf-key index yet
+        self._index_leaf_keys()
+
         # User wants auto expand?
         if self.auto_expand:
             self.tv.expand_all()
@@ -1272,6 +1342,8 @@ class TreeView(WidgetBase):
         self._del_subtree(1, self.shadow, model, tree_dict)
         self._add_subtree(1, self.shadow, model, None, tree_dict,
                           expand_new=expand_new)
+        # rows added just now aren't in the leaf-key index yet
+        self._index_leaf_keys()
 
     def delete_tree(self, tree_dict, prune_empty=True):
         """Delete the nodes named by `tree_dict` from the TreeView.
@@ -1549,6 +1621,12 @@ class TreeView(WidgetBase):
         with self._selection_stocker:
             self.tv.set_model(model)
         self.shadow = {}
+        # the rows those overrides referred to are gone; the column and
+        # table layers aren't row-specific, so they survive (matching
+        # the pg and qt backends)
+        self._cell_styles = {}
+        self._row_styles = {}
+        self._leaf_keys = {}
 
     def clear_selection(self):
         treeselection = self.tv.get_selection()
@@ -1776,6 +1854,179 @@ class TreeView(WidgetBase):
             return self._cmp(val1, val2, datatype=datatype)
         return fn
 
+    # ----- per-cell / row / column / table colour overrides ---------
+    #
+    # Same API as the pg and qt backends.  GTK paints cells through a
+    # per-column data function rather than per-item brushes, so the
+    # overrides are resolved at render time in ``_mkcolfnN`` below.
+
+    @staticmethod
+    def _style_path(path):
+        """Hashable form of a path, for use as a style-map key."""
+        return tuple(path) if isinstance(path, (list, tuple)) else (path,)
+
+    def _index_leaf_keys(self, shadow=None):
+        """Map id(node object) -> key for every leaf currently loaded.
+
+        The model stores the caller's node object for a leaf row and the
+        key string for an interior one, so this is what lets the data
+        function recover a leaf's key.  ``_add_subtree`` updates leaf
+        nodes in place, so the identity stays valid across refreshes.
+        """
+        if shadow is None:
+            self._leaf_keys = {}
+            shadow = self.shadow
+        for key, bnch in shadow.items():
+            node = getattr(bnch, 'node', None)
+            if getattr(bnch, 'terminal', False):
+                self._leaf_keys[id(node)] = key
+            elif isinstance(node, dict):
+                self._index_leaf_keys(node)
+
+    def _key_path_for_iter(self, model, iter):
+        """The key path of a model row, built from the row itself and
+        its ancestors.  Independent of tree paths, so it survives the
+        reordering a sort does."""
+        parts = []
+        it = iter
+        while it is not None:
+            value = model.get_value(it, 0)
+            if isinstance(value, (dict, Bunch.Bunch)):
+                key = self._leaf_keys.get(id(value))
+                if key is None:
+                    return None
+                parts.append(key)
+            else:
+                parts.append(str(value))
+            it = model.iter_parent(it)
+        parts.reverse()
+        return tuple(parts)
+
+    def _resolve_style(self, path_key, col_key):
+        """Merge the four layers for one cell, most specific first."""
+        fg = bg = bold = None
+        for layer in (self._cell_styles.get((path_key, col_key)),
+                      self._row_styles.get(path_key),
+                      self._column_styles.get(col_key),
+                      self._table_style):
+            if not layer:
+                continue
+            if fg is None:
+                fg = layer.get('fg')
+            if bg is None:
+                bg = layer.get('bg')
+            if bold is None:
+                bold = layer.get('bold')
+        return fg, bg, bold
+
+    @staticmethod
+    def _style_or_none(fg, bg, bold):
+        if fg is None and bg is None and bold is None:
+            return None
+        return dict(fg=fg, bg=bg, bold=bold)
+
+    def _has_styles(self):
+        return bool(self._cell_styles or self._row_styles
+                    or self._column_styles or self._table_style)
+
+    def _redraw_cells(self):
+        """Ask GTK to re-run the data functions."""
+        self._index_leaf_keys()
+        self.tv.queue_draw()
+
+    def set_cell_color(self, path, col_key, fg=None, bg=None, bold=None):
+        """Set the colour of a single cell.  Passing all of fg/bg/bold
+        as None clears the cell-level override."""
+        key = (self._style_path(path), col_key)
+        style = self._style_or_none(fg, bg, bold)
+        if style is None:
+            self._cell_styles.pop(key, None)
+        else:
+            self._cell_styles[key] = style
+        self._redraw_cells()
+
+    def set_row_color(self, path, fg=None, bg=None, bold=None):
+        """Set the colour of a whole row."""
+        key = self._style_path(path)
+        style = self._style_or_none(fg, bg, bold)
+        if style is None:
+            self._row_styles.pop(key, None)
+        else:
+            self._row_styles[key] = style
+        self._redraw_cells()
+
+    def set_column_color(self, col_key, fg=None, bg=None, bold=None):
+        """Set the colour of a whole column."""
+        style = self._style_or_none(fg, bg, bold)
+        if style is None:
+            self._column_styles.pop(col_key, None)
+        else:
+            self._column_styles[col_key] = style
+        self._redraw_cells()
+
+    def set_table_color(self, fg=None, bg=None, bold=None):
+        """Set the colour of the whole tree (lowest-precedence layer)."""
+        self._table_style = self._style_or_none(fg, bg, bold)
+        self._redraw_cells()
+
+    def clear_cell_color(self, path, col_key):
+        self._cell_styles.pop((self._style_path(path), col_key), None)
+        self._redraw_cells()
+
+    def clear_row_color(self, path):
+        self._row_styles.pop(self._style_path(path), None)
+        self._redraw_cells()
+
+    def clear_column_color(self, col_key):
+        self._column_styles.pop(col_key, None)
+        self._redraw_cells()
+
+    def clear_all_colors(self):
+        self._cell_styles = {}
+        self._row_styles = {}
+        self._column_styles = {}
+        self._table_style = None
+        self._redraw_cells()
+
+    def set_colors(self, spec):
+        """Apply many overrides at once, matching the pg backend's
+        batch call.  See ``TreeView.set_colors`` there for the spec."""
+        if not isinstance(spec, dict):
+            return
+        if spec.get('clear'):
+            self._cell_styles = {}
+            self._row_styles = {}
+            self._column_styles = {}
+            self._table_style = None
+        for entry in (spec.get('cells') or []):
+            key = (self._style_path(entry.get('path')), entry.get('col_key'))
+            style = self._style_or_none(entry.get('fg'), entry.get('bg'),
+                                        entry.get('bold'))
+            if style is None:
+                self._cell_styles.pop(key, None)
+            else:
+                self._cell_styles[key] = style
+        for entry in (spec.get('rows') or []):
+            key = self._style_path(entry.get('path'))
+            style = self._style_or_none(entry.get('fg'), entry.get('bg'),
+                                        entry.get('bold'))
+            if style is None:
+                self._row_styles.pop(key, None)
+            else:
+                self._row_styles[key] = style
+        for entry in (spec.get('columns') or []):
+            style = self._style_or_none(entry.get('fg'), entry.get('bg'),
+                                        entry.get('bold'))
+            if style is None:
+                self._column_styles.pop(entry.get('col_key'), None)
+            else:
+                self._column_styles[entry.get('col_key')] = style
+        if 'table' in spec:
+            table = spec.get('table') or {}
+            self._table_style = self._style_or_none(
+                table.get('fg'), table.get('bg'), table.get('bold'))
+        self._redraw_cells()
+
     def _mkcolfnN(self, idx, kwd, datatype):
         def fn(*args):
             column, cell, model, iter = args[:4]
@@ -1806,6 +2057,17 @@ class TreeView(WidgetBase):
             else:
                 # text cell, by process of elimination
                 cell.set_property('text', str(value))
+
+            # Per-cell / row / column / table colour overrides.  A
+            # renderer is shared by every row of its column, so its
+            # properties are always set -- to None when this cell has no
+            # override -- or it would keep the previous row's colour.
+            fg = bg = bold = None
+            if self._has_styles():
+                path_key = self._key_path_for_iter(model, iter)
+                if path_key is not None:
+                    fg, bg, bold = self._resolve_style(path_key, kwd)
+            _apply_color_to_cell_gtk(cell, fg, bg, bold)
         return fn
 
     def _start_drag(self, treeview, context, selection,
@@ -3240,32 +3502,7 @@ class TableView(TreeView):
 
     @staticmethod
     def _apply_color_to_cell_gtk(cell, fg, bg, bold=None):
-        """Apply the resolved colour + weight to a single cell
-        renderer.  ``foreground`` only makes sense on
-        CellRendererText (icon / toggle cells ignore it);
-        ``cell-background`` works on all renderer types."""
-        if isinstance(cell, Gtk.CellRendererText):
-            if fg is not None:
-                cell.set_property('foreground', fg)
-                cell.set_property('foreground-set', True)
-            else:
-                cell.set_property('foreground-set', False)
-            # Pango weight: 700 == bold, 400 == normal.  Only set
-            # the property when bold is explicitly True/False so
-            # cells without a weight override keep theme defaults.
-            if bold is True:
-                cell.set_property('weight', 700)
-                cell.set_property('weight-set', True)
-            elif bold is False:
-                cell.set_property('weight', 400)
-                cell.set_property('weight-set', True)
-            else:
-                cell.set_property('weight-set', False)
-        if bg is not None:
-            cell.set_property('cell-background', bg)
-            cell.set_property('cell-background-set', True)
-        else:
-            cell.set_property('cell-background-set', False)
+        _apply_color_to_cell_gtk(cell, fg, bg, bold)
 
     def _row_dict_at(self, idx):
         """Return the dict stored in the TreeStore's column 0 at

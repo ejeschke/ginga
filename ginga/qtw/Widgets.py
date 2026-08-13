@@ -4,6 +4,8 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import contextlib
+import threading
 import os.path
 import pathlib
 from functools import reduce
@@ -15,6 +17,13 @@ from ginga.qtw.QtHelp import Timer  # noqa
 
 from ginga import colors
 from ginga.util.paths import icondir as ginga_icon_dir
+from ginga.util import treehelper
+
+# Role used to stash a tree node's shadow key on its item.  An
+# interior row's first column may now display the node's own
+# value rather than its key, so the key can't be recovered from
+# the text any more.
+_TREE_KEY_ROLE = 0x0100 + 1     # Qt.UserRole + 1
 from ginga.misc import Callback, Bunch, Settings, LineHistory
 from ginga.util.paths import icondir, app_icon_path
 from ginga.fonts import font_asst
@@ -58,6 +67,26 @@ class WidgetBase(Callback.Callbacks):
 
     def get_widget(self):
         return self.widget
+
+    def batch(self):
+        """Group a burst of updates so the backend can apply them as one.
+
+        Backends that ship updates to a remote view (currently ``pg``,
+        which drives a browser over a websocket) send everything done
+        inside the block as a single message and redraw once, instead of
+        one message and one redraw per call.  That makes a bulk update --
+        rewriting a few hundred cells of a tree, say -- cost about what
+        one update costs.
+
+        On the desktop backends there is nothing to coalesce, so this is
+        a no-op context manager.  It is defined on every backend so
+        application code can use it unconditionally::
+
+            with tree.batch():
+                for path, col_key, value in changes:
+                    tree.set_cell(path, col_key, value)
+        """
+        return contextlib.nullcontext()
 
     def set_tooltip(self, text):
         self.widget.setToolTip(text)
@@ -1396,6 +1425,15 @@ class TreeView(WidgetBase):
         self.datatypes = []
         # shadow index
         self.shadow = {}
+        # Per-cell / row / column / table colour overrides, matching the
+        # pg backend's API.  Kept as maps (rather than only painted onto
+        # the items) so they can be re-applied to rows added later, and
+        # so the cascade cell > row > column > table can be resolved per
+        # channel -- a row-level fg composes with a column-level bg.
+        self._cell_styles = {}      # (path, col_key) -> dict(fg, bg, bold)
+        self._row_styles = {}       # path -> dict(fg, bg, bold)
+        self._column_styles = {}    # col_key -> dict(fg, bg, bold)
+        self._table_style = None    # dict(fg, bg, bold) or None
         # native backend font (QFont).  Aliases like "fixed" are resolved
         # to a loadable shipped font by QtHelp/font_asst, so the font is
         # applied via setFont() rather than a CSS font-family that Qt's
@@ -1493,6 +1531,9 @@ class TreeView(WidgetBase):
             # re-enable sorting if needed
             self.widget.setSortingEnabled(True)
 
+        # newly created rows have no styling yet
+        self._restyle_all()
+
         # User wants auto expand?
         if self.auto_expand:
             self.widget.expandAll()
@@ -1508,6 +1549,9 @@ class TreeView(WidgetBase):
 
         if self.sortable:
             self.widget.setSortingEnabled(True)
+
+        # newly created rows have no styling yet
+        self._restyle_all()
 
         # User wants auto expand?
         if self.auto_expand:
@@ -1605,8 +1649,11 @@ class TreeView(WidgetBase):
                     parent_item.removeChild(item)
             else:
                 if level < self.levels:
+                    # only the children count here; an interior's own
+                    # column values are not rows
+                    _, children = treehelper.split_node(tree[key])
                     self._del_subtree(level + 1, bnch.node, bnch.item,
-                                      tree[key])
+                                      children)
 
     def _add_subtree(self, level, shadow, parent_item, tree, expand_new=False):
         """add/update elements from widget that are in the new tree"""
@@ -1664,6 +1711,7 @@ class TreeView(WidgetBase):
                 except KeyError:
                     # new node
                     item = TreeWidgetItem(parent_item, [str(key)])
+                    item.setData(0, _TREE_KEY_ROLE, str(key))
                     if level == 1:
                         parent_item.addTopLevelItem(item)
                     else:
@@ -1679,8 +1727,38 @@ class TreeView(WidgetBase):
                 if not expanded:
                     self.widget.collapseItem(item)
 
+                # An interior node may carry column values of its own,
+                # so a parent row can show data and not just its key.
+                # Columns it says nothing about stay blank, and the
+                # first one falls back to the key -- which is what
+                # these rows have always shown.
+                values, children = treehelper.split_node(node)
+                self._set_interior_values(item, values, key)
+
                 # recurse for non-leaf interior node
-                self._add_subtree(level + 1, d, item, node)
+                self._add_subtree(level + 1, d, item, children)
+
+    def _set_interior_values(self, item, values, key):
+        """Show an interior node's own column values on its row."""
+        shown = treehelper.row_values(values, self.datakeys, key=key)
+        for i, datakey in enumerate(self.datakeys):
+            value = shown[datakey]
+            datatype = self.datatypes[i]
+            if datatype == 'icon':
+                # only when the node actually supplied one; the blank
+                # fallback isn't a pixmap
+                if datakey in values:
+                    item.setIcon(i, value)
+            elif datatype == 'check':
+                if datakey in values:
+                    state = (QtCore.Qt.Checked if value
+                             else QtCore.Qt.Unchecked)
+                    item.setCheckState(i, state)
+            elif datatype == 'widget':
+                if datakey in values:
+                    self.widget.setItemWidget(item, i, value.get_widget())
+            else:
+                item.setText(i, str(value))
 
     def _selection_cb(self):
         res_dict = self.get_selected()
@@ -1736,7 +1814,12 @@ class TreeView(WidgetBase):
             path_rest.append(myname)
             return path_rest
 
-        myname = item.text(0)
+        # An interior's first column may show its own value, so take
+        # the key stashed on the item; fall back to the text for items
+        # created before it was set.
+        myname = item.data(0, _TREE_KEY_ROLE)
+        if myname is None:
+            myname = item.text(0)
         path_rest = self._get_path(item.parent())
         path_rest.append(myname)
         return path_rest
@@ -1842,6 +1925,11 @@ class TreeView(WidgetBase):
     def clear(self):
         self.widget.clear()
         self.shadow = {}
+        # the rows those overrides referred to are gone; the column and
+        # table layers aren't row-specific, so they survive (matching
+        # the pg backend)
+        self._cell_styles = {}
+        self._row_styles = {}
 
     def clear_selection(self):
         self.widget.blockSignals(True)
@@ -1900,6 +1988,198 @@ class TreeView(WidgetBase):
         for i in range(item.columnCount()):
             item.setForeground(i, brush)
             item.setFont(i, font)
+
+    # ----- per-cell / row / column / table colour overrides ---------
+    #
+    # Same API as the pg backend (and the qtw TableView), so portable
+    # code can colour a tree on any backend.  Resolution cascades per
+    # channel: cell > row > column > table.
+
+    @staticmethod
+    def _style_path(path):
+        """Hashable form of a path, for use as a style-map key."""
+        return tuple(path) if isinstance(path, (list, tuple)) else (path,)
+
+    def _resolve_style(self, path_key, col_key):
+        """Merge the four layers for one cell, most specific first."""
+        fg = bg = bold = None
+        for layer in (self._cell_styles.get((path_key, col_key)),
+                      self._row_styles.get(path_key),
+                      self._column_styles.get(col_key),
+                      self._table_style):
+            if layer is None:
+                continue
+            if fg is None:
+                fg = layer.get('fg')
+            if bg is None:
+                bg = layer.get('bg')
+            if bold is None:
+                bold = layer.get('bold')
+        return fg, bg, bold
+
+    def _apply_item_style(self, path_key, item):
+        """Paint one row's cells from the resolved overrides."""
+        for i, col_key in enumerate(self.datakeys):
+            fg, bg, bold = self._resolve_style(path_key, col_key)
+
+            if fg is None:
+                item.setData(i, QtCore.Qt.ForegroundRole, None)
+            else:
+                item.setForeground(i, QtHelp.QBrush(
+                    QtHelp.get_color(fg, 1.0)))
+
+            if bg is None:
+                item.setData(i, QtCore.Qt.BackgroundRole, None)
+            else:
+                item.setBackground(i, QtHelp.QBrush(
+                    QtHelp.get_color(bg, 1.0)))
+
+            if bold is None:
+                item.setData(i, QtCore.Qt.FontRole, None)
+            else:
+                font = QtHelp.QFont(self.font)
+                font.setBold(bool(bold))
+                item.setFont(i, font)
+
+    def _walk_items(self, shadow=None, prefix=()):
+        """Yield (path_key, item) for every row currently in the tree."""
+        if shadow is None:
+            shadow = self.shadow
+        for key, bnch in shadow.items():
+            path_key = prefix + (key,)
+            item = getattr(bnch, 'item', None)
+            if item is not None:
+                yield path_key, item
+            node = getattr(bnch, 'node', None)
+            if isinstance(node, dict):
+                yield from self._walk_items(node, path_key)
+
+    def _restyle_all(self):
+        """Re-apply every override.  Called after the tree changes, so
+        rows added since the colours were set get them too."""
+        if not (self._cell_styles or self._row_styles
+                or self._column_styles or self._table_style):
+            return
+        for path_key, item in self._walk_items():
+            self._apply_item_style(path_key, item)
+
+    def _restyle_path(self, path):
+        path_key = self._style_path(path)
+        try:
+            item = self._path_to_item(path)
+        except (KeyError, IndexError, TypeError):
+            return          # not present (yet); _restyle_all will catch it
+        self._apply_item_style(path_key, item)
+
+    @staticmethod
+    def _style_or_none(fg, bg, bold):
+        if fg is None and bg is None and bold is None:
+            return None
+        return dict(fg=fg, bg=bg, bold=bold)
+
+    def set_cell_color(self, path, col_key, fg=None, bg=None, bold=None):
+        """Set the colour of a single cell.  Passing all of fg/bg/bold
+        as None clears the cell-level override."""
+        key = (self._style_path(path), col_key)
+        style = self._style_or_none(fg, bg, bold)
+        if style is None:
+            self._cell_styles.pop(key, None)
+        else:
+            self._cell_styles[key] = style
+        self._restyle_path(path)
+
+    def set_row_color(self, path, fg=None, bg=None, bold=None):
+        """Set the colour of a whole row."""
+        key = self._style_path(path)
+        style = self._style_or_none(fg, bg, bold)
+        if style is None:
+            self._row_styles.pop(key, None)
+        else:
+            self._row_styles[key] = style
+        self._restyle_path(path)
+
+    def set_column_color(self, col_key, fg=None, bg=None, bold=None):
+        """Set the colour of a whole column."""
+        style = self._style_or_none(fg, bg, bold)
+        if style is None:
+            self._column_styles.pop(col_key, None)
+        else:
+            self._column_styles[col_key] = style
+        self._restyle_all()
+
+    def set_table_color(self, fg=None, bg=None, bold=None):
+        """Set the colour of the whole tree (lowest-precedence layer)."""
+        self._table_style = self._style_or_none(fg, bg, bold)
+        self._restyle_all()
+
+    def clear_cell_color(self, path, col_key):
+        self._cell_styles.pop((self._style_path(path), col_key), None)
+        self._restyle_path(path)
+
+    def clear_row_color(self, path):
+        self._row_styles.pop(self._style_path(path), None)
+        self._restyle_path(path)
+
+    def clear_column_color(self, col_key):
+        self._column_styles.pop(col_key, None)
+        self._restyle_all()
+
+    def clear_all_colors(self):
+        had_any = bool(self._cell_styles or self._row_styles
+                       or self._column_styles or self._table_style)
+        self._cell_styles = {}
+        self._row_styles = {}
+        self._column_styles = {}
+        self._table_style = None
+        if had_any:
+            for path_key, item in self._walk_items():
+                self._apply_item_style(path_key, item)
+
+    def set_colors(self, spec):
+        """Apply many overrides at once.
+
+        Matches the pg backend's batch call, so the same code works
+        either way.  ``spec`` is a dict with any of ``cells``, ``rows``,
+        ``columns`` (lists of entry dicts), ``table`` (one entry dict),
+        and ``clear`` (drop existing overrides first).
+        """
+        if not isinstance(spec, dict):
+            return
+        if spec.get('clear'):
+            self._cell_styles = {}
+            self._row_styles = {}
+            self._column_styles = {}
+            self._table_style = None
+        for entry in (spec.get('cells') or []):
+            key = (self._style_path(entry.get('path')), entry.get('col_key'))
+            style = self._style_or_none(entry.get('fg'), entry.get('bg'),
+                                        entry.get('bold'))
+            if style is None:
+                self._cell_styles.pop(key, None)
+            else:
+                self._cell_styles[key] = style
+        for entry in (spec.get('rows') or []):
+            key = self._style_path(entry.get('path'))
+            style = self._style_or_none(entry.get('fg'), entry.get('bg'),
+                                        entry.get('bold'))
+            if style is None:
+                self._row_styles.pop(key, None)
+            else:
+                self._row_styles[key] = style
+        for entry in (spec.get('columns') or []):
+            style = self._style_or_none(entry.get('fg'), entry.get('bg'),
+                                        entry.get('bold'))
+            if style is None:
+                self._column_styles.pop(entry.get('col_key'), None)
+            else:
+                self._column_styles[entry.get('col_key')] = style
+        if 'table' in spec:
+            table = spec.get('table') or {}
+            self._table_style = self._style_or_none(
+                table.get('fg'), table.get('bg'), table.get('bold'))
+        # one pass over the rows, however many entries came in
+        for path_key, item in self._walk_items():
+            self._apply_item_style(path_key, item)
 
     def set_path_background(self, path, bgcolor, alpha=1.0):
         item = self._path_to_item(path)
@@ -4891,6 +5171,14 @@ class TopLevel(TopLevelMixin, ContainerBase):
         self.widget.setWindowIcon(QIcon(iconpath))
 
 
+
+def _drain_socket(sock):
+    """Read whatever the signal wakeup fd wrote, so it doesn't pile up."""
+    try:
+        sock.recv(4096)
+    except (BlockingIOError, InterruptedError, OSError):
+        pass
+
 class Application(Callback.Callbacks):
 
     def __init__(self, logger=None, settings=None, ws_sock=None):
@@ -5003,7 +5291,111 @@ class Application(Callback.Callbacks):
         font_asst.add_alias('sans', family.lower())
 
     def mainloop(self):
-        self._qtapp.exec()
+        import signal
+
+        with self._interruptible() as state:
+            self._qtapp.exec()
+
+        # Re-raise so ``try: app.mainloop() except KeyboardInterrupt:``
+        # works the way it would for any other Python program.  Only for
+        # SIGINT, and only when the handler that ran was ours -- if the
+        # application installed its own, it has already decided what an
+        # interrupt means.  SIGTERM asks for a clean exit, not an
+        # exception, so it just returns.
+        if state.get('signum') == signal.SIGINT:
+            raise KeyboardInterrupt()
+
+    @contextlib.contextmanager
+    def _interruptible(self):
+        """Make the event loop respond to SIGINT (^C) and SIGTERM.
+
+        Qt blocks inside ``QApplication.exec()``, which is C code: the OS
+        delivers the signal and Python records it, but the interpreter
+        never regains control to run the handler, so ^C appears to do
+        nothing.  ``signal.set_wakeup_fd`` fixes that without polling --
+        the C-level handler writes a byte to a socket, which wakes the
+        Qt loop through a ``QSocketNotifier``; servicing that (Python)
+        callback lets the pending handler run, and it stops the loop.
+
+        Everything is restored on the way out, and an existing handler
+        is left alone -- an embedding application that installed its own
+        SIGINT handling keeps it.
+        """
+        import signal
+        import socket
+
+        if threading.current_thread() is not threading.main_thread():
+            # signal handling is only available on the main thread
+            yield {}
+            return
+
+        # records which signal stopped the loop, so mainloop() can
+        # re-raise KeyboardInterrupt for the caller
+        state = {}
+
+        def _stop(signum, frame):
+            state['signum'] = signum
+            self.quit()
+
+        installed = []
+        for signum in (signal.SIGINT, signal.SIGTERM):
+            try:
+                current = signal.getsignal(signum)
+            except (ValueError, OSError):
+                continue
+            # don't stomp on a handler somebody else installed
+            if current not in (signal.default_int_handler, signal.SIG_DFL):
+                continue
+            try:
+                signal.signal(signum, _stop)
+            except (ValueError, OSError):
+                continue
+            installed.append((signum, current))
+
+        # The wakeup socket is set up whether or not we installed a
+        # handler of our own: it is what makes *any* Python signal
+        # handler able to run while the loop is blocked, including one
+        # an embedding application installed itself.
+        rsock = wsock = None
+        notifier = None
+        old_fd = -1
+        try:
+            rsock, wsock = socket.socketpair()
+            for sock in (rsock, wsock):
+                sock.setblocking(False)
+            old_fd = signal.set_wakeup_fd(wsock.fileno())
+            if old_fd != -1:
+                # somebody else (asyncio, say) owns the wakeup fd --
+                # give it straight back rather than fight over it
+                signal.set_wakeup_fd(old_fd)
+                old_fd = -1
+            else:
+                notifier = QtCore.QSocketNotifier(
+                    rsock.fileno(), QtCore.QSocketNotifier.Type.Read)
+                # draining is enough: returning to Python is what lets
+                # the pending signal handler run
+                notifier.activated.connect(
+                    lambda *args: _drain_socket(rsock))
+        except (ValueError, OSError):
+            pass
+
+        try:
+            yield state
+        finally:
+            if notifier is not None:
+                notifier.setEnabled(False)
+                try:
+                    signal.set_wakeup_fd(-1)
+                except (ValueError, OSError):
+                    pass
+            for signum, handler in installed:
+                try:
+                    signal.signal(signum, handler)
+                except (ValueError, OSError):
+                    pass
+            for sock in (rsock, wsock):
+                if sock is not None:
+                    sock.close()
 
     def close(self):
         """Called when someone is asking the application to close.

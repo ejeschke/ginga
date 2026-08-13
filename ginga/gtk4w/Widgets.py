@@ -5,6 +5,7 @@
 # Please see the file LICENSE.txt for details.
 #
 
+import contextlib
 import uuid
 import pathlib
 import os
@@ -85,6 +86,26 @@ class WidgetBase(Callback.Callbacks):
 
     def get_widget(self):
         return self.widget
+
+    def batch(self):
+        """Group a burst of updates so the backend can apply them as one.
+
+        Backends that ship updates to a remote view (currently ``pg``,
+        which drives a browser over a websocket) send everything done
+        inside the block as a single message and redraw once, instead of
+        one message and one redraw per call.  That makes a bulk update --
+        rewriting a few hundred cells of a tree, say -- cost about what
+        one update costs.
+
+        On the desktop backends there is nothing to coalesce, so this is
+        a no-op context manager.  It is defined on every backend so
+        application code can use it unconditionally::
+
+            with tree.batch():
+                for path, col_key, value in changes:
+                    tree.set_cell(path, col_key, value)
+        """
+        return contextlib.nullcontext()
 
     def set_tooltip(self, text):
         self.widget.set_tooltip_text(text)
