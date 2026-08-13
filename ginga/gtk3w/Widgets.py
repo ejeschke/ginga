@@ -13,6 +13,7 @@ from functools import reduce
 from ginga.gtk3w import GtkHelp
 from ginga.gtk3w.GtkHelp import Timer  # noqa
 from ginga import colors
+from ginga.util import treehelper
 from ginga.util.paths import icondir as ginga_icon_dir
 from ginga.misc import Callback, Bunch, Settings, LineHistory
 from ginga.util.paths import icondir, app_icon_path
@@ -316,7 +317,7 @@ class TextEntrySet(WidgetBase):
         hbox.pack_start(w, True, True, 0)
         w.connect('activate', self._cb_redirect)
         self.entry = w
-        w = Gtk.Button(_tr('Set'))
+        w = Gtk.Button(label=_tr('Set'))
         w.connect('clicked', self._cb_redirect)
         hbox.pack_start(w, False, False, 0)
         self.btn = w
@@ -450,7 +451,7 @@ class Label(WidgetBase):
     def __init__(self, text='', halign='left', style='normal', menu=None):
         super(Label, self).__init__()
 
-        label = Gtk.Label(text)
+        label = Gtk.Label(label=text)
         pad = 2
         label.set_margin_start(pad)
         label.set_margin_end(pad)
@@ -1178,14 +1179,20 @@ class TreeView(WidgetBase):
         # Per-cell / row / column / table colour overrides, matching
         # the pg and qt backends.  Rows are identified by their key
         # path, which -- unlike a tree path -- survives sorting.
+        # Per-column editing / widget-cell configuration, filled in by
+        # setup_table from the column descriptors.
+        self.col_specs = []
+        self._col_editable = set()
+        self._col_widgets = {}
+        self._button_press_id = None
         self._cell_styles = {}      # (path, col_key) -> dict(fg, bg, bold)
         self._row_styles = {}       # path -> dict(fg, bg, bold)
         self._column_styles = {}    # col_key -> dict(fg, bg, bold)
         self._table_style = None    # dict(fg, bg, bold) or None
-        # id(leaf node object) -> its key, so a row's key path can be
-        # recovered inside the cell data function (the model stores the
-        # node object for leaves and the key string for interiors)
-        self._leaf_keys = {}
+        # id(row values dict) -> its key, so a row's key path can be
+        # recovered inside the cell data function without using tree
+        # paths, which a sort would invalidate
+        self._row_keys = {}
         # a font_asst.Font(family, style, weight) tuple; we only need the
         # CSS attributes here, not a native font object
         self.font = font_asst.parse_font('sans')
@@ -1236,7 +1243,8 @@ class TreeView(WidgetBase):
         self._sort_ascending = {}
 
         for cbname in ('selected', 'activated', 'drag-start',
-                       'collapsed', 'expanded', 'changed', 'sorted'):
+                       'collapsed', 'expanded', 'changed', 'sorted',
+                       'cell_edited', 'cell_action'):
             self.enable_callback(cbname)
         self.__set_style()
 
@@ -1248,19 +1256,24 @@ class TreeView(WidgetBase):
         self.leaf_key = leaf_key
 
         # create the column headers
-        if not isinstance(columns[0], str):
-            # columns specifies a mapping
-            headers = [col[0] for col in columns]
-            datakeys = [col[1] for col in columns]
-            if len(columns[0]) > 2:
-                datatypes = [col[2] for col in columns]
-            else:
-                datatypes = ['icon' if _key == 'icon' else 'str'
-                             for _key in datakeys]
-        else:
-            headers = datakeys = columns
-            datatypes = ['icon' if _key == 'icon' else 'str'
-                         for _key in datakeys]
+        specs = [treehelper.normalize_column(col, i)
+                 for i, col in enumerate(columns)]
+        self.col_specs = specs
+        headers = [spec['label'] for spec in specs]
+        datakeys = [spec['key'] for spec in specs]
+        datatypes = [spec['type'] for spec in specs]
+
+        # Per-column editing and widget cells, as the pg backend takes
+        # them.  Tuple/str descriptors set neither, so a caller passing
+        # those behaves exactly as before.
+        self._col_editable = set(i for i, spec in enumerate(specs)
+                                 if spec.get('editable'))
+        self._col_widgets = {i: spec for i, spec in enumerate(specs)
+                             if spec.get('widget') in _CELL_WIDGETS}
+        # a widget column is interactive by nature
+        self._col_editable |= set(i for i, spec in self._col_widgets.items()
+                                  if spec['widget'] in ('checkbox',
+                                                        'combobox'))
 
         self.datakeys = datakeys
         self.datatypes = datatypes
@@ -1279,14 +1292,41 @@ class TreeView(WidgetBase):
             kwd = self.datakeys[n]
             datakey = self.datakeys[n]
             datatype = self.datatypes[n]
-            if datatype == 'icon':
-                cell = Gtk.CellRendererPixbuf()
-            elif datatype == 'check':
+            spec = specs[n]
+            wtype = spec.get('widget')
+            if wtype == 'checkbox' or datatype == 'check':
                 cell = Gtk.CellRendererToggle()
+                cell.set_property("activatable", True)
                 cell.connect("toggled", self._toggled_cb, datakey, n)
+            elif wtype == 'combobox':
+                # GTK has no per-cell widget embedding, so a combo
+                # column is a CellRendererCombo: the dropdown appears
+                # on click rather than sitting permanently in the cell.
+                cell = Gtk.CellRendererCombo()
+                store = Gtk.ListStore(str)
+                for choice in (spec.get('choices') or []):
+                    store.append([str(choice)])
+                cell.set_property("model", store)
+                cell.set_property("text-column", 0)
+                cell.set_property("has-entry", False)
+                cell.set_property("editable", True)
+                cell.connect("edited", self._edited_cb, datakey, n)
+            elif wtype == 'progress':
+                cell = Gtk.CellRendererProgress()
+            elif wtype == 'button':
+                # GTK3 has no button cell renderer, so a button column
+                # is drawn as centred text and clicks are picked up
+                # from the tree's button-press handler below.
+                cell = Gtk.CellRendererText()
+                cell.set_property("xalign", 0.5)
+            elif datatype == 'icon':
+                cell = Gtk.CellRendererPixbuf()
             else:
                 cell = Gtk.CellRendererText()
-                cell.set_property("editable", self.editable)
+                # editability is decided per row in the data function,
+                # since an interior's filler cells aren't content
+                cell.set_property("editable",
+                                  self.editable or n in self._col_editable)
                 cell.connect("edited", self._edited_cb, datakey, n)
 
             cell.set_padding(self.col_pad_px, self.row_pad_px)
@@ -1299,6 +1339,10 @@ class TreeView(WidgetBase):
             fn_data = self._mkcolfnN(n, kwd, datatype)
             tvc.set_cell_data_func(cell, fn_data)
             self.tv.append_column(tvc)
+
+        if any(spec.get('widget') == 'button'
+               for spec in self._col_widgets.values()):
+            self._connect_button_press()
 
         treemodel = Gtk.TreeStore(object)
         self.tv.set_fixed_height_mode(False)
@@ -1331,7 +1375,7 @@ class TreeView(WidgetBase):
         self.tv.set_fixed_height_mode(True)
 
         # rows added just now aren't in the leaf-key index yet
-        self._index_leaf_keys()
+        self._index_row_keys()
 
         # User wants auto expand?
         if self.auto_expand:
@@ -1343,7 +1387,7 @@ class TreeView(WidgetBase):
         self._add_subtree(1, self.shadow, model, None, tree_dict,
                           expand_new=expand_new)
         # rows added just now aren't in the leaf-key index yet
-        self._index_leaf_keys()
+        self._index_row_keys()
 
     def delete_tree(self, tree_dict, prune_empty=True):
         """Delete the nodes named by `tree_dict` from the TreeView.
@@ -1420,7 +1464,9 @@ class TreeView(WidgetBase):
 
             else:
                 if level < self.levels:
-                    self._del_subtree(level + 1, bnch.node, model, tree[key])
+                    # an interior's own column values are not rows
+                    _, children = treehelper.split_node(tree[key])
+                    self._del_subtree(level + 1, bnch.node, model, children)
 
     def _add_subtree(self, level, shadow, model, parent_item, tree,
                      expand_new=False):
@@ -1437,32 +1483,57 @@ class TreeView(WidgetBase):
                     item_iter = bnch.item
                     # bnch.node = node
                     bnch.node.update(node)
+                    bnch.supplied = set(bnch.node.keys())
 
                 except KeyError:
                     # new item
                     item_iter = model.append(parent_item, [node])
                     shadow[key] = Bunch.Bunch(node=node, item=item_iter,
-                                              terminal=True)
+                                              terminal=True,
+                                              supplied=set(node.keys()))
 
             else:
+                # An interior node may carry column values of its own,
+                # so a parent row can show data and not just its key.
+                # Columns it says nothing about stay blank, and the
+                # first falls back to the key -- which is what these
+                # rows have always shown.
+                values, children = treehelper.split_node(node)
+                display = treehelper.row_values(values, self.datakeys,
+                                                key=key)
+                # carry any non-column fields too (visible_key and
+                # friends name row fields that aren't columns)
+                for field, value in values.items():
+                    if field not in display:
+                        display[field] = value
                 try:
                     # shadow node already exists
                     bnch = shadow[key]
                     item = bnch.item
                     d = bnch.node
+                    # update in place: the model holds this very dict,
+                    # and its identity is how the row is recognised
+                    bnch.display.clear()
+                    bnch.display.update(display)
+                    bnch.supplied = set(values.keys())
 
                 except KeyError:
-                    # new node
-                    item = model.append(None, [str(key)])
+                    # new node.  NOTE: append under parent_item, not at
+                    # the root -- a tree deeper than two levels used to
+                    # put its middle rows at the top level.
+                    item = model.append(parent_item, [display])
                     d = {}
-                    shadow[key] = Bunch.Bunch(node=d, item=item, terminal=False)
+                    shadow[key] = Bunch.Bunch(node=d, item=item,
+                                              terminal=False,
+                                              display=display,
+                                              supplied=set(values.keys()))
 
                     if expand_new:
                         #self.tv.expand_row(model.get_path(item), True)
                         expand_paths.append(model.get_path(item))
 
                 # recurse for non-leaf interior node
-                self._add_subtree(level + 1, d, model, item, node)
+                self._add_subtree(level + 1, d, model, item, children)
 
         # NOTE: for some reason, we need to do the expansion of rows at
         # the end
@@ -1572,8 +1643,14 @@ class TreeView(WidgetBase):
             path_rest.append(myname)
             return path_rest
 
-        # non-leaf node case
-        myname = model.get_value(item, 0)
+        # non-leaf node case.  An interior row now holds its own values
+        # dict, so its key comes from the row index rather than from
+        # the stored value (which used to be the key string).
+        value = model.get_value(item, 0)
+        if isinstance(value, str):
+            myname = value
+        else:
+            myname = self._row_keys.get(id(value), value)
         path_rest = self._get_path(model.iter_parent(item))
         path_rest.append(myname)
         return path_rest
@@ -1626,7 +1703,7 @@ class TreeView(WidgetBase):
         # the pg and qt backends)
         self._cell_styles = {}
         self._row_styles = {}
-        self._leaf_keys = {}
+        self._row_keys = {}
 
     def clear_selection(self):
         treeselection = self.tv.get_selection()
@@ -1848,9 +1925,10 @@ class TreeView(WidgetBase):
             model, iter1, iter2 = args[:3]
             bnch1 = model.get_value(iter1, 0)
             bnch2 = model.get_value(iter2, 0)
-            if isinstance(bnch1, str):
+            if isinstance(bnch1, str) or isinstance(bnch2, str):
                 return self._cmp(bnch1, bnch2, datatype=datatype)
-            val1, val2 = bnch1[kwd], bnch2[kwd]
+            val1 = bnch1.get(kwd, '')
+            val2 = bnch2.get(kwd, '')
             return self._cmp(val1, val2, datatype=datatype)
         return fn
 
@@ -1865,23 +1943,29 @@ class TreeView(WidgetBase):
         """Hashable form of a path, for use as a style-map key."""
         return tuple(path) if isinstance(path, (list, tuple)) else (path,)
 
-    def _index_leaf_keys(self, shadow=None):
-        """Map id(node object) -> key for every leaf currently loaded.
+    def _index_row_keys(self, shadow=None):
+        """Map id(row object) -> key for every row currently loaded.
 
-        The model stores the caller's node object for a leaf row and the
-        key string for an interior one, so this is what lets the data
-        function recover a leaf's key.  ``_add_subtree`` updates leaf
-        nodes in place, so the identity stays valid across refreshes.
+        The model holds a values dict per row, and that object's
+        identity is how the cell data function recognises the row --
+        tree paths would go stale the moment the view is sorted.  Both
+        kinds are indexed: a leaf is stored as the caller's node dict,
+        an interior as the display dict built for it.  Both are updated
+        in place on refresh, so the identities survive.
         """
         if shadow is None:
-            self._leaf_keys = {}
+            self._row_keys = {}
             shadow = self.shadow
         for key, bnch in shadow.items():
-            node = getattr(bnch, 'node', None)
             if getattr(bnch, 'terminal', False):
-                self._leaf_keys[id(node)] = key
-            elif isinstance(node, dict):
-                self._index_leaf_keys(node)
+                self._row_keys[id(getattr(bnch, 'node', None))] = key
+                continue
+            display = getattr(bnch, 'display', None)
+            if display is not None:
+                self._row_keys[id(display)] = key
+            node = getattr(bnch, 'node', None)
+            if isinstance(node, dict):
+                self._index_row_keys(node)
 
     def _key_path_for_iter(self, model, iter):
         """The key path of a model row, built from the row itself and
@@ -1892,11 +1976,12 @@ class TreeView(WidgetBase):
         while it is not None:
             value = model.get_value(it, 0)
             if isinstance(value, (dict, Bunch.Bunch)):
-                key = self._leaf_keys.get(id(value))
+                key = self._row_keys.get(id(value))
                 if key is None:
                     return None
                 parts.append(key)
             else:
+                # a row from before interiors carried values
                 parts.append(str(value))
             it = model.iter_parent(it)
         parts.reverse()
@@ -1931,7 +2016,7 @@ class TreeView(WidgetBase):
 
     def _redraw_cells(self):
         """Ask GTK to re-run the data functions."""
-        self._index_leaf_keys()
+        self._index_row_keys()
         self.tv.queue_draw()
 
     def set_cell_color(self, path, col_key, fg=None, bg=None, bold=None):
@@ -2031,16 +2116,13 @@ class TreeView(WidgetBase):
         def fn(*args):
             column, cell, model, iter = args[:4]
             bnch = model.get_value(iter, 0)
-            if isinstance(bnch, Bunch.Bunch) or isinstance(bnch, dict):
-                # leaf row
-                value = bnch[kwd]
+            if isinstance(bnch, (Bunch.Bunch, dict)):
+                # every row -- leaf or interior -- holds its column
+                # values; ones it didn't supply render blank
+                value = bnch.get(kwd, '')
             else:
-                value = bnch
-                # NOTE: hack to set other columns to show nothing
-                # if this is not a leaf row.  Not sure idx will always
-                # be 0 only for the shown value
-                if idx > 0:
-                    value = ''
+                # a row stored before interiors carried values
+                value = bnch if idx == 0 else ''
 
             if isinstance(cell, Gtk.CellRendererPixbuf):
                 if datatype == 'icon':
@@ -2052,11 +2134,56 @@ class TreeView(WidgetBase):
                         value = None
                     cell.set_property('pixbuf', value)
             elif isinstance(cell, Gtk.CellRendererToggle):
-                if datatype == 'check':
-                    cell.set_property('active', value)
+                cell.set_property('active', bool(value))
+            elif isinstance(cell, Gtk.CellRendererProgress):
+                spec = self._col_widgets.get(idx, {})
+                lo = spec.get('min', 0) or 0
+                hi = spec.get('max', 100)
+                hi = 100 if hi is None else hi
+                try:
+                    pct = (float(value) - lo) * 100.0 / (float(hi) - lo)
+                except (TypeError, ValueError, ZeroDivisionError):
+                    pct = 0.0
+                cell.set_property('value', int(max(0, min(100, pct))))
             else:
-                # text cell, by process of elimination
-                cell.set_property('text', str(value))
+                spec_w = self._col_widgets.get(idx, {})
+                if spec_w.get('widget') == 'button':
+                    label = spec_w.get('text') or ''
+                    if value not in (None, ''):
+                        label = str(value)
+                    cell.set_property('text', label)
+                else:
+                    # text cell, by process of elimination
+                    cell.set_property('text', str(value))
+
+            # Per-row gating.  A renderer draws every row of its column,
+            # so these have to be set for each one: a column the row
+            # never supplied is filler rather than content and isn't
+            # editable, and visible_key / enabled_key confine a control
+            # to the rows it belongs on.
+            spec = self._col_widgets.get(idx)
+            supplied = self._row_supplied(bnch)
+            if idx in self._col_editable or spec is not None:
+                editable = kwd in supplied
+                vis_key = (spec or {}).get('visible_key')
+                if vis_key is not None:
+                    editable = editable and bool(
+                        self._row_field(bnch, vis_key))
+                if isinstance(cell, Gtk.CellRendererToggle):
+                    cell.set_property('activatable', editable)
+                elif not isinstance(cell, (Gtk.CellRendererPixbuf,
+                                           Gtk.CellRendererProgress)):
+                    cell.set_property('editable', editable)
+            if spec is not None:
+                vis_key = spec.get('visible_key')
+                if vis_key is not None:
+                    cell.set_property(
+                        'visible', bool(self._row_field(bnch, vis_key)))
+                enabled_key = spec.get('enabled_key')
+                if enabled_key is not None:
+                    cell.set_property(
+                        'sensitive',
+                        bool(self._row_field(bnch, enabled_key, True)))
 
             # Per-cell / row / column / table colour overrides.  A
             # renderer is shared by every row of its column, so its
@@ -2077,25 +2204,82 @@ class TreeView(WidgetBase):
         self.make_callback('drag-start', drag_pkg, res_dict)
         drag_pkg.start_drag()
 
+    def _connect_button_press(self):
+        """Watch for clicks so a button column can report them."""
+        if getattr(self, '_button_press_id', None) is None:
+            self._button_press_id = self.tv.connect(
+                'button-press-event', self._on_tree_button_press)
+
+    def _on_tree_button_press(self, treeview, event):
+        """Fire cell_action when a button cell is clicked.
+
+        GTK3 draws these as text, so there is no widget to connect to;
+        the click has to be located in the view instead.
+        """
+        hit = treeview.get_path_at_pos(int(event.x), int(event.y))
+        if hit is None:
+            return False
+        path, column, _cx, _cy = hit
+        try:
+            idx = treeview.get_columns().index(column)
+        except ValueError:
+            return False
+        spec = self._col_widgets.get(idx)
+        if spec is None or spec.get('widget') != 'button':
+            return False
+
+        model = treeview.get_model()
+        item = model.get_iter(path)
+        row = model.get_value(item, 0)
+        col_key = self.datakeys[idx]
+        if col_key not in self._row_supplied(row):
+            return False
+        vis_key = spec.get('visible_key')
+        if vis_key is not None and not self._row_field(row, vis_key):
+            return False
+        enabled_key = spec.get('enabled_key')
+        if enabled_key is not None and not self._row_field(row, enabled_key,
+                                                           True):
+            return False
+
+        self.make_callback('cell_action', self._get_path(item), col_key)
+        return True
+
+    def _row_supplied(self, row):
+        """The column keys a row actually provided."""
+        if isinstance(row, (dict, Bunch.Bunch)):
+            return set(row.keys())
+        return set()
+
+    def _row_field(self, row, field, default=None):
+        """A row field that isn't a column -- visible_key and friends."""
+        if isinstance(row, (dict, Bunch.Bunch)):
+            return row.get(field, default)
+        return default
+
     def _edited_cb(self, cell, path, new_text, datakey, col):
         model = self.tv.get_model()
         item = model.get_iter(path)
         tr_row = model[item]
         dct = tr_row[0]
-        text = dct[datakey]
+        old_value = dct.get(datakey, '')
         dct[datakey] = new_text
         _path = self._get_path(item)
         self.make_callback('changed', _path, datakey, new_text)
+        self.make_callback('cell_edited', _path, datakey, old_value,
+                           new_text)
 
     def _toggled_cb(self, cell, path, datakey, col):
         model = self.tv.get_model()
         item = model.get_iter(path)
         tr_row = model[item]
         dct = tr_row[0]
-        tf = not dct[datakey]
+        old_value = bool(dct.get(datakey, False))
+        tf = not old_value
         dct[datakey] = tf
         _path = self._get_path(item)
         self.make_callback('changed', _path, datakey, tf)
+        self.make_callback('cell_edited', _path, datakey, old_value, tf)
 
     def get_rgb_array(self):
         return GtkHelp.get_rgb_array(self.tv)
@@ -4055,7 +4239,7 @@ class TabWidget(ContainerBase):
     def add_widget(self, child, title=''):
         self.add_ref(child)
         child_w = child.get_widget()
-        label = Gtk.Label(title)
+        label = Gtk.Label(label=title)
         evbox = Gtk.EventBox()
         evbox.props.visible_window = True
         evbox.add(label)
@@ -4231,7 +4415,7 @@ class MDIWindow(WidgetBase):
             child.resize(wd, ht)
 
         child_w = child.get_widget()
-        label = Gtk.Label(title)
+        label = Gtk.Label(label=title)
         if iconpath is None:
             iconpath = app_icon_path
 
@@ -5050,8 +5234,10 @@ class Application(Callback.Callbacks):
 
         _app = self
 
-        # supposedly needed for GObject < 3.10.2
-        GObject.threads_init()
+        # NOTE: GObject.threads_init() used to be called here for
+        # PyGObject < 3.10.2.  It has been a no-op ever since, and on
+        # current versions it raises a deprecation warning -- which
+        # turns into an error under this project's pytest settings.
         # self._time_save = time.time()
 
         for name in ('close', 'shutdown'):

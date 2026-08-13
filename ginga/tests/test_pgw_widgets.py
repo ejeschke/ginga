@@ -10,7 +10,10 @@ import logging
 
 import pytest
 
-pytest.importorskip('pgwidgets')
+try:
+    import pgwidgets                         # noqa: F401
+except Exception:                            # pragma: no cover
+    pytest.skip("pgwidgets not available", allow_module_level=True)
 
 # Import the backend directly rather than through ginga.gw.Widgets:
 # that module binds a toolkit at import time, so which widget set it

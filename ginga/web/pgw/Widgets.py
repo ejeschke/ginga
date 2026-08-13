@@ -910,6 +910,9 @@ class TreeView(WidgetMixin, PGW.TreeView):
                               cell_cursor=cell_cursor)
         self.levels = 1
         self.datakeys = []
+        # Presence of this attribute marks a backend that accepts full
+        # column descriptors (dicts) as well as the portable tuples.
+        self.col_specs = []
 
         # remapping 'collapsed'
         self.on('collapsed', self._cb_redirect_collapsed)
@@ -1027,6 +1030,7 @@ class TreeView(WidgetMixin, PGW.TreeView):
                 col_def['type'] = 'icon' if col[1] == 'icon' else 'string'
             col_defs.append(col_def)
         self.datakeys = [col_def['key'] for col_def in col_defs]
+        self.col_specs = col_defs
         self.leaf_key = leaf_key
 
         try:

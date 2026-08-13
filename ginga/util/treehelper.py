@@ -33,7 +33,8 @@ wrappers cannot drift on the question of what counts as a child.
 
 VALUES_KEY = '__values__'
 
-__all__ = ['VALUES_KEY', 'split_node', 'row_values']
+__all__ = ['VALUES_KEY', 'split_node', 'row_values',
+           'normalize_column']
 
 
 def split_node(node):
@@ -81,3 +82,30 @@ def row_values(values, datakeys, key=None, blank=''):
         else:
             out[datakey] = blank
     return out
+
+
+def normalize_column(col, index=0):
+    """Normalise a column descriptor to a dict.
+
+    Accepts the portable ``(label, key[, type])`` tuple, a bare string,
+    or the full dict form the pg backend takes -- so ``editable``,
+    ``widget`` / ``choices``, ``visible_key`` and ``enabled_key``
+    survive on their way to a desktop backend instead of being dropped.
+    """
+    if isinstance(col, dict):
+        key = col.get('key') or col.get('label') or f'col{index}'
+        dtype = col.get('type') or ('icon' if key == 'icon' else 'str')
+        if dtype == 'string':
+            dtype = 'str'
+        spec = dict(col)
+        spec.update(label=col.get('label', key), key=key, type=dtype)
+        return spec
+
+    if isinstance(col, str):
+        return dict(label=col, key=col,
+                    type=('icon' if col == 'icon' else 'str'))
+
+    label = col[0]
+    key = col[1] if len(col) > 1 else label
+    dtype = col[2] if len(col) > 2 else ('icon' if key == 'icon' else 'str')
+    return dict(label=label, key=key, type=dtype)

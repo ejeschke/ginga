@@ -4522,8 +4522,10 @@ class Application(Callback.Callbacks):
         self._periodic = []
         _app = self
 
-        # supposedly needed for GObject < 3.10.2
-        GObject.threads_init()
+        # NOTE: GObject.threads_init() used to be called here for
+        # PyGObject < 3.10.2.  It has been a no-op ever since, and on
+        # current versions it raises a deprecation warning -- which
+        # turns into an error under this project's pytest settings.
         # self._time_save = time.time()
 
         for name in ('close', 'shutdown'):

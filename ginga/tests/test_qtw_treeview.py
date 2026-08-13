@@ -12,7 +12,12 @@ import pytest
 
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
-pytest.importorskip('qtpy')
+try:
+    import qtpy                              # noqa: F401
+except Exception:                            # pragma: no cover
+    # qtpy can be installed without a usable binding, which raises
+    # ImportError rather than ModuleNotFoundError
+    pytest.skip("no usable qt binding", allow_module_level=True)
 
 # Import the backend directly: ginga.gw.Widgets binds a toolkit at
 # import time, so what it offers depends on whether an earlier import

@@ -1473,30 +1473,8 @@ def _read_cell_widget(col, w):
 
 
 def _normalize_column(col, index):
-    """Normalise a TreeView column descriptor.
-
-    Accepts the portable ``(label, key[, type])`` tuple, a bare string,
-    or the full dict the pg backend takes -- so ``editable``, ``widget``
-    / ``choices`` and ``visible_key`` survive instead of being dropped
-    on the way to a desktop backend.
-    """
-    if isinstance(col, dict):
-        key = col.get('key') or col.get('label') or f'col{index}'
-        dtype = col.get('type') or ('icon' if key == 'icon' else 'str')
-        if dtype == 'string':
-            dtype = 'str'
-        spec = dict(col)
-        spec.update(label=col.get('label', key), key=key, type=dtype)
-        return spec
-
-    if isinstance(col, str):
-        return dict(label=col, key=col,
-                    type=('icon' if col == 'icon' else 'str'))
-
-    label = col[0]
-    key = col[1] if len(col) > 1 else label
-    dtype = col[2] if len(col) > 2 else ('icon' if key == 'icon' else 'str')
-    return dict(label=label, key=key, type=dtype)
+    """Normalise a TreeView column descriptor (see treehelper)."""
+    return treehelper.normalize_column(col, index)
 
 
 class _TreeItemDelegate(QtGui.QStyledItemDelegate):
