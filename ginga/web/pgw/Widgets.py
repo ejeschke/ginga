@@ -5,6 +5,7 @@
 # Please see the file LICENSE.txt for details.
 #
 from functools import reduce
+import contextlib
 import os.path
 import time
 
@@ -102,6 +103,29 @@ class WidgetMixin(CallbackMixin):
 
     def get_widget(self):
         return self
+
+    def batch(self):
+        """Group a burst of updates into a single message to the browser.
+
+        Everything done inside the block is buffered and sent as one
+        batch on exit, which the browser applies with rendering
+        suspended -- so a bulk update costs one round-trip and one
+        redraw instead of one of each per call.  Batching is per
+        session, so updates to other widgets inside the block ride
+        along.
+
+        Running *in-situ* (Pyodide) there is no wire to batch, so this
+        is a no-op; the desktop backends define it as a no-op too, so
+        application code can use it unconditionally::
+
+            with tree.batch():
+                for path, col_key, value in changes:
+                    tree.set_cell(path, col_key, value)
+        """
+        batch = getattr(super(), 'batch', None)
+        if batch is None:
+            return contextlib.nullcontext()
+        return batch()
 
     def get_size(self):
         res = super().get_size()
@@ -851,14 +875,39 @@ def _treedata_to_bunch(obj):
 
 
 class TreeView(WidgetMixin, PGW.TreeView):
+    """Hierarchical tree/table view.
+
+    Callback signatures emitted here:
+
+    * ``activated(tree, subtree)``
+    * ``selected(tree, subtree)``
+    * ``expanded(tree, path)`` / ``collapsed(tree, path)``
+    * ``changed(tree)``
+    * ``cell_edited(tree, path, col_key, old_value, new_value)``
+    * ``cell_action(tree, row_dict, col_key)``
+    * ``cell_selected(tree, list_of_cell_dicts)``
+    * ``sorted(tree, col_key, ascending)``
+    * ``scrolled(tree, h_pct, v_pct)``
+    * ``copy(tree, tsv)`` / ``cut(tree, tsv)`` / ``paste(tree, tsv)``
+
+    ``path`` is a list of the tree's own string keys, so unlike the
+    flat :class:`TableView` -- whose paths are integer row indices --
+    nothing needs translating at this boundary.
+    """
+
     def __init__(self, *args, auto_expand=False, sortable=False,
                  selection='single', use_alt_row_color=False,
-                 dragable=False):
+                 dragable=False, cell_cursor=False):
         WidgetMixin.__init__(self)
 
+        # ``cell_cursor`` turns on spreadsheet-style keyboard navigation
+        # and editing (pg backend only): worth enabling on a tree that
+        # has editable columns, since dblclick is otherwise the only way
+        # to start an edit.
         PGW.TreeView.__init__(self, *get_args(args),
                               selection_mode=selection, sortable=sortable,
-                              alternate_row_colors=use_alt_row_color)
+                              alternate_row_colors=use_alt_row_color,
+                              cell_cursor=cell_cursor)
         self.levels = 1
         self.datakeys = []
 
@@ -873,6 +922,24 @@ class TreeView(WidgetMixin, PGW.TreeView):
         self._enable_callback('activated')
         self.on('changed', self._cb_redirect_changed)
         self._enable_callback('changed')
+        # Cell-level callbacks.  These were previously left unwired, so
+        # ``add_callback`` fell through to the raw pgwidgets registration;
+        # redirecting them here puts them on the same footing as the rest
+        # (and as the TableView wrapper's).  The signatures are unchanged
+        # by the wrapping -- a tree's paths are already key lists.
+        self.on('cell_edited', self._cb_redirect_cell_edited)
+        self._enable_callback('cell_edited')
+        self.on('cell_action', self._cb_redirect_cell_action)
+        self._enable_callback('cell_action')
+        self.on('cell_selected', self._cb_redirect_cell_selected)
+        self._enable_callback('cell_selected')
+        self.on('sorted', self._cb_redirect_sorted)
+        self._enable_callback('sorted')
+        self.on('scrolled', self._cb_redirect_scrolled)
+        self._enable_callback('scrolled')
+        for name in ('copy', 'cut', 'paste'):
+            self.on(name, self._cb_redirect_clipboard, name)
+            self._enable_callback(name)
 
     def _cb_redirect_changed(self, *args):
         # the JS TreeView fires 'changed' (no args) after a structural
@@ -897,13 +964,60 @@ class TreeView(WidgetMixin, PGW.TreeView):
         subtree = _treedata_to_bunch(super().get_subtree(status=path))
         self._make_callback('activated', subtree)
 
+    def _cb_redirect_cell_edited(self, path, col_key, old_value, new_value):
+        self._make_callback('cell_edited', path, col_key,
+                            old_value, new_value)
+
+    def _cb_redirect_cell_action(self, row_values, col_key):
+        """JS fires ``cell_action(row_values, col_key)`` when the user
+        clicks a button-shaped widget cell, so the row's values arrive
+        directly -- there is no path to resolve.  Re-emit as
+        ``cell_action(tree, row_dict, col_key)`` to match qtw/gtk."""
+        self._make_callback('cell_action',
+                            _treedata_to_bunch(row_values), col_key)
+
+    def _cb_redirect_cell_selected(self, cells):
+        # each cell is ``{path, col_key, value}``; a tree's paths need
+        # no conversion, so pass them straight through
+        self._make_callback('cell_selected', cells)
+
+    def _cb_redirect_sorted(self, col_key, ascending):
+        self._make_callback('sorted', col_key, ascending)
+
+    def _cb_redirect_scrolled(self, h_pct, v_pct):
+        self._make_callback('scrolled', h_pct, v_pct)
+
+    def _cb_redirect_clipboard(self, tsv, name):
+        self._make_callback(name, tsv)
+
     def setup_table(self, columns, levels, leaf_key):
+        """Define the columns and the depth of the tree.
+
+        ``columns`` is a sequence of either ``(label, key)`` /
+        ``(label, key, type)`` tuples -- the portable form the qt/gtk
+        backends also accept -- or full descriptor dicts, which pass
+        through to pgwidgets untouched so that ``editable``, ``widget``,
+        ``choices``, ``halign``, ``colwidth`` and friends can be set
+        without a second ``set_columns()`` call.
+        """
         self.levels = levels
 
         # create the column headers
         col_defs = []
         # columns specifies a mapping
-        for col in columns:
+        for i, col in enumerate(columns):
+            if isinstance(col, dict):
+                col_def = dict(col)
+                key = (col_def.get('key') or col_def.get('label')
+                       or f'col{i}')
+                col_def['key'] = key
+                col_def.setdefault('label', key)
+                if col_def.get('type', None) in (None, 'str'):
+                    col_def['type'] = ('icon' if key == 'icon'
+                                       else 'string')
+                col_defs.append(col_def)
+                continue
+
             col_def = dict(label=col[0], key=col[1])
             if len(col) > 2:
                 col_def['type'] = 'string' if col[2] == 'str' else col[2]
@@ -944,8 +1058,14 @@ class TreeView(WidgetMixin, PGW.TreeView):
     def set_tree(self, tree_dict):
         super().set_tree(_treedata_to_plain(tree_dict))
 
-    def add_tree(self, tree_dict, expand_new=False):
-        super().add_tree(_treedata_to_plain(tree_dict))
+    def add_tree(self, tree_dict, expand_new=False, parent=None):
+        """Merge `tree_dict` into the tree under `parent`.
+
+        `parent` is a path (list of keys) naming the node to merge
+        under; None (the default) merges at the root.  Keys that
+        already exist there are replaced subtree-deep.
+        """
+        super().add_tree(_treedata_to_plain(tree_dict), parent)
 
     def update_tree(self, tree_dict, expand_new=False):
         super().update_tree(_treedata_to_plain(tree_dict))
@@ -1424,16 +1544,24 @@ class TableView(WidgetMixin, PGW.TableView):
     def _cb_redirect_scrolled(self, h_pct, v_pct):
         self._make_callback('scrolled', h_pct, v_pct)
 
-    def _cb_redirect_cell_action(self, path, col_key):
-        """JS fires ``cell_action(path, col_key)`` when the user
-        clicks a button-shaped widget cell.  Resolve ``path`` to
-        the row dict and re-emit as ``cell_action(table, row_dict,
-        col_key)`` to match the qtw signature."""
-        idx_path = self._from_pgw_path(path)
-        idx = idx_path[0] if idx_path else None
-        row = (dict(self._rows[idx])
-               if idx is not None and 0 <= idx < len(self._rows)
-               else None)
+    def _cb_redirect_cell_action(self, row_values, col_key):
+        """JS fires ``cell_action(row_values, col_key)`` when the user
+        clicks a button-shaped widget cell -- the row's values, not a
+        path (see ``_buildCellWidget`` in pgwidgets-js TreeView.js).
+        Re-emit as ``cell_action(table, row_dict, col_key)`` to match
+        the qtw signature.
+
+        Older pgwidgets-js builds sent the path here instead; resolve
+        that against our row shadow if that is what turns up.
+        """
+        if isinstance(row_values, dict):
+            row = dict(row_values)
+        else:
+            idx_path = self._from_pgw_path(row_values)
+            idx = idx_path[0] if idx_path else None
+            row = (dict(self._rows[idx])
+                   if isinstance(idx, int) and 0 <= idx < len(self._rows)
+                   else None)
         self._make_callback('cell_action', row, col_key)
 
     def _cb_redirect_cell_selected(self, cells):
@@ -1501,6 +1629,20 @@ class TableView(WidgetMixin, PGW.TableView):
     # auto-generated from defs.py without further help here.  The
     # path-taking methods need our integer-index ↔ pgw-row-key
     # boundary conversion.
+
+    def set_colors(self, spec):
+        """Apply many colour overrides in one call (one round-trip, one
+        re-render).  See the pgwidgets TreeView.set_colors docs for the
+        spec shape; the ``path`` of each cell/row entry takes the same
+        integer row indices as the single-cell calls here."""
+        if isinstance(spec, dict):
+            spec = dict(spec)
+            for key in ('cells', 'rows'):
+                entries = spec.get(key)
+                if entries:
+                    spec[key] = [dict(e, path=self._to_pgw_path(
+                        e.get('path', []))) for e in entries]
+        super().set_colors(spec)
 
     def set_cell_color(self, path, col_key, fg=None, bg=None, bold=None):
         super().set_cell_color(self._to_pgw_path(path), col_key,
