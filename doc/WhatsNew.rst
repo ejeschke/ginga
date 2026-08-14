@@ -4,6 +4,56 @@ What's New
 
 Ver 7.3.0 (unreleased)
 ======================
+- The ``TreeView`` and ``TableView`` widgets now behave the same on every
+  backend, so an application driving the same tree under ``pg``, ``qt``,
+  ``gtk3`` or ``gtk4`` gets the same result.  Interior (parent) rows can
+  carry column values of their own instead of showing only their key
+  (``ginga.util.treehelper`` holds the shared rules; a node that supplies
+  none renders exactly as before).  ``setup_table()`` accepts full column
+  descriptors as well as the portable ``(label, key)`` tuples, so
+  ``editable``, ``widget``/``choices``, ``visible_key`` and ``enabled_key``
+  survive -- a backend that takes them advertises a ``col_specs``
+  attribute, so an application can ask rather than test the toolkit name.
+  Editing is per column (and refused on the filler cells of an interior
+  row), ``checkbox``/``combobox``/``progress``/``button`` columns put a
+  control in the cell, the ``set_cell_color`` / ``set_row_color`` /
+  ``set_column_color`` / ``set_table_color`` cascade and its ``set_colors``
+  batch work everywhere, and ``cell_edited`` / ``cell_action`` are emitted
+  with identical signatures.
+- The ``gtk4`` ``TreeView`` and ``TableView`` were rewritten on
+  ``GtkColumnView`` (with ``GtkTreeListModel``), replacing the deprecated
+  ``GtkTreeView`` and bringing the widgets up to the feature set above:
+  real widgets per cell, cell selection, clipboard, and sorting that keeps
+  the hierarchy intact.  They also gain the spreadsheet cell cursor the qt
+  and pg tables have -- arrows and Tab move it, Return or F2 opens the
+  editor, typing replaces the cell, and Up/Down/Return/Tab commit an open
+  edit and move on -- plus column selection from a header click, and
+  ``Ctrl+C``/``X``/``V``.  ``dragable=True`` works again (it had no
+  ``ColumnView`` equivalent and was silently doing nothing), so dragging a
+  file from the ``FBrowser`` plugin to a viewer works; ``DragPackage``
+  builds a ``GdkContentProvider`` offering ``GdkFileList``.
+- The ``gtk4`` backend no longer uses API that GTK 4.10 deprecated:
+  per-widget style providers, ``get_allocation``,
+  ``translate_coordinates``, ``show()`` and the ``GdkPixbuf``
+  constructors.  Menu items and submenus now render icons.  A menubar
+  entry still shows its label -- ``GtkPopoverMenuBar`` ignores an icon
+  there, and the alternative loses press-drag-release selection across the
+  bar.  Also fixed the application stylesheet leaking into the widgets:
+  its ``notebook stack`` rule matched the stack inside every
+  ``GtkEditableLabel``, so the editable cells of a table living in a
+  ``TabWidget`` were filled with the window chrome colour, which also hid
+  the row selection.
+- The ``gtk3`` ``TreeView`` paints alternating row colours again.  It
+  relied on ``set_rules_hint()``, which GTK deprecated in 3.14 and the
+  themes ignore, so a tree asked for them (the ``FBrowser`` plugin) came
+  out plain while the ``TableView``, which already painted its own, looked
+  right.  The stripes follow visible row order, children included, so they
+  stay correct as nodes are expanded.
+- The ``qt`` backend's ``mainloop()`` is interruptible with ``^C`` again.
+  Qt's event loop does not run Python code while idle, so ``SIGINT`` sat
+  unhandled until the next event; the loop now wakes the interpreter
+  through a signal wakeup pipe, and applications terminate on the first
+  ``^C`` with a log message rather than needing several.
 - ``Bunch`` (``ginga.misc.Bunch``) is faster and two latent bugs are
   fixed.  Construction now populates the instance directly instead of
   going through ``Bunch``'s own ``__setattr__``, and attribute lookup does
