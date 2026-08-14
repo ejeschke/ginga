@@ -1226,9 +1226,13 @@ class TreeView(WidgetBase):
         tv.connect('row-activated', self._cb_redirect)
         tv.connect('row-collapsed', self._row_collapsed_cb)
         tv.connect('row-expanded', self._row_expanded_cb)
-        # needed to get alternating row colors
-        if use_alt_row_color:
-            tv.set_rules_hint(True)
+        # Alternating row colours.  ``set_rules_hint`` is what this used
+        # to rely on, but it has been deprecated since GTK 3.14 and the
+        # themes ignore it -- so the stripes are painted here, the way
+        # the TableView below already does.
+        self._alt_row_colors = bool(use_alt_row_color)
+        self._alt_index = {}
+        self._alt_index_dirty = True
         treeselection = tv.get_selection()
         treeselection.connect('changed', self._selection_cb)
         if self.selection == 'multiple':
@@ -1362,6 +1366,8 @@ class TreeView(WidgetBase):
         self._add_tree(model, tree_dict, expand_new=expand_new)
 
     def _add_tree(self, model, tree_dict, expand_new=False):
+        # rows are about to change, so the stripe map is stale
+        self._invalidate_alt_index()
 
         # Hack to get around slow TreeView scrolling with large lists
         self.tv.set_fixed_height_mode(False)
@@ -1390,6 +1396,7 @@ class TreeView(WidgetBase):
         self._index_row_keys()
 
     def delete_tree(self, tree_dict, prune_empty=True):
+        self._invalidate_alt_index()
         """Delete the nodes named by `tree_dict` from the TreeView.
 
         `tree_dict` is a nested dict of keys mirroring the loaded tree.  A
@@ -1602,10 +1609,12 @@ class TreeView(WidgetBase):
         return res_dict
 
     def _row_collapsed_cb(self, treeview, item_iter, path):
+        self._invalidate_alt_index()
         path = self._get_path(item_iter)
         self.make_callback('collapsed', path)
 
     def _row_expanded_cb(self, treeview, item_iter, path):
+        self._invalidate_alt_index()
         path = self._get_path(item_iter)
         self.make_callback('expanded', path)
 
@@ -1698,6 +1707,7 @@ class TreeView(WidgetBase):
         with self._selection_stocker:
             self.tv.set_model(model)
         self.shadow = {}
+        self._invalidate_alt_index()
         # the rows those overrides referred to are gone; the column and
         # table layers aren't row-specific, so they survive (matching
         # the pg and qt backends)
@@ -2194,8 +2204,55 @@ class TreeView(WidgetBase):
                 path_key = self._key_path_for_iter(model, iter)
                 if path_key is not None:
                     fg, bg, bold = self._resolve_style(path_key, kwd)
+            if bg is None and self._alt_row_colors:
+                bg = self._alt_row_bg_for(model, iter)
             _apply_color_to_cell_gtk(cell, fg, bg, bold)
         return fn
+
+    # Stripe palette, matching the TableView's.
+    _ALT_ROW_BG_EVEN = '#ffffff'
+    _ALT_ROW_BG_ODD = '#f4f4f4'
+
+    def _alt_row_bg_for(self, model, iter):
+        """The stripe colour for a row, by its position on screen.
+
+        A tree stripes by *visible* row -- children included, and only
+        while their parent is expanded -- so the index cannot come from
+        the path the way a flat table's can.  The map is rebuilt when
+        the rows or the expansion change, not per cell.
+        """
+        if self._alt_index_dirty:
+            self._rebuild_alt_index(model)
+        path = model.get_path(iter)
+        if path is None:
+            return None
+        idx = self._alt_index.get(path.to_string())
+        if idx is None:
+            return None
+        return self._ALT_ROW_BG_ODD if idx % 2 else self._ALT_ROW_BG_EVEN
+
+    def _rebuild_alt_index(self, model):
+        self._alt_index = {}
+        counter = [0]
+
+        def walk(parent_iter):
+            child = model.iter_children(parent_iter)
+            while child is not None:
+                path = model.get_path(child)
+                self._alt_index[path.to_string()] = counter[0]
+                counter[0] += 1
+                if (model.iter_has_child(child)
+                        and self.tv.row_expanded(path)):
+                    walk(child)
+                child = model.iter_next(child)
+
+        walk(None)
+        self._alt_index_dirty = False
+
+    def _invalidate_alt_index(self):
+        self._alt_index_dirty = True
+        if self._alt_row_colors and self.tv is not None:
+            self.tv.queue_draw()
 
     def _start_drag(self, treeview, context, selection,
                     info, timestamp):

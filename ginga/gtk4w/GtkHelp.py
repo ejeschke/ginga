@@ -10,6 +10,8 @@ import math
 import random
 import time
 
+from collections import namedtuple
+
 import numpy as np
 
 from ginga.misc import Bunch, Callback
@@ -21,6 +23,7 @@ from ginga.util import icon_helper
 import gi
 gi.require_version('Gtk', '4.0')
 from gi.repository import Gtk  # noqa
+from gi.repository import Graphene  # noqa
 from gi.repository import Gdk  # noqa
 from gi.repository import Gsk  # noqa
 from gi.repository import GLib  # noqa
@@ -224,54 +227,6 @@ class Notebook(WidgetMask, Gtk.Notebook):
         super(Notebook, self).set_current_page(new_idx)
 
 
-class MultiDragDropTreeView(Gtk.TreeView):
-    '''TreeView that captures mouse events to make drag and drop work
-    properly
-    See: https://gist.github.com/kevinmehall/278480#file-multiple-selection-dnd-class-py
-    '''
-
-    def __init__(self):
-        super(MultiDragDropTreeView, self).__init__()
-
-        event = Gtk.GestureClick.new()
-        event.connect("pressed", self.on_button_press)
-        # all buttons
-        event.set_button(0)
-        self.add_controller(event)
-        event = Gtk.GestureClick.new()
-        event.connect("released", self.on_button_release)
-        event.set_button(0)
-        self.add_controller(event)
-        self.defer_select = False
-
-    def on_button_press(self, event, n_clicks, x, y):
-        # Here we intercept mouse clicks on selected items so that we can
-        # drag multiple items without the click selecting only one
-        state = event.get_current_event_state()
-        target = self.get_path_at_pos(int(x), int(y))
-        if (target and
-            not (state &
-                 (Gdk.ModifierType.CONTROL_MASK |
-                  Gdk.ModifierType.SHIFT_MASK)) and
-            self.get_selection().path_is_selected(target[0])):
-            # disable selection
-            self.get_selection().set_select_function(lambda *ignore: False)
-            self.defer_select = target[0]
-
-    def on_button_release(self, event, n_clicks, x, y):
-        # re-enable selection
-        self.get_selection().set_select_function(lambda *ignore: True)
-
-        x, y = int(x), int(y)
-        target = self.get_path_at_pos(x, y)
-        if (self.defer_select and target and
-                self.defer_select == target[0] and
-                not (x == 0 and y == 0)):  # certain drag and drop
-            self.set_cursor(target[0], target[1], False)
-
-        self.defer_select = False
-
-
 class MDISubWindow(Callback.Callbacks):
 
     def __init__(self, widget, label, iconpath=None):
@@ -291,7 +246,7 @@ class MDISubWindow(Callback.Callbacks):
         if iconpath is None:
             iconpath = app_icon_path
         pixbuf = pixbuf_new_from_file_at_size(iconpath, 32, 32)
-        self.image = Gtk.Picture.new_for_pixbuf(pixbuf)
+        self.image = picture_from_pixbuf(pixbuf)
         hbox.append(self.image)
 
         modify_bg(label, "gray90")
@@ -302,19 +257,19 @@ class MDISubWindow(Callback.Callbacks):
         # titlebar buttons
         iconfile = os.path.join(icondir, "close.svg")
         pixbuf = pixbuf_new_from_file_at_size(iconfile, 24, 24)
-        image = Gtk.Picture.new_for_pixbuf(pixbuf)
+        image = picture_from_pixbuf(pixbuf)
         close = Gtk.Button()
         modify_bg(close, "gray90")
         close.set_child(image)
         iconfile = os.path.join(icondir, "maximize.svg")
         pixbuf = pixbuf_new_from_file_at_size(iconfile, 24, 24)
-        image = Gtk.Picture.new_for_pixbuf(pixbuf)
+        image = picture_from_pixbuf(pixbuf)
         maxim = Gtk.Button()
         modify_bg(maxim, "gray90")
         maxim.set_child(image)
         iconfile = os.path.join(icondir, "minimize.svg")
         pixbuf = pixbuf_new_from_file_at_size(iconfile, 24, 24)
-        image = Gtk.Picture.new_for_pixbuf(pixbuf)
+        image = picture_from_pixbuf(pixbuf)
         minim = Gtk.Button()
         modify_bg(minim, "gray90")
         minim.set_child(image)
@@ -339,12 +294,10 @@ class MDISubWindow(Callback.Callbacks):
         frame = Gtk.Frame()
         frame.set_child(vbox)
         # set a nice border around the subwindow
-        context = frame.get_style_context()
-        context.add_class("custom_bg")
-        css_data = "*.custom_bg { background-image: none; background-color: gray85; border-color: black; border-style: solid; border-width: 1px; }"
-        css_provider = Gtk.CssProvider()
-        css_provider.load_from_data(css_data.encode())
-        context.add_provider(css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
+        set_widget_css(frame, 'frame',
+                       ".{name} { background-image: none; "
+                       "background-color: gray85; border-color: black; "
+                       "border-style: solid; border-width: 1px; }")
         self.frame = frame
 
         for name in ('close', 'maximize', 'minimize'):
@@ -532,7 +485,7 @@ class MDIWidget:
         pass
 
     def select_child_cb(self, event, whatsit, x, y, subwin):
-        x_root, y_root = subwin.title.translate_coordinates(self.widget, x, y)
+        x_root, y_root = translate_coords(subwin.title, self.widget, x, y)
 
         x, y = self.get_widget_position(subwin.frame)
         subwin.x, subwin.y = x, y
@@ -554,7 +507,7 @@ class MDIWidget:
             return True
         self.update_subwin_size(subwin)
 
-        x_root, y_root = subwin.frame.translate_coordinates(self.widget, x, y)
+        x_root, y_root = translate_coords(subwin.frame, self.widget, x, y)
         x, y = x_root, y_root
 
         x1, y1 = self.get_widget_position(subwin.frame)
@@ -836,7 +789,7 @@ class Splitter(Gtk.Fixed):
         self.connect("notify", self._size_allocate_cb)
 
     def add_widget(self, widget):
-        rect = self.get_allocation()
+        rect = widget_allocation(self)
         wd, ht = rect.width, rect.height
 
         self.children.append(widget)
@@ -862,7 +815,7 @@ class Splitter(Gtk.Fixed):
                 widget.set_vexpand(True)
             iconfile = os.path.join(icondir, thumbfile)
             pixbuf = pixbuf_new_from_file_at_size(iconfile, _w, _h)
-            image = Gtk.Picture.new_for_pixbuf(pixbuf)
+            image = picture_from_pixbuf(pixbuf)
             #modify_bg(thumb, "gray90")
             thumb = image
 
@@ -917,7 +870,7 @@ class Splitter(Gtk.Fixed):
         ## if sizes == self._sizes:
         ##     return
         if self.get_realized():
-            rect = self.get_allocation()
+            rect = widget_allocation(self)
             wd, ht = rect.width, rect.height
         else:
             min_req, nat_req = self.get_preferred_size()
@@ -997,7 +950,7 @@ class Splitter(Gtk.Fixed):
         self.set_sizes(self._sizes)
 
     def _move_resize_child(self, child, x, y, wd, ht):
-        rect = child.get_allocation()
+        rect = widget_allocation(child)
         modified = False
 
         if (rect.x, rect.y) != (x, y):
@@ -1033,7 +986,7 @@ class Splitter(Gtk.Fixed):
         return max(0, pos - n)
 
     def _start_resize_cb(self, gesture, whatsit, x, y, widget, i):
-        x, y = widget.translate_coordinates(self, x, y)
+        x, y = translate_coords(widget, self, x, y)
 
         pos = x if self.orientation == 'horizontal' else y
         sizes = list(self._sizes)
@@ -1042,7 +995,7 @@ class Splitter(Gtk.Fixed):
         return True
 
     def _stop_resize_cb(self, gesture, whatsit, x, y, widget, i):
-        x, y = widget.translate_coordinates(self, x, y)
+        x, y = translate_coords(widget, self, x, y)
 
         pos = x if self.orientation == 'horizontal' else y
         sizes = list(self._sizes)
@@ -1053,7 +1006,7 @@ class Splitter(Gtk.Fixed):
     def _do_resize_cb(self, motion, x, y, widget, i):
         button = self.kbdmouse_mask
         state = motion.get_current_event_state()
-        x, y = widget.translate_coordinates(self, x, y)
+        x, y = translate_coords(widget, self, x, y)
 
         if state & Gdk.ModifierType.BUTTON1_MASK:
             button |= 0x1
@@ -1370,7 +1323,7 @@ class Dial(Gtk.DrawingArea):
         self.tracking = tf
 
     def configure_event(self, widget, event):
-        rect = widget.get_allocation()
+        rect = widget_allocation(widget)
         x, y, width, height = rect.x, rect.y, rect.width, rect.height
 
         self.dims = np.array((width, height))
@@ -1618,7 +1571,7 @@ class FileSelection:
             #self.filew.set_filename(filename)
             self.filew.set_current_name(filename)
 
-        self.filew.show()
+        self.filew.present()
         # default size can be enormous
         #self.filew.resize(800, 600)
 
@@ -1637,7 +1590,7 @@ class FileSelection:
                 self.cb(path)
 
     def close(self, widget):
-        self.filew.hide()
+        self.filew.set_visible(False)
 
 
 class DirectorySelection(FileSelection):
@@ -2078,36 +2031,143 @@ def make_cursor(widget, iconpath, x, y, size=None):
         size = (16, 16)
     fallback = Gdk.Cursor.new_from_name("crosshair")
     pixbuf = pixbuf_new_from_file_at_size(iconpath, size[0], size[1])
-    texture = Gdk.Texture.new_for_pixbuf(pixbuf)
+    texture = texture_from_pixbuf(pixbuf)
     cursor = Gdk.Cursor.new_from_texture(texture, x, y, fallback)
     return cursor
 
 
-def modify_bg(widget, color):
-    context = widget.get_style_context()
-    if color is not None:
-        context.add_class("custom_bg")
-        css_color = _coerce_css_color(color)
-        css_data = ("*.custom_bg { background-image: none; "
-                    "background-color: %s; }" % (css_color,))
-        css_provider = Gtk.CssProvider()
-        css_provider.load_from_data(css_data.encode())
-        context.add_provider(css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
+# GTK 4.10 deprecated the per-widget style provider, the pixbuf
+# constructors and the old geometry calls.  These wrap the current
+# equivalents so the call sites stay one-liners.
+
+Allocation = namedtuple('Allocation', ['x', 'y', 'width', 'height'])
+
+
+def widget_allocation(widget):
+    """The widget's geometry relative to its parent.
+
+    Replaces ``get_allocation()``; ``compute_bounds`` against the
+    parent gives the same rectangle.
+    """
+    parent = widget.get_parent()
+    if parent is not None:
+        ok, rect = widget.compute_bounds(parent)
+        if ok:
+            return Allocation(rect.origin.x, rect.origin.y,
+                              rect.size.width, rect.size.height)
+    return Allocation(0, 0, widget.get_width(), widget.get_height())
+
+
+def translate_coords(widget, target, x, y):
+    """``(x, y)`` expressed in `target`'s coordinates.
+
+    Replaces ``translate_coordinates()``.  Falls back to the input, as
+    that call did when the widgets shared no common ancestor.
+    """
+    if widget is target:
+        return x, y
+    ok, point = widget.compute_point(target, Graphene.Point().init(x, y))
+    if not ok:
+        return x, y
+    return point.x, point.y
+
+
+def texture_from_pixbuf(pixbuf):
+    """A ``Gdk.Texture`` holding a pixbuf's pixels.
+
+    Replaces ``Gdk.Texture.new_for_pixbuf()``.
+    """
+    fmt = (Gdk.MemoryFormat.R8G8B8A8 if pixbuf.get_has_alpha()
+           else Gdk.MemoryFormat.R8G8B8)
+    return Gdk.MemoryTexture.new(pixbuf.get_width(), pixbuf.get_height(),
+                                 fmt, GLib.Bytes.new(pixbuf.get_pixels()),
+                                 pixbuf.get_rowstride())
+
+
+def picture_from_pixbuf(pixbuf):
+    """Replaces ``Gtk.Picture.new_for_pixbuf()``."""
+    return Gtk.Picture.new_for_paintable(texture_from_pixbuf(pixbuf))
+
+
+def picture_set_pixbuf(picture, pixbuf):
+    """Replaces ``Gtk.Picture.set_pixbuf()``."""
+    picture.set_paintable(None if pixbuf is None
+                          else texture_from_pixbuf(pixbuf))
+
+
+def present(widget):
+    """Show a widget, raising it if it is a window.
+
+    ``Gtk.Widget.show()`` is deprecated and ``present()`` replaces it --
+    but only for windows.  A dialog attached to a parent is a page in a
+    notebook rather than a toplevel, and that has no ``present()``.
+    """
+    if isinstance(widget, Gtk.Window):
+        widget.present()
     else:
-        context.remove_class("custom_bg")
+        widget.set_visible(True)
+
+
+def widget_css_class(widget, prefix='ginga-widget'):
+    """A style class carried by this widget alone."""
+    name = getattr(widget, '_ginga_css_class', None)
+    if name is None:
+        name = '%s-%d' % (prefix, id(widget))
+        widget.add_css_class(name)
+        widget._ginga_css_class = name
+    return name
+
+
+def set_widget_css(widget, key, rules):
+    """Style one widget, replacing any rules previously set under `key`.
+
+    GTK4 deprecated attaching a provider to a widget's style context,
+    so the provider goes on the display instead -- which means the
+    rules have to be scoped to this widget rather than relying on the
+    provider's reach.  `rules` is CSS with ``{name}`` standing in for
+    the widget's own style class -- substituted literally rather than
+    through ``format()``, which trips over every brace in a
+    stylesheet.  None clears the rules.
+    """
+    display = widget.get_display() or Gdk.Display.get_default()
+    providers = getattr(widget, '_ginga_css_providers', None)
+    if providers is None:
+        providers = {}
+        widget._ginga_css_providers = providers
+
+    old = providers.pop(key, None)
+    if old is not None and display is not None:
+        Gtk.StyleContext.remove_provider_for_display(display, old)
+    if rules is None:
+        return
+
+    name = widget_css_class(widget)
+    provider = Gtk.CssProvider()
+    provider.load_from_string(rules.replace('{name}', name))
+    providers[key] = provider
+    if display is None:
+        # no display yet: install it as soon as there is one
+        widget.connect('realize', lambda w: set_widget_css(w, key, rules))
+        return
+    Gtk.StyleContext.add_provider_for_display(
+        display, provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
+
+
+def modify_bg(widget, color):
+    if color is None:
+        set_widget_css(widget, 'bg', None)
+        return
+    set_widget_css(widget, 'bg',
+                   '.{name} { background-image: none; '
+                   'background-color: %s; }' % (_coerce_css_color(color),))
 
 
 def modify_fg(widget, color):
-    context = widget.get_style_context()
-    if color is not None:
-        context.add_class("custom_fg")
-        css_color = _coerce_css_color(color)
-        css_data = ("*.custom_fg { color: %s; }" % (css_color,))
-        css_provider = Gtk.CssProvider()
-        css_provider.load_from_data(css_data.encode())
-        context.add_provider(css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
-    else:
-        context.remove_class("custom_fg")
+    if color is None:
+        set_widget_css(widget, 'fg', None)
+        return
+    set_widget_css(widget, 'fg', '.{name} { color: %s; }'
+                   % (_coerce_css_color(color),))
 
 
 def _coerce_css_color(color):
@@ -2144,11 +2204,11 @@ def set_default_style():
 
     module_home = os.path.split(sys.modules[__name__].__file__)[0]
     gtk_css = os.path.join(module_home, 'gtk_css')
-    with open(gtk_css, 'rb') as css_f:
+    with open(gtk_css) as css_f:
         css_data = css_f.read()
 
     try:
-        style_provider.load_from_data(css_data)
+        style_provider.load_from_string(css_data)
 
         # GTK 4 dropped ``add_provider_for_screen`` /
         # ``Gdk.Screen``; the equivalent is

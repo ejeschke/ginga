@@ -19,18 +19,23 @@
  * (Toolbar), and ``grid`` (GridBox) are the most visible cases;
  * add more here if other widgets show up looking too-white.
  *
+ * Keep these selectors to *direct* children.  ``notebook stack``
+ * matched the stack inside every GtkEditableLabel as well -- so
+ * every editable cell of a table living in a TabWidget was painted
+ * with the chrome grey, hiding the row selection underneath it.
+ *
  * Colour matches the pgwidgets-js Menu.css / StatusBar.css
  * palette (``#e8e8e8``).
  */
 window,
 dialog,
 notebook,
-notebook stack,
+notebook > stack,
 toolbar,
 grid,
 frame,
 scrolledwindow,
-scrolledwindow viewport {
+scrolledwindow > viewport {
     background-color: #e8e8e8;
 }
 
