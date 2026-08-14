@@ -276,8 +276,13 @@ class ApplicationBase(Callbacks):
         """
         return in_situ_web
 
-    def make_window(self, title=None):
-        win = TopLevel(title=title, moveable=True, resizable=True)
+    def make_window(self, title=None, **kwargs):
+        # NOTE: pgwidgets' TopLevel draws its own title bar, so options
+        # like closeable=False take effect here rather than being a hint
+        # to a window manager
+        kwargs.setdefault('moveable', True)
+        kwargs.setdefault('resizable', True)
+        win = TopLevel(title=title, **kwargs)
         self.add_window(win)
         return win
 
@@ -1011,8 +1016,8 @@ class TreeView(WidgetMixin, PGW.TreeView):
         for i, col in enumerate(columns):
             if isinstance(col, dict):
                 col_def = dict(col)
-                key = (col_def.get('key') or col_def.get('label')
-                       or f'col{i}')
+                key = (col_def.get('key') or col_def.get('label') or
+                       f'col{i}')
                 col_def['key'] = key
                 col_def.setdefault('label', key)
                 if col_def.get('type', None) in (None, 'str'):

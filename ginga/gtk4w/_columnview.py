@@ -661,8 +661,8 @@ class ColumnViewTreeMixin:
             ok, rect = widget.compute_bounds(self.cv)
             if not ok:
                 continue
-            if (rect.origin.x <= x < rect.origin.x + rect.size.width
-                    and rect.origin.y <= y < rect.origin.y + rect.size.height):
+            if (rect.origin.x <= x < rect.origin.x + rect.size.width and
+                    rect.origin.y <= y < rect.origin.y + rect.size.height):
                 return row
         return None
 
@@ -677,8 +677,8 @@ class ColumnViewTreeMixin:
     def _cv_selection_cb(self, model, position, n_items):
         # picking rows drops any cell selection, the way picking a
         # column drops the row selection -- one selection at a time
-        if (self._cell_mode() and self._cell_selection
-                and not self._in_cell_click):
+        if (self._cell_mode() and self._cell_selection and
+                not self._in_cell_click):
             for i in range(model.get_n_items()):
                 if model.is_selected(i):
                     self._cell_selection = set()
@@ -834,8 +834,8 @@ class ColumnViewTreeMixin:
             self._move_cursor(d_row, d_col, wrap=wrap)
             return True
 
-        ctrl = bool(state & Gdk.ModifierType.CONTROL_MASK
-                    or state & Gdk.ModifierType.META_MASK)
+        ctrl = bool(state & Gdk.ModifierType.CONTROL_MASK or
+                    state & Gdk.ModifierType.META_MASK)
         if ctrl:
             # Clipboard, as the qt table binds it -- and only while the
             # view itself has the keyboard, so an open cell editor
@@ -1386,8 +1386,8 @@ class ColumnViewTreeMixin:
         if tf:
             self._col_editable = set(
                 i for i, spec in enumerate(self.col_specs)
-                if spec.get('widget') not in _CELL_WIDGETS
-                and spec['type'] not in ('icon', 'check'))
+                if spec.get('widget') not in _CELL_WIDGETS and
+                spec['type'] not in ('icon', 'check'))
         else:
             self._col_editable = set()
 
@@ -1421,16 +1421,16 @@ class ColumnViewTreeMixin:
 
     def _cell_pressed(self, gesture, n_press, x, y, widget, col_idx):
         row = self._cell_row_for(widget)
-        editing = (isinstance(widget, Gtk.EditableLabel)
-                   and widget.get_property('editing'))
+        editing = (isinstance(widget, Gtk.EditableLabel) and
+                   widget.get_property('editing'))
         if row is not None and not editing:
             # clicking a cell moves the keyboard cursor there, so
             # arrows and Tab carry on from where the user pointed
             position = self._position_of_row(row)
             if position is not None:
                 self._cursor = (position, col_idx)
-                if (not self._cell_mode()
-                        and isinstance(widget, Gtk.EditableLabel)):
+                if (not self._cell_mode() and
+                        isinstance(widget, Gtk.EditableLabel)):
                     # we claim the press on editable cells, so GTK never
                     # makes the row selection a click would -- stand in
                     # for it here.  Elsewhere GTK still handles it (and

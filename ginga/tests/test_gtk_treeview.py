@@ -45,7 +45,7 @@ needs_descriptors = pytest.mark.skipif(
 # gtk4's ColumnView has neither, using a widget per cell -- so the
 # renderer-level checks apply to gtk3 only.  The gtk4 equivalents live
 # at the end of this module.
-uses_renderers = not ('gtk4' in Widgets.__name__)
+uses_renderers = 'gtk4' not in Widgets.__name__
 needs_renderers = pytest.mark.skipif(
     not uses_renderers,
     reason="renderer-based check; gtk4 renders cells as widgets")
@@ -480,7 +480,6 @@ def test_a_cell_colour_wins_over_the_stripe(app):
             rgba.to_string() if rgba else None,)
 
 
-
 # -- gtk4 ColumnView --------------------------------------------------
 #
 # The gtk4 backend renders through real per-cell widgets rather than
@@ -569,8 +568,8 @@ def test_header_click_selects_a_column(app):
     table._on_header_clicked(_Gesture(), 1, 0, 0, 0)
     table._on_header_clicked(_Gesture(Gdk.ModifierType.SHIFT_MASK),
                              1, 0, 0, 2)
-    assert {c['col_key'] for c in table.get_selected_cells()} == {'a', 'b',
-                                                                 'c'}
+    assert {c['col_key'] for c in table.get_selected_cells()} == \
+        {'a', 'b', 'c'}
 
 
 @needs_gtk4

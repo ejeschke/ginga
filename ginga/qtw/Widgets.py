@@ -1410,7 +1410,6 @@ class TreeWidgetItem(QtGui.QTreeWidgetItem):
             return a.lower() < b.lower()
 
 
-
 def _build_cell_widget(col, value, on_changed=None, on_action=None):
     """Create the control for a ``widget`` column's cell.
 
@@ -1506,8 +1505,8 @@ class _TreeItemDelegate(QtGui.QStyledItemDelegate):
         if col in tree._col_widgets:
             # served by a live control in the cell
             return None
-        return super(_TreeItemDelegate, self).createEditor(parent, option,
-                                                          index)
+        return super(_TreeItemDelegate, self).createEditor(
+            parent, option, index)
 
     def setEditorData(self, editor, index):
         if isinstance(editor, QtGui.QComboBox):
@@ -2356,8 +2355,8 @@ class TreeView(WidgetBase):
     def _restyle_all(self):
         """Re-apply every override.  Called after the tree changes, so
         rows added since the colours were set get them too."""
-        if not (self._cell_styles or self._row_styles
-                or self._column_styles or self._table_style):
+        if not (self._cell_styles or self._row_styles or
+                self._column_styles or self._table_style):
             return
         for path_key, item in self._walk_items():
             self._apply_item_style(path_key, item)
@@ -2424,8 +2423,8 @@ class TreeView(WidgetBase):
         self._restyle_all()
 
     def clear_all_colors(self):
-        had_any = bool(self._cell_styles or self._row_styles
-                       or self._column_styles or self._table_style)
+        had_any = bool(self._cell_styles or self._row_styles or
+                       self._column_styles or self._table_style)
         self._cell_styles = {}
         self._row_styles = {}
         self._column_styles = {}
@@ -5396,10 +5395,16 @@ class MDIWindow(TopLevelMixin, WidgetBase):
 
 class TopLevel(TopLevelMixin, ContainerBase):
 
-    def __init__(self, title=None, iconpath=None):
+    def __init__(self, title=None, iconpath=None, closeable=True):
         ContainerBase.__init__(self)
 
         widget = QtHelp.TopLevel()
+        if not closeable:
+            # drop the title bar's close button.  Whether it is honoured
+            # is up to the window manager -- the 'close' callback should
+            # still do something sane where it isn't.
+            widget.setWindowFlags(widget.windowFlags() &
+                                  ~QtCore.Qt.WindowType.WindowCloseButtonHint)
 
         if iconpath is None:
             iconpath = app_icon_path
@@ -5424,13 +5429,13 @@ class TopLevel(TopLevelMixin, ContainerBase):
         self.widget.setWindowIcon(QIcon(iconpath))
 
 
-
 def _drain_socket(sock):
     """Read whatever the signal wakeup fd wrote, so it doesn't pile up."""
     try:
         sock.recv(4096)
     except (BlockingIOError, InterruptedError, OSError):
         pass
+
 
 class Application(Callback.Callbacks):
 
@@ -5516,8 +5521,8 @@ class Application(Callback.Callbacks):
     def get_wids(self):
         return list(self.window_dict.keys())
 
-    def make_window(self, title=None):
-        w = TopLevel(title=title)
+    def make_window(self, title=None, **kwargs):
+        w = TopLevel(title=title, **kwargs)
         self.add_window(w)
         return w
 

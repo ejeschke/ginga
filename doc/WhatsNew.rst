@@ -4,6 +4,13 @@ What's New
 
 Ver 7.3.0 (unreleased)
 ======================
+- ``Application.make_window()`` passes keyword arguments on to the
+  ``TopLevel`` it creates, and ``TopLevel`` takes ``closeable`` -- pass
+  ``closeable=False`` for a window with no close button in its title bar,
+  for an application that should not be shut down that way.  The web
+  (``pg``) backend draws its own title bar, so it is absolute there; on
+  ``qt`` and the ``gtk`` backends it is a hint to the window manager, so
+  keep a ``close`` callback for the cases it does not cover.
 - The ``TreeView`` and ``TableView`` widgets now behave the same on every
   backend, so an application driving the same tree under ``pg``, ``qt``,
   ``gtk3`` or ``gtk4`` gets the same result.  Interior (parent) rows can

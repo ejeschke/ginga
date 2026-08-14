@@ -21,7 +21,6 @@ from ginga.misc import Callback, Bunch, Settings, LineHistory
 from ginga.util.paths import icondir, app_icon_path
 from ginga.fonts import font_asst
 from ginga.gw.widget_helpers import DIALOG_FLAGS_ONTOP
-from ginga.util.syncops import Shelf
 from ginga.locale.localize import translate_caption, _tr
 
 from gi.repository import Gtk
@@ -1279,9 +1278,9 @@ class TreeView(_columnview.ColumnViewTreeMixin, WidgetBase):
                     break
             if row is None:
                 continue
-            descend = (isinstance(sub, dict) and len(sub) > 0
-                       and row.children is not None
-                       and row.children.get_n_items() > 0)
+            descend = (isinstance(sub, dict) and len(sub) > 0 and
+                       row.children is not None and
+                       row.children.get_n_items() > 0)
             if not descend:
                 store.remove(_columnview._position_of(store, row))
                 removed += 1
@@ -3146,13 +3145,18 @@ class TopLevelMixin:
 
 class TopLevel(TopLevelMixin, ContainerBase):
 
-    def __init__(self, title=None, iconpath=None):
+    def __init__(self, title=None, iconpath=None, closeable=True):
         ContainerBase.__init__(self)
 
         self._fullscreen = False
         self.dialogs = []
 
         widget = GtkHelp.TopLevel()
+        if not closeable:
+            # drop the title bar's close button.  Whether it is honoured
+            # is up to the window manager -- the 'close' callback should
+            # still do something sane where it isn't.
+            widget.set_deletable(False)
         if iconpath is None:
             iconpath = app_icon_path
         # TODO: no set_icon in Gtk4
@@ -3328,8 +3332,8 @@ class Application(Callback.Callbacks):
     def get_wids(self):
         return list(self.window_dict.keys())
 
-    def make_window(self, title=None):
-        w = TopLevel(title=title)
+    def make_window(self, title=None, **kwargs):
+        w = TopLevel(title=title, **kwargs)
         return w
 
     def make_timer(self):

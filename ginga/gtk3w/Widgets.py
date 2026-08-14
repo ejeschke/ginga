@@ -1124,7 +1124,6 @@ class StatusBar(WidgetBase):
                                                self.clear_message)
 
 
-
 def _apply_color_to_cell_gtk(cell, fg, bg, bold=None):
     """Paint one cell renderer from resolved fg/bg/bold values.
 
@@ -1158,6 +1157,7 @@ def _apply_color_to_cell_gtk(cell, fg, bg, bold=None):
         cell.set_property('cell-background-set', True)
     else:
         cell.set_property('cell-background-set', False)
+
 
 class TreeView(WidgetBase):
     def __init__(self, auto_expand=False, sortable=False, selection='single',
@@ -2021,8 +2021,8 @@ class TreeView(WidgetBase):
         return dict(fg=fg, bg=bg, bold=bold)
 
     def _has_styles(self):
-        return bool(self._cell_styles or self._row_styles
-                    or self._column_styles or self._table_style)
+        return bool(self._cell_styles or self._row_styles or
+                    self._column_styles or self._table_style)
 
     def _redraw_cells(self):
         """Ask GTK to re-run the data functions."""
@@ -2241,8 +2241,8 @@ class TreeView(WidgetBase):
                 path = model.get_path(child)
                 self._alt_index[path.to_string()] = counter[0]
                 counter[0] += 1
-                if (model.iter_has_child(child)
-                        and self.tv.row_expanded(path)):
+                if (model.iter_has_child(child) and
+                        self.tv.row_expanded(path)):
                     walk(child)
                 child = model.iter_next(child)
 
@@ -5210,13 +5210,18 @@ class TopLevelMixin:
 
 class TopLevel(TopLevelMixin, ContainerBase):
 
-    def __init__(self, title=None, iconpath=None):
+    def __init__(self, title=None, iconpath=None, closeable=True):
         ContainerBase.__init__(self)
 
         self._fullscreen = False
         self.dialogs = []
 
         widget = GtkHelp.TopLevel()
+        if not closeable:
+            # drop the title bar's close button.  Whether it is honoured
+            # is up to the window manager -- the 'close' callback should
+            # still do something sane where it isn't.
+            widget.set_deletable(False)
         if iconpath is None:
             iconpath = app_icon_path
         widget.set_icon(GtkHelp.get_icon(iconpath))
@@ -5350,8 +5355,8 @@ class Application(Callback.Callbacks):
     def get_wids(self):
         return list(self.window_dict.keys())
 
-    def make_window(self, title=None):
-        w = TopLevel(title=title)
+    def make_window(self, title=None, **kwargs):
+        w = TopLevel(title=title, **kwargs)
         self.add_window(w)
         return w
 
