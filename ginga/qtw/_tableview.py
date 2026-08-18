@@ -612,7 +612,12 @@ class TableView(WidgetBase):
                 w.setValue(int(lo))
             return w
         if wtype == 'button':
-            label = str(value) if value is not None else (col.get('text') or '')
+            # NOTE: an empty value falls back to the column's own text,
+            # as the gtk backends do -- a row that carries no value for
+            # a button column would otherwise render a blank button
+            label = col.get('text') or ''
+            if value not in (None, ''):
+                label = str(value)
             w = QtGui.QPushButton(label)
             w.clicked.connect(
                 lambda _c=False, tk=token, ck=col_key:

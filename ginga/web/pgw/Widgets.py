@@ -2015,6 +2015,8 @@ class MessageDialog(Dialog):
     def set_category_icon(cls, category, iconpath, size=(64, 64)):
         cls.icon_dct[category] = iconpath
 
+    # NOTE: flags mirrors Dialog's above -- unused here, as a browser
+    # dialog is a DOM overlay that already renders over the page
     def __init__(self, title='', flags=None, buttons=[("Dismiss", 0)],
                  parent=None, modal=False, autoclose=False):
         Dialog.__init__(self, title=title, flags=flags, buttons=buttons,

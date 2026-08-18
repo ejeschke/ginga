@@ -358,3 +358,44 @@ def test_refresh_updates_controls_without_firing(widget_tree):
     assert _cell_widget(widget_tree, ['ob1'], 'qa').currentText() == 'Bad'
     assert _cell_widget(widget_tree, ['ob1'], 'pct').value() == 75
     assert got == []
+
+
+def test_button_label_falls_back_to_the_column_text(app):
+    """A row that carries no value for a button column still shows the
+    column's own text.
+
+    qt took any non-None value, so a row supplying '' rendered a blank
+    button -- while the gtk backends fall back to the column's `text`.
+    """
+    tree = Widgets.TreeView()
+    tree.setup_table([dict(label='Name', key='name'),
+                      dict(label='', key='go', widget='button',
+                           text='Delete')], 2, 'name')
+    tree.set_tree({'ob1': {'name': 'OB', 'go': '',
+                           'e1': {'name': 'e1', 'go': None},
+                           'e2': {'name': 'e2', 'go': 'Other'}}})
+
+    # empty string and None both mean "no value here"
+    assert _cell_widget(tree, ['ob1'], 'go').text() == 'Delete'
+    assert _cell_widget(tree, ['ob1', 'e1'], 'go').text() == 'Delete'
+    # ...but a real value still wins
+    assert _cell_widget(tree, ['ob1', 'e2'], 'go').text() == 'Other'
+
+
+def test_table_button_label_falls_back_to_the_column_text(app):
+    """Same for the TableView, which builds its cell widgets itself."""
+    from ginga.qtw.QtHelp import QtGui
+
+    table = Widgets.TableView(columns=[dict(label='Name', key='name'),
+                                       dict(label='', key='go',
+                                            widget='button',
+                                            text='Delete')])
+    table.set_rows([{'name': 'a', 'go': ''}, {'name': 'b', 'go': 'Other'}])
+
+    def button(row):
+        holder = table.get_widget().cellWidget(row, 1)
+        assert holder is not None
+        return holder.findChildren(QtGui.QPushButton)[0]
+
+    assert button(0).text() == 'Delete'
+    assert button(1).text() == 'Other'

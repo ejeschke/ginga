@@ -3481,7 +3481,11 @@ class MessageDialog(Dialog):
         native_img = Image.get_native_image_from_file(iconpath, size=size)
         cls.icon_dct[category] = native_img
 
-    def __init__(self, title='', flags=None, buttons=[("Dismiss", 0)],
+    # NOTE: flags defaults to on-top, as Dialog's does -- a message
+    # the user needs to see should not be able to fall behind the
+    # window that raised it
+    def __init__(self, title='', flags=DIALOG_FLAGS_ONTOP,
+                 buttons=[("Dismiss", 0)],
                  parent=None, modal=False, autoclose=False):
         Dialog.__init__(self, title=title, flags=flags, buttons=buttons,
                         parent=parent, modal=modal, autoclose=autoclose)

@@ -2,8 +2,19 @@
 What's New
 ++++++++++
 
-Ver 7.3.0 (unreleased)
+Ver 7.3.0 (2026.08.17)
 ======================
+- A ``button`` column in a ``TreeView``/``TableView`` now falls back to
+  the column's own ``text`` when a row carries no value (or an empty
+  string) for it, on ``qt`` as it already did on the ``gtk`` backends --
+  such a row previously rendered a blank button on ``qt``.
+- ``MessageDialog`` now floats above the window that raised it, as
+  ``Dialog`` already did.  Every backend's ``Dialog`` defaults to
+  ``DIALOG_FLAGS_ONTOP``, but ``MessageDialog`` overrode that default
+  with ``0`` (qt) or ``None`` (gtk3, gtk4) -- so an error or a warning
+  could open *behind* the window it belonged to, which is the one kind
+  of dialog that must not.  (The ``pg`` backend is unchanged: a browser
+  dialog is a DOM overlay that already renders over the page.)
 - ``Application.make_window()`` passes keyword arguments on to the
   ``TopLevel`` it creates, and ``TopLevel`` takes ``closeable`` -- pass
   ``closeable=False`` for a window with no close button in its title bar,

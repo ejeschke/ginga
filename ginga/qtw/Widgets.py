@@ -1447,7 +1447,12 @@ def _build_cell_widget(col, value, on_changed=None, on_action=None):
             w.setValue(int(lo))
         return w
     if wtype == 'button':
-        label = str(value) if value is not None else (col.get('text') or '')
+        # NOTE: an empty value falls back to the column's own text, as
+        # the gtk backends do -- a row that carries no value for a
+        # button column would otherwise render a blank button
+        label = col.get('text') or ''
+        if value not in (None, ''):
+            label = str(value)
         w = QtGui.QPushButton(label)
         if on_action is not None:
             w.clicked.connect(lambda _checked=False: on_action())
@@ -5748,7 +5753,11 @@ class MessageDialog(Dialog):
         native_img = Image.get_native_image_from_file(iconpath, size=size)
         cls.icon_dct[category] = native_img
 
-    def __init__(self, title='', flags=0, buttons=[("Dismiss", 0)],
+    # NOTE: flags defaults to on-top, as Dialog's does -- a message
+    # the user needs to see should not be able to fall behind the
+    # window that raised it
+    def __init__(self, title='', flags=DIALOG_FLAGS_ONTOP,
+                 buttons=[("Dismiss", 0)],
                  parent=None, modal=False, autoclose=False):
         Dialog.__init__(self, title=title, flags=flags, buttons=buttons,
                         parent=parent, modal=modal, autoclose=autoclose)
