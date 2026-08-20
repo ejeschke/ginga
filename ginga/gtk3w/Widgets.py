@@ -1794,6 +1794,43 @@ class TreeView(WidgetBase):
         self.clear_selection()
         self.select_paths(list(items or []), True)
 
+    # ----- cell-level selection -----------------------------------
+    #
+    # A cell mode -- selecting individual cells rather than whole rows,
+    # with a cell cursor and clipboard -- exists on the gtk4 and pg trees
+    # and on every backend's TableView, but not here: this tree is a
+    # GtkTreeView, which selects rows.  The methods are declared so a
+    # caller that reaches for them is told what is going on rather than
+    # meeting an AttributeError.
+
+    _NO_CELL_MODE = ("gtk3's TreeView selects rows, not cells; "
+                     "cell selection is available on its TableView, or "
+                     "on the gtk4 and pg TreeView")
+
+    def _no_cell_mode(self):
+        raise NotImplementedError(self._NO_CELL_MODE)
+
+    def select_cell(self, path, col_key, state=True):
+        self._no_cell_mode()
+
+    def select_cells(self, cells, state=True):
+        self._no_cell_mode()
+
+    def clear_cell_selection(self):
+        self._no_cell_mode()
+
+    def get_selected_cells(self):
+        self._no_cell_mode()
+
+    def copy_selection(self):
+        self._no_cell_mode()
+
+    def cut_selection(self):
+        self._no_cell_mode()
+
+    def paste_selection(self):
+        self._no_cell_mode()
+
     def set_editable(self, tf):
         """Make every text column editable (or not).  Per-row gating --
         an interior's filler cells are never editable -- still applies,

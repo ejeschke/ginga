@@ -1328,3 +1328,20 @@ def test_tree_editability_can_be_changed_after_setup(app):
 
     tree.set_column_editable('b', False)
     assert not editable(1)
+
+
+@needs_renderers
+def test_tree_says_it_has_no_cell_mode(app):
+    """gtk3's TreeView selects rows; the cell API is declared so a
+    caller is told, rather than meeting an AttributeError."""
+    tree = Widgets.TreeView()
+    tree.setup_table([('A', 'a')], 1, 'a')
+    for call in (lambda: tree.select_cell(['r0'], 'a'),
+                 lambda: tree.select_cells([]),
+                 lambda: tree.clear_cell_selection(),
+                 lambda: tree.get_selected_cells(),
+                 lambda: tree.copy_selection(),
+                 lambda: tree.cut_selection(),
+                 lambda: tree.paste_selection()):
+        with pytest.raises(NotImplementedError):
+            call()

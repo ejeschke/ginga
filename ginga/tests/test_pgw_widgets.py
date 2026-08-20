@@ -355,3 +355,14 @@ def test_treeview_path_background_fills_the_row(app, sent):
 
     path, fg, bg, bold = _calls(sent, 'set_row_color')[-1]
     assert path == ['r0'] and bg == '#ff0000'
+
+
+def test_treeview_reports_its_column_widths(app, sent):
+    """qt and gtk could report column widths; pgwidgets-js now can too."""
+    tree = Widgets.TreeView()
+    tree.setup_table([('A', 'a'), ('B', 'b')], 1, 'a')
+    del sent[:]
+
+    tree.get_column_widths()
+
+    assert _calls(sent, 'get_column_widths') == [[]]

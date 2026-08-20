@@ -34,7 +34,13 @@ Ver 7.4.0 (unreleased)
   ``set_row_spacing()``, ``set_column_spacing()`` and ``set_colors()``
   on ``qt``; ``TreeView`` gains ``set_editable()`` /
   ``set_column_editable()`` on ``gtk3`` and ``set_column_widths()`` /
-  ``sort_on_column()`` / ``set_path_background()`` on ``pg``.
+  ``sort_on_column()`` / ``set_path_background()`` /
+  ``get_column_widths()`` on ``pg``.  The one thing a ``TreeView``
+  still cannot do everywhere is select *cells*: ``qt`` and ``gtk3``
+  wrap a row-selecting native widget, so those seven methods raise
+  ``NotImplementedError`` there, naming where the feature does live
+  (that backend's ``TableView``, or the ``gtk4`` / ``pg`` tree) instead
+  of failing with ``AttributeError``.
 - ``cell_action`` now names the clicked row the same way on every
   backend: a ``TreeView`` reports its **path**, a ``TableView`` its
   **row dict**.  ``gtk4`` reported a path from both (its table included)

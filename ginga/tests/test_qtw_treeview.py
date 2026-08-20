@@ -546,3 +546,18 @@ def test_table_colors_can_be_set_in_one_batch(app):
 
     table.set_colors(dict(clear=True))
     assert tw.item(1, 0).font().bold() is False
+
+
+def test_tree_says_it_has_no_cell_mode(app, tree):
+    """The cell-selection API exists on the gtk4 and pg trees and on
+    every backend's table, but a QTreeWidget selects rows.  Say so,
+    rather than leaving a caller with an AttributeError."""
+    for call in (lambda: tree.select_cell(['ob1'], 'name'),
+                 lambda: tree.select_cells([]),
+                 lambda: tree.clear_cell_selection(),
+                 lambda: tree.get_selected_cells(),
+                 lambda: tree.copy_selection(),
+                 lambda: tree.cut_selection(),
+                 lambda: tree.paste_selection()):
+        with pytest.raises(NotImplementedError):
+            call()
