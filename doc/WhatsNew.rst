@@ -28,6 +28,13 @@ Ver 7.4.0 (unreleased)
   stretching to fill its cell, which is how ``qt`` has always drawn it.
 - ``TableView.set_font()`` works on ``qt``, which took a font only at
   construction; the ``gtk`` and ``pg`` backends already had it.
+- Filled in the ``TreeView`` / ``TableView`` methods that some backends
+  had and others didn't, so the two widgets now offer the same API
+  everywhere: ``TableView`` gains ``set_cell_padding()``,
+  ``set_row_spacing()``, ``set_column_spacing()`` and ``set_colors()``
+  on ``qt``; ``TreeView`` gains ``set_editable()`` /
+  ``set_column_editable()`` on ``gtk3`` and ``set_column_widths()`` /
+  ``sort_on_column()`` / ``set_path_background()`` on ``pg``.
 - ``cell_action`` now names the clicked row the same way on every
   backend: a ``TreeView`` reports its **path**, a ``TableView`` its
   **row dict**.  ``gtk4`` reported a path from both (its table included)

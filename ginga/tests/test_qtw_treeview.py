@@ -511,3 +511,38 @@ def test_cell_action_names_the_row_by_path_or_values(app, tree):
     row, col_key = got[0]
     assert isinstance(row, dict) and row['a'] == 'a1'
     assert col_key == 'go'
+
+
+# ----- API the other backends already had ----------------------------
+
+
+def test_table_takes_cell_padding_and_spacing(app):
+    """The gtk and pg tables took these; qt had no way to pad a cell."""
+    table = Widgets.TableView(columns=[dict(label='A', key='a')])
+
+    table.set_cell_padding(4)
+    assert 'padding: 4px 4px' in table.get_widget().styleSheet()
+
+    table.set_row_spacing(6)
+    table.set_column_spacing(2)
+    assert 'padding: 6px 2px' in table.get_widget().styleSheet()
+
+
+def test_table_colors_can_be_set_in_one_batch(app):
+    """set_colors() applies cell / row / column / table overrides at
+    once, as the gtk and pg tables do."""
+    table = Widgets.TableView(columns=[dict(label='A', key='a'),
+                                       dict(label='B', key='b')])
+    table.set_rows([{'a': 'a0', 'b': 'b0'}, {'a': 'a1', 'b': 'b1'}])
+
+    table.set_colors(dict(rows=[dict(path=[0], bg='#ff0000')],
+                          cells=[dict(path=[1], col_key='b', fg='#0000ff')],
+                          columns=[dict(col_key='a', bold=True)]))
+
+    tw = table.get_widget()
+    assert tw.item(0, 0).background().color().name() == '#ff0000'
+    assert tw.item(1, 1).foreground().color().name() == '#0000ff'
+    assert tw.item(1, 0).font().bold() is True
+
+    table.set_colors(dict(clear=True))
+    assert tw.item(1, 0).font().bold() is False

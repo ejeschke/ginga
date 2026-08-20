@@ -998,6 +998,26 @@ class TreeView(WidgetMixin, PGW.TreeView):
     def _cb_redirect_clipboard(self, tsv, name):
         self._make_callback(name, tsv)
 
+    def set_column_widths(self, lwidths):
+        """Set the column widths positionally, as the qt and gtk trees
+        take them; pgwidgets names a column by its key."""
+        for i, width in enumerate(lwidths):
+            if width is None or i >= len(self.datakeys):
+                continue
+            self.set_column_width(self.datakeys[i], width)
+
+    def sort_on_column(self, i):
+        """Sort by column index, ascending (the qt/gtk spelling of
+        ``sort_by_column``, which names the column by key)."""
+        if 0 <= i < len(self.datakeys):
+            self.sort_by_column(self.datakeys[i], True)
+
+    def set_path_background(self, path, bgcolor, alpha=1.0):
+        """Fill one row's background.  Kept for the qt/gtk spelling;
+        ``set_row_color`` is the portable form and takes a foreground
+        too.  ``alpha`` is accepted but unused, as it is there."""
+        self.set_row_color(path, bg=bgcolor)
+
     def setup_table(self, columns, levels, leaf_key):
         """Define the columns and the depth of the tree.
 

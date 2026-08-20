@@ -1303,3 +1303,28 @@ def test_a_table_reports_a_clicked_button_by_its_row(app):
     assert isinstance(row, dict), "a table must report the row, not a path"
     assert row['a'] == 'a1'
     assert col_key == 'go'
+
+
+def test_tree_editability_can_be_changed_after_setup(app):
+    """set_editable / set_column_editable reach the renderers that
+    setup_table already built (the qt, gtk4 and pg trees took these)."""
+    tree = Widgets.TreeView()
+    tree.setup_table([('A', 'a'), ('B', 'b')], 1, 'a')
+    tree.set_tree({'r0': {'a': 'r0', 'b': 'x'}})
+
+    def editable(i):
+        # gtk3 keeps a table-wide flag beside the per-column set;
+        # gtk4 folds the flag into the set
+        return getattr(tree, 'editable', False) or i in tree._col_editable
+
+    tree.set_editable(True)
+    assert editable(0) and editable(1)
+
+    tree.set_editable(False)
+    assert not editable(0) and not editable(1)
+
+    tree.set_column_editable(1, True)
+    assert editable(1) and not editable(0)
+
+    tree.set_column_editable('b', False)
+    assert not editable(1)

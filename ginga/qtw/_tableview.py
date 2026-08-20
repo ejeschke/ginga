@@ -906,6 +906,29 @@ class TableView(WidgetBase):
             else {'fg': fg, 'bg': bg, 'bold': bold}
         self._apply_all_colors()
 
+    def set_colors(self, spec):
+        """Apply many overrides at once, matching the gtk and pg
+        backends' batch call.  See ``TableView.set_colors`` there for
+        the spec: ``{clear, cells, rows, columns, table}``."""
+        if not isinstance(spec, dict):
+            return
+        if spec.get('clear'):
+            self.clear_all_colors()
+        for entry in (spec.get('cells') or []):
+            self.set_cell_color(entry.get('path'), entry.get('col_key'),
+                                fg=entry.get('fg'), bg=entry.get('bg'),
+                                bold=entry.get('bold'))
+        for entry in (spec.get('rows') or []):
+            self.set_row_color(entry.get('path'), fg=entry.get('fg'),
+                               bg=entry.get('bg'), bold=entry.get('bold'))
+        for entry in (spec.get('columns') or []):
+            self.set_column_color(entry.get('col_key'), fg=entry.get('fg'),
+                                  bg=entry.get('bg'), bold=entry.get('bold'))
+        if 'table' in spec:
+            table = spec.get('table') or {}
+            self.set_table_color(fg=table.get('fg'), bg=table.get('bg'),
+                                 bold=table.get('bold'))
+
     def clear_cell_color(self, path, col_key):
         self.set_cell_color(path, col_key, fg=None, bg=None)
 
@@ -982,6 +1005,29 @@ class TableView(WidgetBase):
         self.font = font
         self.fontsize = size
         self.widget.setFont(font)
+
+    def set_cell_padding(self, px):
+        """Padding inside every cell, in pixels (both directions)."""
+        self.row_pad_px = self.col_pad_px = int(px)
+        self._apply_padding()
+
+    def set_row_spacing(self, px):
+        """Vertical padding inside a cell -- this is what sets the row
+        height."""
+        self.row_pad_px = int(px)
+        self._apply_padding()
+
+    def set_column_spacing(self, px):
+        """Horizontal padding inside a cell."""
+        self.col_pad_px = int(px)
+        self._apply_padding()
+
+    def _apply_padding(self):
+        # a stylesheet is the only way to pad a QTableWidget's cells;
+        # the item delegate's sizeHint would fight the editor geometry
+        self.widget.setStyleSheet(
+            "QTableWidget::item { padding: %dpx %dpx; }" % (self.row_pad_px,
+                                                            self.col_pad_px))
 
     def set_header_font(self, font, size=10):
         """Set the column-header font.  Headers use the widget's default

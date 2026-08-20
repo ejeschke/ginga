@@ -1794,6 +1794,35 @@ class TreeView(WidgetBase):
         self.clear_selection()
         self.select_paths(list(items or []), True)
 
+    def set_editable(self, tf):
+        """Make every text column editable (or not).  Per-row gating --
+        an interior's filler cells are never editable -- still applies,
+        in the column data function."""
+        self.editable = bool(tf)
+        self._apply_editable_flags()
+
+    def set_column_editable(self, col, tf):
+        """Make one column editable, named by index or by key."""
+        idx = col if isinstance(col, int) else self.datakeys.index(col)
+        if tf:
+            self._col_editable.add(idx)
+        else:
+            self._col_editable.discard(idx)
+        self._apply_editable_flags()
+
+    def _apply_editable_flags(self):
+        """Push the table-wide / per-column flags onto the renderers.
+
+        setup_table sets these when it builds the columns, so changing
+        them afterwards has to reach the renderers that already exist.
+        """
+        for n, tvc in enumerate(self.tv.get_columns()):
+            for cell in tvc.get_cells():
+                if isinstance(cell, Gtk.CellRendererText):
+                    cell.set_property("editable",
+                                      self.editable or n in self._col_editable)
+        self.tv.queue_draw()
+
     def select_all(self, state=True):
         treeselection = self.tv.get_selection()
         with self._selection_stocker:

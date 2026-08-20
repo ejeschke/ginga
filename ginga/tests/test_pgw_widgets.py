@@ -319,3 +319,39 @@ def test_textarea_scrolls_to_a_lineno_with_an_alignment(app, sent):
     area.scroll_to_lineno(20, align='center')
 
     assert _calls(sent, 'scroll_to_lineno')[-1] == [20, 'center']
+
+
+# ----- API the qt and gtk trees already had --------------------------
+
+def test_treeview_column_widths_can_be_set_positionally(app, sent):
+    """qt/gtk take a list of widths by position; pgwidgets names a
+    column by its key."""
+    tree = Widgets.TreeView()
+    tree.setup_table([('A', 'a'), ('B', 'b')], 1, 'a')
+    del sent[:]
+
+    tree.set_column_widths([100, None, 999])
+
+    assert _calls(sent, 'set_column_width') == [['a', 100]]
+
+
+def test_treeview_sorts_by_column_index(app, sent):
+    tree = Widgets.TreeView()
+    tree.setup_table([('A', 'a'), ('B', 'b')], 1, 'a')
+    del sent[:]
+
+    tree.sort_on_column(1)
+
+    assert _calls(sent, 'sort_by_column') == [['b', True]]
+
+
+def test_treeview_path_background_fills_the_row(app, sent):
+    tree = Widgets.TreeView()
+    tree.setup_table([('A', 'a')], 1, 'a')
+    tree.set_tree({'r0': {'a': 'r0'}})
+    del sent[:]
+
+    tree.set_path_background(['r0'], '#ff0000')
+
+    path, fg, bg, bold = _calls(sent, 'set_row_color')[-1]
+    assert path == ['r0'] and bg == '#ff0000'
