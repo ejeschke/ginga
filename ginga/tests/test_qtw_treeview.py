@@ -23,11 +23,17 @@ except Exception:                            # pragma: no cover
 # import time, so what it offers depends on whether an earlier import
 # already fixed the family.
 from ginga.qtw import Widgets  # noqa: E402
+from ginga.qtw.QtHelp import QtGui  # noqa: E402
 
 
 @pytest.fixture(scope='module')
 def app():
-    return Widgets.Application()
+    # NOTE: a second QApplication in one process comes up with no
+    # screens attached, so reuse whatever another test module already
+    # created rather than building a second ginga Application
+    if QtGui.QApplication.instance() is None:
+        Widgets.Application()
+    return QtGui.QApplication.instance()
 
 
 @pytest.fixture

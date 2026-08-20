@@ -432,6 +432,19 @@ class TextArea(WidgetBase):
         else:
             vsb.setValue(pos)
 
+    def scroll_to_lineno(self, lineno, align='nearest'):
+        """Scroll so that line ``lineno`` (0-based) is visible.
+
+        ``align`` says where it should end up: 'nearest' (scroll the least
+        amount needed, the default), 'center' or 'top'.
+        """
+        offset = QtHelp.offset_of_lineno(self.tw, lineno)
+        QtHelp.scroll_to_offset(self.tw, offset, align=align)
+
+    def scroll_to_end(self):
+        vsb = self.tw.verticalScrollBar()
+        vsb.setValue(vsb.maximum())
+
 
 class TextSource(WidgetBase):
     """Ginga widget wrapping the numbered, tag-aware Qt text editor
@@ -544,11 +557,17 @@ class TextSource(WidgetBase):
     def get_end_lineno(self):
         return self.widget.get_end_lineno()
 
-    def scroll_to_lineno(self, lineno):
-        return self.widget.scroll_to_lineno(lineno)
+    def scroll_to_lineno(self, lineno, align='nearest'):
+        return self.widget.scroll_to_lineno(lineno, align=align)
 
     def scroll_to_end(self):
         return self.widget.scroll_to_end()
+
+    def set_cursor_style(self, style='line', color=None):
+        return self.widget.set_cursor_style(style, color=color)
+
+    def get_cursor_style(self):
+        return self.widget.get_cursor_style()
 
     def get_length(self):
         return self.widget.get_length()
@@ -656,8 +675,8 @@ class TextSource(WidgetBase):
     def clear_icons(self):
         return self.widget.clear_icons()
 
-    def scroll_to_ref(self, ref):
-        return self.widget.scroll_to_ref(ref)
+    def scroll_to_ref(self, ref, align='nearest'):
+        return self.widget.scroll_to_ref(ref, align=align)
 
 
 class Label(WidgetBase):

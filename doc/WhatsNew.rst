@@ -2,6 +2,22 @@
 What's New
 ++++++++++
 
+Ver 7.4.0 (unreleased)
+======================
+- ``TextArea.scroll_to_lineno()`` (all backends) and ``TextSource``'s
+  ``scroll_to_lineno()`` / ``scroll_to_ref()`` (``qt``, ``pg``) take
+  ``align``: 'nearest' (the default, as before), 'center' or 'top'.
+- On ``qt`` those now drive the scroll bar instead of moving the text
+  cursor, which used to collapse the caller's selection -- so a search
+  that scrolls to its match keeps the match selected.
+- ``TextSource.set_cursor_style()`` sets the caret to a 'line' or
+  'block' shape in any color.  On ``qt`` ginga draws it, so it does not
+  blink and stays visible while the widget is unfocused; on ``pg`` it
+  styles the browser's caret (focused only, block shape needs CSS
+  ``caret-shape``).
+- ``TextArea.get_text()`` works on ``gtk3``/``gtk4``, and ``gtk4``'s
+  ``set_limit()`` can trim the buffer; both raised a ``TypeError``.
+
 Ver 7.3.0 (2026.08.17)
 ======================
 - A ``button`` column in a ``TreeView``/``TableView`` now falls back to

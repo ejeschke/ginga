@@ -251,3 +251,81 @@ def test_batch_is_available_on_every_widget(app):
     for w in (Widgets.TreeView(), Widgets.Label('x'), Widgets.Button('b')):
         with w.batch():
             pass
+
+
+# ----- text widget scrolling and caret --------------------------------
+
+def test_textsource_scrolls_by_ref_with_an_alignment(app, sent):
+    """A search centers its match: the alignment rides along with the
+    offset the ref resolves to."""
+    text = Widgets.TextSource()
+    text.set_text("\n".join("line %d" % i for i in range(50)))
+    ref = text.get_ref_line_start(20)
+    del sent[:]
+
+    text.scroll_to_ref(ref, align='center')
+
+    offset, align = _calls(sent, '_scrollToOffset')[-1]
+    assert offset == ref.get_offset()
+    assert align == 'center'
+
+
+def test_textsource_scrolls_to_a_lineno_with_an_alignment(app, sent):
+    text = Widgets.TextSource()
+    text.set_text("\n".join("line %d" % i for i in range(50)))
+    del sent[:]
+
+    text.scroll_to_lineno(20, align='center')
+    offset, align = _calls(sent, '_scrollToOffset')[-1]
+    assert offset == text.get_ref_line_start(20).get_offset()
+    assert align == 'center'
+
+    # the default leaves the view where it is if the line is visible
+    text.scroll_to_lineno(20)
+    assert _calls(sent, '_scrollToOffset')[-1][1] == 'nearest'
+
+
+def test_textsource_rejects_an_unknown_alignment(app):
+    text = Widgets.TextSource()
+    with pytest.raises(ValueError):
+        text.scroll_to_lineno(1, align='middle')
+
+
+def test_textsource_cursor_style_is_pushed_and_remembered(app, sent):
+    text = Widgets.TextSource()
+    assert text.get_cursor_style() == ('line', None)
+    del sent[:]
+
+    text.set_cursor_style('block', color='indianred')
+
+    assert _calls(sent, 'set_cursor_style')[-1] == ['block', 'indianred']
+    assert text.get_cursor_style() == ('block', 'indianred')
+
+
+def test_textsource_cursor_style_survives_a_reconnect(app, sent):
+    """A browser that (re)connects gets the caret styling replayed along
+    with the rest of the model."""
+    text = Widgets.TextSource()
+    text.set_cursor_style('block', color='indianred')
+    del sent[:]
+
+    text._reconstruct_model()
+
+    assert _calls(sent, 'set_cursor_style')[-1] == ['block', 'indianred']
+
+
+def test_textsource_rejects_an_unknown_cursor_style(app):
+    text = Widgets.TextSource()
+    with pytest.raises(ValueError):
+        text.set_cursor_style('underline', color='indianred')
+
+
+def test_textarea_scrolls_to_a_lineno_with_an_alignment(app, sent):
+    """The plain TextArea gets the same scrolling API as TextSource."""
+    area = Widgets.TextArea()
+    area.set_text("\n".join("line %d" % i for i in range(50)))
+    del sent[:]
+
+    area.scroll_to_lineno(20, align='center')
+
+    assert _calls(sent, 'scroll_to_lineno')[-1] == [20, 'center']

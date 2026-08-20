@@ -357,6 +357,10 @@ class TextEntrySet(WidgetBase):
         self.entry.set_sensitive(tf)
 
 
+# name of the reusable gtk text mark used to scroll a TextArea
+scroll_mark_name = 'ginga-scroll-to'
+
+
 class TextArea(WidgetBase):
     def __init__(self, wrap=False, editable=False):
         super(TextArea, self).__init__()
@@ -400,7 +404,9 @@ class TextArea(WidgetBase):
 
     def get_text(self):
         buf = self.tw.get_buffer()
-        return buf.get_text()
+        # NOTE: gtk's buffer wants the range explicitly (and whether to
+        # include hidden chars); there is no whole-buffer shorthand
+        return buf.get_text(buf.get_start_iter(), buf.get_end_iter(), True)
 
     def _history_housekeeping(self):
         # remove some lines to keep us within our history limit
@@ -408,8 +414,8 @@ class TextArea(WidgetBase):
         numlines = buf.get_line_count()
         if numlines > self.histlimit:
             rmcount = int(numlines - self.histlimit)
-            start = buf.get_iter_at_line(0)
-            end = buf.get_iter_at_line(rmcount)
+            found, start = buf.get_iter_at_line(0)
+            found, end = buf.get_iter_at_line(rmcount)
             buf.delete(start, end)
 
     def clear(self):
@@ -453,6 +459,56 @@ class TextArea(WidgetBase):
             vadj.set_value(vadj.get_upper())
         else:
             vadj.set_value(pos)
+
+    def scroll_to_lineno(self, lineno, align='nearest'):
+        """Scroll so that line ``lineno`` (0-based) is visible.
+
+        ``align`` says where it should end up: 'nearest' (scroll the least
+        amount needed, the default), 'center' or 'top'.
+        """
+        if align not in ('nearest', 'center', 'top'):
+            raise ValueError("align should be one of 'nearest', 'center' "
+                             "or 'top'")
+        buf = self.tw.get_buffer()
+        lineno = max(0, min(lineno, buf.get_line_count() - 1))
+        # NOTE: unlike gtk3, gtk4's get_iter_at_line() returns a
+        # (found, iter) tuple
+        found, it = buf.get_iter_at_line(lineno)
+        vadj = self.widget.get_vadjustment()
+        page = vadj.get_page_size()
+        if page <= 0:
+            # not laid out yet: gtk's own scroll is queued until it is,
+            # and it refers to the mark, so the mark has to outlive this
+            # call -- one reusable mark per widget keeps that from leaking
+            mark = buf.get_mark(scroll_mark_name)
+            if mark is None:
+                mark = buf.create_mark(scroll_mark_name, it, True)
+            else:
+                buf.move_mark(mark, it)
+            yalign = dict(center=0.5, top=0.0, nearest=0.0)[align]
+            self.tw.scroll_to_mark(mark, 0.0, align != 'nearest', 0.0, yalign)
+            return
+
+        # the view's adjustment is in the same (buffer) coordinates that
+        # get_iter_location() reports, so we can place the line exactly
+        rect = self.tw.get_iter_location(it)
+        pos = vadj.get_value()
+        if align == 'center':
+            value = rect.y + rect.height / 2 - page / 2
+        elif align == 'top':
+            value = rect.y
+        elif rect.y < pos:
+            value = rect.y
+        elif rect.y + rect.height > pos + page:
+            value = rect.y + rect.height - page
+        else:
+            return
+        vadj.set_value(max(vadj.get_lower(),
+                           min(value, vadj.get_upper() - page)))
+
+    def scroll_to_end(self):
+        buf = self.tw.get_buffer()
+        self.scroll_to_lineno(buf.get_line_count() - 1)
 
 
 class Label(WidgetBase):

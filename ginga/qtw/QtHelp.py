@@ -763,6 +763,51 @@ def delete_widget(w):
     w.deleteLater()
 
 
+def scroll_to_offset(text_widget, offset, align='nearest'):
+    """Scroll a QTextEdit so that the line containing ``offset`` is visible.
+
+    ``align`` says where that line should end up: 'nearest' scrolls the
+    least amount that brings it into view (and does nothing if it already
+    is), 'center' puts it in the middle of the view and 'top' at the top.
+
+    The scroll bar is driven directly rather than through
+    setTextCursor()/ensureCursorVisible(), because moving the text cursor
+    would collapse any selection (e.g. the match a search just made) and
+    move the caret away from where the caller put it.
+    """
+    cursor = QTextCursor(text_widget.document())
+    cursor.setPosition(offset)
+    rect = text_widget.cursorRect(cursor)
+    height = text_widget.viewport().height()
+    if align == 'center':
+        delta = rect.center().y() - height // 2
+    elif align == 'top':
+        delta = rect.top()
+    elif align == 'nearest':
+        if rect.top() < 0:
+            delta = rect.top()
+        elif rect.bottom() > height:
+            delta = rect.bottom() - height
+        else:
+            delta = 0
+    else:
+        raise ValueError("align should be one of 'nearest', 'center' "
+                         "or 'top'")
+    if delta != 0:
+        # a QTextEdit's vertical scroll bar is in pixels
+        vbar = text_widget.verticalScrollBar()
+        vbar.setValue(vbar.value() + delta)
+
+
+def offset_of_lineno(text_widget, lineno):
+    """Return the character offset of the start of line ``lineno`` (0-based)
+    in a QTextEdit; the end of the document if there is no such line."""
+    block = text_widget.document().findBlockByLineNumber(max(0, lineno))
+    if block.isValid():
+        return block.position()
+    return text_widget.document().characterCount() - 1
+
+
 def mkformat(fgcolor=None, bgcolor=None, style=None, baseformat=None):
     """Return a QTextCharFormat with the given attributes."""
     style = [] if style is None else list(style)
@@ -993,6 +1038,77 @@ class QEnhancedTextEdit(QtGui.QTextEdit):
         # bypassing that model, so we disable it here.
         self.setUndoRedoEnabled(False)
 
+        # Custom caret (see set_cursor_style).  While these are at their
+        # defaults Qt draws its own caret; once a color is set we paint it
+        # ourselves in paintEvent().
+        self._caret_style = 'line'
+        self._caret_color = None
+        self._caret_pen = None
+        self._caret_brush = None
+        self.cursorPositionChanged.connect(self._caret_moved_cb)
+
+    def _caret_moved_cb(self):
+        if self._caret_color is not None:
+            self.viewport().update()
+
+    def set_cursor_style(self, style='line', color=None):
+        """Set the appearance of the text caret.
+
+        ``style`` is 'line' (a thin vertical bar, the default) or 'block'
+        (a rectangle the width of the character it sits on).  ``color`` is
+        any ginga color name/spec, or None for the toolkit default.
+
+        A caret with a color is drawn by us rather than by Qt, so unlike
+        the native caret it does not blink and stays visible while the
+        widget does not have the keyboard focus -- useful for showing
+        where a search landed while a Find dialog holds the focus.
+        """
+        if style not in ('line', 'block'):
+            raise ValueError("style should be one of 'line' or 'block'")
+        self._caret_style = style
+        self._caret_color = color
+        # resolved once here rather than on every paint
+        self._caret_pen = None if color is None else QPen(get_color(color), 1)
+        self._caret_brush = None if color is None else get_color(color,
+                                                                 alpha=0.4)
+        # hide Qt's caret when we are drawing our own
+        self.setCursorWidth(0 if color is not None else 1)
+        self.viewport().update()
+
+    def get_cursor_style(self):
+        return (self._caret_style, self._caret_color)
+
+    def _caret_rect(self):
+        rect = self.cursorRect()
+        if self._caret_style != 'block':
+            rect.setWidth(2)
+            return rect
+        # width of the character the caret is sitting on; at the end of a
+        # line (nothing there) use the width of a space
+        cursor = self.textCursor()
+        text = cursor.block().text()
+        pos = cursor.positionInBlock()
+        char = text[pos] if pos < len(text) else ' '
+        if char == '\t':
+            char = ' '
+        rect.setWidth(max(2, self.fontMetrics().horizontalAdvance(char)))
+        return rect
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        if self._caret_color is None:
+            return
+        # A translucent fill keeps the character under a block caret
+        # readable, while the solid outline keeps the caret easy to spot.
+        painter = QPainter(self.viewport())
+        try:
+            rect = self._caret_rect()
+            painter.fillRect(rect, self._caret_brush)
+            painter.setPen(self._caret_pen)
+            painter.drawRect(rect.adjusted(0, 0, -1, -1))
+        finally:
+            painter.end()
+
     def sizeChange_cb(self):
         if not self.growing:
             return
@@ -1143,12 +1259,26 @@ class QTextSource(QtGui.QFrame, TextModel):
         self._icon_refs.clear()
         self.nb.clear_icons()
 
-    def scroll_to_ref(self, ref):
-        """Ensure the line containing ``ref`` is visible."""
-        cursor = QTextCursor(self.tw.document())
-        cursor.setPosition(self._offset_of(ref))
-        self.tw.setTextCursor(cursor)
-        self.tw.ensureCursorVisible()
+    def scroll_to_ref(self, ref, align='nearest'):
+        """Ensure the line containing ``ref`` is visible.
+
+        ``align`` selects where the line ends up: 'nearest' (scroll the
+        least amount needed, the default), 'center' or 'top'.
+        """
+        self._scroll_to_offset(self._offset_of(ref), align=align)
+
+    def _scroll_to_offset(self, offset, align='nearest'):
+        """Scroll so that the line containing ``offset`` is visible."""
+        scroll_to_offset(self.tw, self._clamp_offset(offset), align=align)
+        self.nb.update()
+
+    def set_cursor_style(self, style='line', color=None):
+        """Set the appearance of the text caret; see
+        ``QEnhancedTextEdit.set_cursor_style``."""
+        self.tw.set_cursor_style(style, color=color)
+
+    def get_cursor_style(self):
+        return self.tw.get_cursor_style()
 
     def set_scroll_position(self, h_pct, v_pct):
         hbar = self.tw.horizontalScrollBar()
@@ -1188,21 +1318,13 @@ class QTextSource(QtGui.QFrame, TextModel):
     def get_end_lineno(self):
         return max(0, self.tw.document().blockCount() - 1)
 
-    def scroll_to_lineno(self, lineno):
-        cursor = QTextCursor(self.tw.document())
-        block = self.tw.document().findBlockByLineNumber(max(0, lineno))
-        if block.isValid():
-            cursor.setPosition(block.position())
-        else:
-            cursor.movePosition(QTextCursor.End)
-        self.tw.setTextCursor(cursor)
-        self.tw.ensureCursorVisible()
+    def scroll_to_lineno(self, lineno, align='nearest'):
+        self._scroll_to_offset(offset_of_lineno(self.tw, lineno), align=align)
 
     def scroll_to_end(self):
-        cursor = self.tw.textCursor()
-        cursor.movePosition(QTextCursor.End)
-        self.tw.setTextCursor(cursor)
-        self.tw.ensureCursorVisible()
+        vbar = self.tw.verticalScrollBar()
+        vbar.setValue(vbar.maximum())
+        self.nb.update()
 
     # ------------------------------------------------------------------
     # Render hooks (called by TextModel to reflect changes in the widget)
