@@ -1228,3 +1228,40 @@ def test_a_row_colour_fills_a_button_cell(app):
     button_x = int(width * 0.9)
     assert _at(pb, button_x, y) == red, \
         "the button column was left unpainted on a coloured row"
+
+
+# ----- programmatic selection is not user interaction ----------------
+
+
+def test_selecting_a_table_row_from_code_is_silent(app):
+    """Selecting from code does not fire 'selected' on any backend --
+    the caller already knows what it did, and two views that clear each
+    other's selection would otherwise ping-pong."""
+    table = Widgets.TableView(columns=[dict(label='A', key='a')])
+    table.set_rows([{'a': 'a%d' % i} for i in range(3)])
+    fired = []
+    table.add_callback('selected', lambda w, rows: fired.append(rows))
+
+    table.select_path([0])
+    table.select_paths([[1]])
+    table.set_selected([2])
+    table.select_all(True)
+    table.clear_selection()
+    table.select_all(False)
+
+    assert fired == [], "a programmatic selection reported itself"
+
+
+def test_selecting_a_tree_row_from_code_is_silent(app):
+    tree = Widgets.TreeView()
+    tree.setup_table([('Name', 'name')], 1, 'name')
+    tree.set_tree({'ob1': {'name': 'ob1'}, 'ob2': {'name': 'ob2'}})
+    fired = []
+    tree.add_callback('selected', lambda w, rows: fired.append(rows))
+
+    tree.select_path(['ob1'])
+    tree.select_paths([['ob2']])
+    tree.select_all(True)
+    tree.clear_selection()
+
+    assert fired == []

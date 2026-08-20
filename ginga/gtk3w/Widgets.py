@@ -1788,6 +1788,12 @@ class TreeView(WidgetBase):
     def select_path(self, path, state=True):
         self.select_paths([path], state=state)
 
+    def set_selected(self, items):
+        """Select exactly the rows named by ``items`` (key paths),
+        replacing whatever was selected before."""
+        self.clear_selection()
+        self.select_paths(list(items or []), True)
+
     def select_all(self, state=True):
         treeselection = self.tv.get_selection()
         with self._selection_stocker:

@@ -25,6 +25,8 @@ This module holds the model and the row plumbing; the widget class
 builds on it.
 """
 
+import contextlib
+
 from gi.repository import Gdk, GLib, GObject, Gio, Gtk
 
 from ginga import colors
@@ -319,6 +321,9 @@ class ColumnViewTreeMixin:
         # guard: our own cell click selects a cell and must not be
         # taken for the user picking rows
         self._in_cell_click = False
+        # depth counter: while non-zero we are changing the selection
+        # ourselves, and that is not the user selecting something
+        self._silent_selection_depth = 0
         # generated colour classes: (fg, bg, bold) -> class name
         self._color_classes = {}
         self._color_rules = {}
@@ -679,6 +684,9 @@ class ColumnViewTreeMixin:
         self.make_callback('activated', res_dict)
 
     def _cv_selection_cb(self, model, position, n_items):
+        if self._silent_selection_depth > 0:
+            # we changed the selection ourselves; see _silent_selection
+            return
         # picking rows drops any cell selection, the way picking a
         # column drops the row selection -- one selection at a time
         if (self._cell_mode() and self._cell_selection and
@@ -937,6 +945,21 @@ class ColumnViewTreeMixin:
             return
         self.selection_model.select_item(position, True)
 
+    @contextlib.contextmanager
+    def _silent_selection(self):
+        """Change the selection without reporting it.
+
+        Selecting from code is not the user selecting something, so it
+        does not fire 'selected' -- the caller already knows what it just
+        did, and a pair of views that clear each other's selection would
+        otherwise ping-pong.
+        """
+        self._silent_selection_depth += 1
+        try:
+            yield
+        finally:
+            self._silent_selection_depth -= 1
+
     def select_path(self, path, state=True):
         row = self._row_at(path)
         if row is None:
@@ -945,23 +968,33 @@ class ColumnViewTreeMixin:
         pos = self._position_of_row(row)
         if pos is None:
             return
-        if state:
-            self.selection_model.select_item(pos, False)
-        else:
-            self.selection_model.unselect_item(pos)
+        with self._silent_selection():
+            if state:
+                self.selection_model.select_item(pos, False)
+            else:
+                self.selection_model.unselect_item(pos)
 
     def select_paths(self, paths, state=True):
         for path in paths:
             self.select_path(path, state=state)
 
+    def set_selected(self, items):
+        """Select exactly the rows named by ``items`` (paths),
+        replacing whatever was selected before."""
+        self.clear_selection()
+        for item in (items or []):
+            self.select_path(item)
+
     def select_all(self, state=True):
-        if state:
-            self.selection_model.select_all()
-        else:
-            self.selection_model.unselect_all()
+        with self._silent_selection():
+            if state:
+                self.selection_model.select_all()
+            else:
+                self.selection_model.unselect_all()
 
     def clear_selection(self):
-        self.selection_model.unselect_all()
+        with self._silent_selection():
+            self.selection_model.unselect_all()
 
     def _set_expanded_path(self, path, tf):
         row = self._row_at(path)

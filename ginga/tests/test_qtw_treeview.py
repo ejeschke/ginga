@@ -405,3 +405,83 @@ def test_table_button_label_falls_back_to_the_column_text(app):
 
     assert button(0).text() == 'Delete'
     assert button(1).text() == 'Other'
+
+
+def test_table_font_can_be_changed_after_construction(app):
+    """The gtk and pg backends already took set_font; qt applied a font
+    once at construction and had no way to change it."""
+    table = Widgets.TableView(columns=[dict(label='A', key='a')])
+    table.set_rows([{'a': 'x'}])
+
+    table.set_font('Courier', 9)
+
+    font = table.get_widget().font()
+    assert font.pointSize() == 9
+    assert table.fontsize == 9
+
+
+# ----- programmatic selection is not user interaction ----------------
+
+
+def _selection_watcher(widget):
+    fired = []
+    widget.add_callback('selected', lambda w, rows: fired.append(rows))
+    return fired
+
+
+def test_selecting_a_table_row_from_code_is_silent(app):
+    table = Widgets.TableView(columns=[dict(label='A', key='a')])
+    table.set_rows([{'a': 'a%d' % i} for i in range(3)])
+    fired = _selection_watcher(table)
+
+    table.select_path([0])
+    table.select_paths([[1]])
+    table.set_selected([2])
+    table.select_all(True)
+    table.clear_selection()
+    table.select_all(False)
+
+    assert fired == [], "a programmatic selection reported itself"
+
+
+def test_a_user_selection_in_a_table_still_reports(app):
+    table = Widgets.TableView(columns=[dict(label='A', key='a')])
+    table.set_rows([{'a': 'a%d' % i} for i in range(3)])
+    fired = _selection_watcher(table)
+
+    # what a click does: the Qt widget's own selection machinery
+    table.get_widget().selectRow(1)
+
+    assert len(fired) == 1
+    assert fired[0] == [{'a': 'a1'}]
+
+
+def test_selecting_a_tree_row_from_code_is_silent(app, tree):
+    tree.set_tree({'ob1': {'name': 'ob1'}, 'ob2': {'name': 'ob2'}})
+    fired = _selection_watcher(tree)
+
+    tree.select_path(['ob1'])
+    tree.select_paths([['ob2']])
+    tree.select_all(True)
+    tree.clear_selection()
+
+    assert fired == []
+
+
+def test_two_tables_can_clear_each_other_without_ping_pong(app):
+    """The case this contract exists for: two views that clear each
+    other's selection would otherwise recurse and wipe both."""
+    a = Widgets.TableView(columns=[dict(label='A', key='a')])
+    b = Widgets.TableView(columns=[dict(label='A', key='a')])
+    for t in (a, b):
+        t.set_rows([{'a': 'a%d' % i} for i in range(3)])
+    a.add_callback('selected', lambda w, rows: b.clear_selection())
+    b.add_callback('selected', lambda w, rows: a.clear_selection())
+
+    a.get_widget().selectRow(0)          # user picks in A
+    assert len(a.get_selected()) == 1
+    assert len(b.get_selected()) == 0
+
+    b.get_widget().selectRow(2)          # user picks in B
+    assert len(a.get_selected()) == 0
+    assert len(b.get_selected()) == 1

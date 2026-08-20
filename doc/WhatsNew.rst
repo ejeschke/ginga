@@ -26,6 +26,19 @@ Ver 7.4.0 (unreleased)
   nothing at all, its cell background included).
 - A ``button`` cell on ``gtk4`` is sized to its label instead of
   stretching to fill its cell, which is how ``qt`` has always drawn it.
+- ``TableView.set_font()`` works on ``qt``, which took a font only at
+  construction; the ``gtk`` and ``pg`` backends already had it.
+- **Selecting from code no longer fires the ``selected`` callback.**
+  ``clear_selection()``, ``set_selected()``, ``select_path()``,
+  ``select_paths()`` and ``select_all()`` change the selection silently
+  on every backend and on both ``TreeView`` and ``TableView``; only
+  pointer and keyboard interaction reports a selection.  The backends
+  disagreed here -- ``qt`` and ``gtk3`` were already silent, while
+  ``gtk4`` and ``pg`` reported -- so an application driving two views
+  that clear each other's selection worked on some toolkits and
+  ping-ponged on others.  ``TableView`` also gains ``clear_selection()``
+  on ``qt`` and ``pg``, which only ``TreeView`` had.  (Needs the
+  matching pgwidgets-js for the ``pg`` backend.)
 
 Ver 7.3.0 (2026.08.17)
 ======================

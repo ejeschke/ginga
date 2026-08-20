@@ -2284,6 +2284,12 @@ class TreeView(WidgetBase):
         finally:
             self.widget.blockSignals(False)
 
+    def set_selected(self, items):
+        """Select exactly the rows named by ``items`` (key paths),
+        replacing whatever was selected before."""
+        self.clear_selection()
+        self.select_paths(list(items or []), True)
+
     def select_all(self, state=True):
         self.widget.blockSignals(True)
         try:

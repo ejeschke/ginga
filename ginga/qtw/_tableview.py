@@ -18,6 +18,8 @@ a current-cell cursor with arrow/Tab navigation, grid lines, a row-number
 vertical header, rectangular / row / column selection, and *per-cell*
 editability -- the things the QTreeWidget version had to emulate.
 """
+import contextlib
+
 from ginga.qtw.QtHelp import QtGui, QtCore, QFont
 from ginga.qtw import QtHelp
 from ginga.qtw.Widgets import (WidgetBase, WidgetError, _CellWrapper,
@@ -717,6 +719,21 @@ class TableView(WidgetBase):
                                 self._user_col_keys().index(d['col_key'])))
         return out
 
+    @contextlib.contextmanager
+    def _silent_selection(self):
+        """Change the selection without reporting it.
+
+        Selecting from code is not the user selecting something, so it
+        does not fire 'selected' / 'cell_selected' -- the caller already
+        knows what it just did, and a pair of views that clear each
+        other's selection would otherwise ping-pong.
+        """
+        blocked = self.widget.blockSignals(True)
+        try:
+            yield
+        finally:
+            self.widget.blockSignals(blocked)
+
     def select_cell(self, path, col_key, state=True):
         idx = self._resolve_to_row_index(path)
         c = self._col_index(col_key)
@@ -728,44 +745,53 @@ class TableView(WidgetBase):
         qmi = self.widget.model().index(idx, c)
         flag = (QtCore.QItemSelectionModel.Select if state
                 else QtCore.QItemSelectionModel.Deselect)
-        sm.select(qmi, flag)
+        with self._silent_selection():
+            sm.select(qmi, flag)
 
     def select_cells(self, cells, state=True):
         for c in (cells or []):
             self.select_cell(c.get('path'), c.get('col_key'), state)
 
     def clear_cell_selection(self):
-        self.widget.clearSelection()
+        with self._silent_selection():
+            self.widget.clearSelection()
+
+    def clear_selection(self):
+        with self._silent_selection():
+            self.widget.clearSelection()
 
     def set_selected(self, items):
         tw = self.widget
-        tw.clearSelection()
-        for it in items:
-            idx = self._resolve_to_row_index(it)
-            if idx is not None and 0 <= idx < tw.rowCount():
-                tw.selectRow(idx)
+        with self._silent_selection():
+            tw.clearSelection()
+            for it in items:
+                idx = self._resolve_to_row_index(it)
+                if idx is not None and 0 <= idx < tw.rowCount():
+                    tw.selectRow(idx)
 
     def select_path(self, path, state=True):
         idx = self._resolve_to_row_index(path)
         if idx is None or not (0 <= idx < self.widget.rowCount()):
             return
-        if state:
-            self.widget.selectRow(idx)
-        else:
-            for c in range(self.widget.columnCount()):
-                item = self.widget.item(idx, c)
-                if item is not None:
-                    item.setSelected(False)
+        with self._silent_selection():
+            if state:
+                self.widget.selectRow(idx)
+            else:
+                for c in range(self.widget.columnCount()):
+                    item = self.widget.item(idx, c)
+                    if item is not None:
+                        item.setSelected(False)
 
     def select_paths(self, paths, state=True):
         for p in paths:
             self.select_path(p, state)
 
     def select_all(self, state=True):
-        if state:
-            self.widget.selectAll()
-        else:
-            self.widget.clearSelection()
+        with self._silent_selection():
+            if state:
+                self.widget.selectAll()
+            else:
+                self.widget.clearSelection()
 
     def _resolve_to_row_index(self, item):
         if isinstance(item, int):
@@ -944,6 +970,18 @@ class TableView(WidgetBase):
         self.widget.verticalHeader().setVisible(self._show_row_numbers)
         if self._show_row_numbers:
             self._renumber_rows()
+
+    def set_font(self, font, size=10):
+        """Set the font used for the table's cells.
+
+        (The gtk and pg backends already took this; qt set the font once
+        at construction and had no way to change it afterwards.)
+        """
+        if not isinstance(font, QFont):
+            font = self.get_font(font, size)
+        self.font = font
+        self.fontsize = size
+        self.widget.setFont(font)
 
     def set_header_font(self, font, size=10):
         """Set the column-header font.  Headers use the widget's default

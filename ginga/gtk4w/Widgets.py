@@ -1847,11 +1847,6 @@ class TableView(TreeView):
         """A list of row dicts, as the qt and pg tables return."""
         return [dict(row.values) for row in self._selected_rows()]
 
-    def set_selected(self, items):
-        self.clear_selection()
-        for item in (items or []):
-            self.select_path(item)
-
     # ----- presentation -------------------------------------------
 
     def set_show_grid(self, tf):
