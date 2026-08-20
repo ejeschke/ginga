@@ -17,6 +17,15 @@ Ver 7.4.0 (unreleased)
   ``caret-shape``).
 - ``TextArea.get_text()`` works on ``gtk3``/``gtk4``, and ``gtk4``'s
   ``set_limit()`` can trim the buffer; both raised a ``TypeError``.
+- A row colour now fills the cells of a ``TreeView``/``TableView``
+  column that holds a control (checkbox, button, ...) on the ``gtk``
+  backends, as it already did on ``qt``: ``gtk4`` colours the
+  ColumnView's cell rather than only the control inside it, and
+  ``gtk3`` paints through a blank stand-in renderer on the rows where
+  ``visible_key`` gates the control off (a switched-off renderer draws
+  nothing at all, its cell background included).
+- A ``button`` cell on ``gtk4`` is sized to its label instead of
+  stretching to fill its cell, which is how ``qt`` has always drawn it.
 
 Ver 7.3.0 (2026.08.17)
 ======================

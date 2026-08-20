@@ -1158,3 +1158,73 @@ def test_dialogs_can_be_shown(app, with_parent):
     dialog.show()                       # must not raise
     _settle(200)
     dialog.hide()
+
+
+# -- a row colour has to reach the cells that hold a control ----------
+
+
+@needs_renderers
+def test_a_gated_off_widget_cell_still_carries_the_row_colour(app):
+    """A renderer switched off draws nothing, its cell background
+    included, so a row that ``visible_key`` gates the control off used
+    to show an unpainted gap in an otherwise coloured row.  A blank
+    stand-in renderer takes the cell on exactly those rows."""
+    tree = Widgets.TreeView()
+    tree.setup_table([
+        dict(label='Name', key='name'),
+        dict(label='', key='go', widget='button', text='Reset',
+             visible_key='can_go'),
+    ], 2, 'name')
+    tree.set_tree({'ob1': {'name': 'OB', 'go': None, 'can_go': True,
+                           'e1': {'name': 'e1', 'go': None,
+                                  'can_go': False}}})
+    tree.set_row_color(['ob1'], bg='red')
+    tree.set_row_color(['ob1', 'e1'], bg='red')
+
+    column = tree.tv.get_columns()[tree.datakeys.index('go')]
+    control, filler = column.get_cells()
+
+    model = tree.tv.get_model()
+    idx = tree.datakeys.index('go')
+    fn = tree._mk_gate_filler_colfn('go', tree._col_widgets[idx])
+
+    # the row that shows the control paints through the control itself
+    fn(column, filler, model, _find(tree, ['ob1']))
+    assert filler.get_property('visible') is False
+    assert _render(tree, ['ob1'], 'go').get_property(
+        'cell-background-set') is True
+
+    # ...and the row that hides it paints through the stand-in
+    fn(column, filler, model, _find(tree, ['ob1', 'e1']))
+    assert filler.get_property('visible') is True
+    assert filler.get_property('cell-background-set') is True
+    assert filler.get_property('text') == ''
+
+
+@needs_gtk4
+def test_a_row_colour_fills_a_button_cell(app):
+    """The colour goes on the ColumnView's cell, not just the control:
+    a button is sized to its label, draws its own background over ours,
+    and is missing altogether where ``visible_key`` gates it off."""
+    table = Widgets.TableView(
+        columns=[dict(label='A', key='a'),
+                 dict(label='', key='go', widget='button', text='Reset',
+                      visible_key='can_go')])
+    table.set_rows([{'a': 'a0', 'go': None, 'can_go': True},
+                    {'a': 'a1', 'go': None, 'can_go': False}])
+    # only the second row is coloured, so we can find it on screen
+    table.set_row_color([1], bg='#ff0000')
+    win = _shown(table, size=(400, 160))
+    _settle()
+    pb = _pixels(win)
+
+    width, height = pb.get_width(), pb.get_height()
+    red = (255, 0, 0)
+    text_x = int(width * 0.2)
+    rows = [y for y in range(2, height - 2) if _at(pb, text_x, y) == red]
+    assert rows, "the row colour did not paint at all"
+
+    y = rows[len(rows) // 2]
+    button_x = int(width * 0.9)
+    assert _at(pb, button_x, y) == red, \
+        "the button column was left unpainted on a coloured row"

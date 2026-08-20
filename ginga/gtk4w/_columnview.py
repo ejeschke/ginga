@@ -478,6 +478,10 @@ class ColumnViewTreeMixin:
             widget.set_valign(Gtk.Align.CENTER)
         elif kind == 'button':
             widget = Gtk.Button()
+            # sized to its label rather than filling the cell, so a row
+            # colour shows around it as it does on the qt backend
+            widget.set_halign(Gtk.Align.CENTER)
+            widget.set_valign(Gtk.Align.CENTER)
             widget.connect('clicked', self._cv_cell_clicked_cb, col_idx)
         elif kind == 'text-edit':
             widget = Gtk.EditableLabel()
@@ -1514,17 +1518,42 @@ class ColumnViewTreeMixin:
         Markup would only tint the text run; a class puts the colour on
         the widget, so a background fills the cell as it does on the qt
         and gtk3 backends.
+
+        The class goes on the ColumnView's own cell widget as well as on
+        the control inside it.  A label fills its cell, but a button does
+        not -- it is sized to its text, draws its own background over
+        ours, and is missing altogether on a row that ``visible_key``
+        gates off -- so colouring only the control would leave a
+        row-coloured row with unpainted gaps.
         """
-        previous = getattr(widget, '_ginga_color_class', None)
-        if previous is not None:
-            widget.remove_css_class(previous)
-            widget._ginga_color_class = None
         fg, bg, bold = self._resolve_style(row, self.datakeys[col_idx])
-        if fg is None and bg is None and bold is None:
-            return
-        cls = self._color_class(fg, bg, bold)
-        widget.add_css_class(cls)
-        widget._ginga_color_class = cls
+        cls = (None if (fg is None and bg is None and bold is None)
+               else self._color_class(fg, bg, bold))
+        for w in (widget, self._cell_container(widget)):
+            if w is None:
+                continue
+            previous = getattr(w, '_ginga_color_class', None)
+            if previous is not None:
+                w.remove_css_class(previous)
+                w._ginga_color_class = None
+            if cls is not None:
+                w.add_css_class(cls)
+                w._ginga_color_class = cls
+
+    @staticmethod
+    def _cell_container(widget):
+        """The ColumnView cell widget holding ``widget``, if we can see
+        it -- the control is a direct child of the cell, except in the
+        tree column where a TreeExpander sits between the two."""
+        w = widget
+        for i in range(3):
+            w = w.get_parent()
+            if w is None:
+                return None
+            # GtkColumnViewCell is internal to gtk, so go by name
+            if type(w).__name__.startswith('GtkColumnViewCell'):
+                return w
+        return None
 
     def _color_class(self, fg, bg, bold):
         """A CSS class for one colour combination, made on demand."""

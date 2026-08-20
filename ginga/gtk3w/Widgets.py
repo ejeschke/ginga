@@ -1396,6 +1396,7 @@ class TreeView(WidgetBase):
                 tvc.set_clickable(True)
             fn_data = self._mkcolfnN(n, kwd, datatype)
             tvc.set_cell_data_func(cell, fn_data)
+            self._pack_gate_filler(tvc, kwd, spec)
             self.tv.append_column(tvc)
 
         if any(spec.get('widget') == 'button'
@@ -2361,6 +2362,48 @@ class TreeView(WidgetBase):
         if isinstance(row, (dict, Bunch.Bunch)):
             return set(row.keys())
         return set()
+
+    def _pack_gate_filler(self, tvc, kwd, spec):
+        """Pack a blank stand-in renderer into a gated widget column.
+
+        A renderer switched off draws nothing at all -- not even its
+        cell background -- so a row where ``visible_key`` hides the
+        control would show an unpainted gap in an otherwise coloured
+        row.  The stand-in takes the cell on exactly those rows (the
+        two are never visible at once) and carries the colour.
+        """
+        if spec is None or spec.get('visible_key') is None:
+            return
+        filler = Gtk.CellRendererText()
+        tvc.pack_start(filler, True)
+        tvc.set_cell_data_func(filler,
+                               self._mk_gate_filler_colfn(kwd, spec))
+
+    def _mk_gate_filler_colfn(self, kwd, spec):
+        """Cell-data-func for the stand-in packed by
+        ``_pack_gate_filler``."""
+        visible_key = spec['visible_key']
+
+        def fn(column, cell, model, iter, _data=None):
+            bnch = model.get_value(iter, 0)
+            shown = bool(self._row_field(bnch, visible_key, True))
+            cell.set_property('visible', not shown)
+            cell.set_property('text', '')
+            fg, bg, bold = self._filler_colors(model, iter, kwd)
+            _apply_color_to_cell_gtk(cell, None, bg, None)
+        return fn
+
+    def _filler_colors(self, model, iter, kwd):
+        """The colour the stand-in should paint -- the same cascade the
+        column's own cell-data-func resolves."""
+        fg = bg = bold = None
+        if self._has_styles():
+            path_key = self._key_path_for_iter(model, iter)
+            if path_key is not None:
+                fg, bg, bold = self._resolve_style(path_key, kwd)
+        if bg is None and self._alt_row_colors:
+            bg = self._alt_row_bg_for(model, iter)
+        return fg, bg, bold
 
     def _row_field(self, row, field, default=None):
         """A row field that isn't a column -- visible_key and friends."""
@@ -3540,6 +3583,15 @@ class TableView(TreeView):
             cell,
             self._mk_widget_colfn(model_col_idx, col['key'], col))
         self._wire_widget_cell_signal_gtk(cell, col)
+        self._pack_gate_filler(tvc, col['key'], col)
+
+    def _filler_colors(self, model, iter, kwd):
+        bnch = model.get_value(iter, 0)
+        row_id = id(bnch) if isinstance(bnch, dict) else None
+        fg, bg, bold = self._resolve_cell_color_gtk(row_id, kwd)
+        if bg is None and self._alternate_row_colors:
+            bg = self._alt_row_bg_for(model, iter)
+        return fg, bg, bold
 
     def _make_widget_cell_gtk(self, col):
         wtype = col['widget']
