@@ -1405,11 +1405,19 @@ class ColumnViewTreeMixin:
             return          # editing has just started
         self._report_edit(widget, col_idx, widget.get_text())
 
+    def _cell_action_arg(self, row):
+        """What ``cell_action`` names the clicked row by.
+
+        A tree names it by path; a table by its row dict (see the
+        TableView override).  Every backend follows that split.
+        """
+        return self._path_for_row(row)
+
     def _cv_cell_clicked_cb(self, widget, col_idx):
         row = self._cell_row_for(widget)
         if row is None:
             return
-        self.make_callback('cell_action', self._path_for_row(row),
+        self.make_callback('cell_action', self._cell_action_arg(row),
                            self.datakeys[col_idx])
 
     def set_column_editable(self, col, tf):

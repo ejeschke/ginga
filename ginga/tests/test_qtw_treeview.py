@@ -485,3 +485,29 @@ def test_two_tables_can_clear_each_other_without_ping_pong(app):
     b.get_widget().selectRow(2)          # user picks in B
     assert len(a.get_selected()) == 0
     assert len(b.get_selected()) == 1
+
+
+def test_cell_action_names_the_row_by_path_or_values(app, tree):
+    """A tree reports the clicked row by its path, a table by its row
+    dict.  Every backend follows that split."""
+    tree.setup_table([dict(label='Name', key='name'),
+                      dict(label='', key='go', widget='button', text='Go')],
+                     1, 'name')
+    tree.set_tree({'ob1': {'name': 'ob1', 'go': None}})
+    got = []
+    tree.add_callback('cell_action', lambda w, *args: got.append(args))
+    tree._cell_widget_clicked(tree._path_to_item(['ob1']),
+                              tree.datakeys.index('go'))
+    assert got == [(['ob1'], 'go')]
+
+    table = Widgets.TableView(
+        columns=[dict(label='A', key='a'),
+                 dict(label='', key='go', widget='button', text='Go')])
+    table.set_rows([{'a': 'a0', 'go': None}, {'a': 'a1', 'go': None}])
+    got = []
+    table.add_callback('cell_action', lambda w, *args: got.append(args))
+    table._on_cell_widget_clicked(table._row_token(1), 'go')
+    assert len(got) == 1
+    row, col_key = got[0]
+    assert isinstance(row, dict) and row['a'] == 'a1'
+    assert col_key == 'go'

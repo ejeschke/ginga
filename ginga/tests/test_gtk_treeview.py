@@ -1265,3 +1265,41 @@ def test_selecting_a_tree_row_from_code_is_silent(app):
     tree.clear_selection()
 
     assert fired == []
+
+
+def test_a_table_reports_a_clicked_button_by_its_row(app):
+    """cell_action names the clicked row by its values on a table (and
+    by its path on a tree) -- the same split on every backend."""
+    table = Widgets.TableView(
+        columns=[dict(label='A', key='a'),
+                 dict(label='', key='go', widget='button', text='Go')])
+    table.set_rows([{'a': 'a0', 'go': None}, {'a': 'a1', 'go': None}])
+    got = []
+    table.add_callback('cell_action', lambda w, *args: got.append(args))
+
+    if is_gtk4:
+        _shown(table)
+        _pump()
+        for (_rid, col_idx), (row, widget) in list(table._cell_labels.items()):
+            if col_idx == 1 and table._index_of(row) == 1:
+                table._cv_cell_clicked_cb(widget, 1)
+                break
+    else:
+        # gtk3 locates the click in the view; nothing is realised
+        # off-screen, so aim the hit test ourselves
+        model = table.tv.get_model()
+        column = table.tv.get_columns()[table._col_offset() + 1]
+        table.tv.get_path_at_pos = lambda x, y: (
+            model.get_path(model.iter_nth_child(None, 1)), column, 1, 1)
+
+        class _Ev:
+            button = 1
+            x = y = 1.0
+
+        table._on_tv_button_press_for_widget_cells(table.tv, _Ev())
+
+    assert len(got) == 1, "the click was not reported"
+    row, col_key = got[0]
+    assert isinstance(row, dict), "a table must report the row, not a path"
+    assert row['a'] == 'a1'
+    assert col_key == 'go'

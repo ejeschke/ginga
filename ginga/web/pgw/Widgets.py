@@ -976,13 +976,13 @@ class TreeView(WidgetMixin, PGW.TreeView):
         self._make_callback('cell_edited', path, col_key,
                             old_value, new_value)
 
-    def _cb_redirect_cell_action(self, row_values, col_key):
-        """JS fires ``cell_action(row_values, col_key)`` when the user
-        clicks a button-shaped widget cell, so the row's values arrive
-        directly -- there is no path to resolve.  Re-emit as
-        ``cell_action(tree, row_dict, col_key)`` to match qtw/gtk."""
-        self._make_callback('cell_action',
-                            _treedata_to_bunch(row_values), col_key)
+    def _cb_redirect_cell_action(self, path, row_values, col_key):
+        """JS fires ``cell_action(path, row_values, col_key)`` when the
+        user clicks a button-shaped widget cell.  A tree names the
+        clicked row by its path, as the qt and gtk trees do, so the
+        values are dropped here -- the table subclass keeps them
+        instead."""
+        self._make_callback('cell_action', path, col_key)
 
     def _cb_redirect_cell_selected(self, cells):
         # each cell is ``{path, col_key, value}``; a tree's paths need
@@ -1553,25 +1553,13 @@ class TableView(WidgetMixin, PGW.TableView):
     def _cb_redirect_scrolled(self, h_pct, v_pct):
         self._make_callback('scrolled', h_pct, v_pct)
 
-    def _cb_redirect_cell_action(self, row_values, col_key):
-        """JS fires ``cell_action(row_values, col_key)`` when the user
-        clicks a button-shaped widget cell -- the row's values, not a
-        path (see ``_buildCellWidget`` in pgwidgets-js TreeView.js).
-        Re-emit as ``cell_action(table, row_dict, col_key)`` to match
-        the qtw signature.
-
-        Older pgwidgets-js builds sent the path here instead; resolve
-        that against our row shadow if that is what turns up.
+    def _cb_redirect_cell_action(self, path, row_values, col_key):
+        """JS fires ``cell_action(path, row_values, col_key)`` when the
+        user clicks a button-shaped widget cell.  A table names the
+        clicked row by its values, as the qt and gtk tables do, so the
+        path is dropped here -- the tree base class keeps it instead.
         """
-        if isinstance(row_values, dict):
-            row = dict(row_values)
-        else:
-            idx_path = self._from_pgw_path(row_values)
-            idx = idx_path[0] if idx_path else None
-            row = (dict(self._rows[idx])
-                   if isinstance(idx, int) and 0 <= idx < len(self._rows)
-                   else None)
-        self._make_callback('cell_action', row, col_key)
+        self._make_callback('cell_action', dict(row_values or {}), col_key)
 
     def _cb_redirect_cell_selected(self, cells):
         # JS sends ``[{path, col_key, value}, ...]`` with pgw-style

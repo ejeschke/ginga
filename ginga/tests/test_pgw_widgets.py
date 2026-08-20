@@ -69,17 +69,17 @@ def test_treeview_cell_edited_signature(app):
     assert (col_key, old, new) == ('note', 'old', 'new')
 
 
-def test_treeview_cell_action_delivers_row_values(app):
-    """pgwidgets-js sends the row's values (not a path) with
-    cell_action; they arrive as the row dict."""
+def test_treeview_cell_action_delivers_a_path(app):
+    """A tree names the clicked row by its path, as the qt and gtk
+    trees do -- pgwidgets-js sends both that and the row's values."""
     tree = Widgets.TreeView()
     got = []
     tree.add_callback('cell_action', lambda *args: got.append(args))
-    tree._cb_redirect_cell_action({'name': 'ob1', 'go': None}, 'go')
+    tree._cb_redirect_cell_action(['ob1'], {'name': 'ob1', 'go': None}, 'go')
     assert len(got) == 1
-    w, row, col_key = got[0]
+    w, path, col_key = got[0]
     assert w is tree
-    assert row['name'] == 'ob1'
+    assert path == ['ob1']
     assert col_key == 'go'
 
 
@@ -107,30 +107,20 @@ def test_treeview_clipboard_callbacks(app):
 # ----- TableView cell_action ---------------------------------------
 
 def test_tableview_cell_action_row_values(app):
-    """Regression: the redirect used to assume a path and blow up on
-    the row dict that pgwidgets-js actually sends."""
+    """A table names the clicked row by its values, as the qt and gtk
+    tables do -- the path pgwidgets-js also sends is dropped here."""
     table = Widgets.TableView(
         columns=[dict(label='A', key='a'),
                  dict(label='Go', key='go', widget='button', text='Go')])
     table.set_rows([{'a': 'one', 'go': None}, {'a': 'two', 'go': None}])
     got = []
     table.add_callback('cell_action', lambda *args: got.append(args))
-    table._cb_redirect_cell_action({'a': 'two', 'go': None}, 'go')
+    table._cb_redirect_cell_action(['row1'], {'a': 'two', 'go': None}, 'go')
     assert len(got) == 1
     w, row, col_key = got[0]
     assert w is table
     assert row == {'a': 'two', 'go': None}
     assert col_key == 'go'
-
-
-def test_tableview_cell_action_legacy_path(app):
-    """Older pgwidgets-js builds sent the path; still resolved."""
-    table = Widgets.TableView(columns=[dict(label='A', key='a')])
-    table.set_rows([{'a': 'one'}, {'a': 'two'}])
-    got = []
-    table.add_callback('cell_action', lambda *args: got.append(args))
-    table._cb_redirect_cell_action(['row1'], 'a')
-    assert got[0][1] == {'a': 'two'}
 
 
 # ----- setup_table column descriptors ------------------------------

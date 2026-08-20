@@ -1713,6 +1713,11 @@ class TableView(TreeView):
         idx = self._index_of(row)
         return [] if idx is None else [idx]
 
+    def _cell_action_arg(self, row):
+        # a table reports the clicked row by its values, as the qt,
+        # gtk3 and pg tables do (a tree reports a path instead)
+        return dict(row.values)
+
     def _index_of(self, row):
         for i, candidate in enumerate(self.store):
             if candidate is row:
