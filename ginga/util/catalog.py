@@ -108,16 +108,16 @@ class Star:
     def __delitem__(self, key):
         del self.starInfo[key]
 
-    def __iter__(self):
-        return iter(self.starInfo)
-
-    def __len__(self):
-        return len(self.starInfo)
-
     # A star is a bag of named fields, and is handed to things that
     # expect a mapping -- the TreeView widgets, for one, which build a
     # row out of whatever keys a node supplies.  Delegate the rest of
     # the dict protocol so those don't have to special-case us.
+    #
+    # NOTE: deliberately *not* __iter__ / __len__.  A list of stars is
+    # routinely handed to numpy (see the Catalogs plugin), and a sized,
+    # iterable object is one numpy unpacks: np.array(starlist) would
+    # stop being a 1-D array of stars and become a 2-D array of their
+    # field names.  dict(star) works through keys() without them.
     def keys(self):
         return self.starInfo.keys()
 

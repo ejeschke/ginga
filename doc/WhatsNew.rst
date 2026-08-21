@@ -65,8 +65,12 @@ Ver 7.4.0 (unreleased)
   falls back to probing the known columns.  ``catalog.Star``, which
   the Catalogs plugin fills its table with, is one such node -- and it
   now supports the rest of the dict protocol (``keys()``, ``items()``,
-  ``values()``, ``get()``, ``update()``, iteration, ``len()``) so
-  anything else expecting a mapping is satisfied too.
+  ``values()``, ``get()``, ``update()``, ``clear()``) so anything else
+  expecting a mapping is satisfied too.  It stays deliberately un-sized
+  and non-iterable: a star list is handed to numpy, which unpacks
+  anything it can walk, so ``__len__`` / ``__iter__`` would turn
+  ``np.array(starlist)`` from an array of stars into a 2-D array of
+  their field names.
 - Along the same lines, an *interior* node may again be any mapping and
   not only a ``dict`` -- a ``Bunch`` parent had been rendering with no
   children at all since interior values were added, because splitting a

@@ -832,9 +832,11 @@ class Catalogs(GingaPlugin.LocalPlugin):
             res = filter_obj.contains_pts(coords)
             self.logger.debug("res.shape = %s" % str(res.shape))
 
-            stars = np.array(starlist)[np.flatnonzero(res)]
-            self.logger.debug("number of filtered stars=%d" % (len(stars)))
-            starlist = list(stars)
+            # NOTE: index the list itself rather than np.array(starlist),
+            # which only holds stars because a star is not sized --
+            # anything numpy can walk it unpacks into an array of fields
+            starlist = [starlist[i] for i in np.flatnonzero(res)]
+            self.logger.debug("number of filtered stars=%d" % (len(starlist)))
 
         return starlist
 
