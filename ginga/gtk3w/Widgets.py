@@ -1545,14 +1545,17 @@ class TreeView(WidgetBase):
                     item_iter = bnch.item
                     # bnch.node = node
                     bnch.node.update(node)
-                    bnch.supplied = set(bnch.node.keys())
+                    bnch.supplied = treehelper.supplied_keys(bnch.node,
+                                                             self.datakeys)
 
                 except KeyError:
                     # new item
                     item_iter = model.append(parent_item, [node])
+                    supplied = treehelper.supplied_keys(node,
+                                                        self.datakeys)
                     shadow[key] = Bunch.Bunch(node=node, item=item_iter,
                                               terminal=True,
-                                              supplied=set(node.keys()))
+                                              supplied=supplied)
 
             else:
                 # An interior node may carry column values of its own,

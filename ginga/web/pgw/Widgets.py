@@ -25,6 +25,7 @@ except ImportError:
 from ginga.misc.Callback import Callbacks
 from ginga.misc import Bunch, Settings
 from ginga.web.pgw import PgHelp
+from ginga.util import treehelper
 from ginga.util.paths import icondir, app_icon_path
 from ginga.fonts import font_asst
 from ginga.locale.localize import translate_caption, _tr
@@ -842,7 +843,9 @@ def _treedata_to_plain(obj):
     """
     if isinstance(obj, dict):
         return {k: _treedata_to_plain(v) for k, v in obj.items()}
-    if isinstance(obj, (Bunch.Bunch, Bunch.caselessDict)):
+    # Bunch and caselessDict are the usual ones, but anything mapping-
+    # like can appear in one of these trees (catalog.Star, for one)
+    if treehelper.is_mapping(obj):
         return {k: _treedata_to_plain(obj[k]) for k in obj.keys()}
     if isinstance(obj, (set, frozenset)):
         return [_treedata_to_plain(v) for v in obj]

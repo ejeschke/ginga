@@ -1846,7 +1846,9 @@ class TreeView(WidgetBase):
                 # update leaf item.  Columns the node omits render
                 # blank rather than raising, matching interior rows.
                 shown = treehelper.row_values(node, self.datakeys)
-                self._mark_supplied(item, set(node.keys()))
+                self._mark_supplied(item,
+                                    treehelper.supplied_keys(node,
+                                                             self.datakeys))
                 for i, _key in enumerate(self.datakeys):
                     datatype = self.datatypes[i]
                     value = shown[_key]

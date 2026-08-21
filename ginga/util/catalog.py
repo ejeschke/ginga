@@ -105,6 +105,37 @@ class Star:
     def __setitem__(self, key, value):
         self.starInfo[key] = value
 
+    def __delitem__(self, key):
+        del self.starInfo[key]
+
+    def __iter__(self):
+        return iter(self.starInfo)
+
+    def __len__(self):
+        return len(self.starInfo)
+
+    # A star is a bag of named fields, and is handed to things that
+    # expect a mapping -- the TreeView widgets, for one, which build a
+    # row out of whatever keys a node supplies.  Delegate the rest of
+    # the dict protocol so those don't have to special-case us.
+    def keys(self):
+        return self.starInfo.keys()
+
+    def values(self):
+        return self.starInfo.values()
+
+    def items(self):
+        return self.starInfo.items()
+
+    def get(self, key, default=None):
+        return self.starInfo.get(key, default)
+
+    def update(self, *args, **kwargs):
+        self.starInfo.update(*args, **kwargs)
+
+    def clear(self):
+        self.starInfo.clear()
+
     # TODO: Should deprecate this and encourage __contains__ like Python dict
     def has_key(self, key):
         return key in self.starInfo

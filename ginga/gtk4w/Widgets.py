@@ -1334,7 +1334,7 @@ class TreeView(_columnview.ColumnViewTreeMixin, WidgetBase):
                     break
             if row is None:
                 continue
-            descend = (isinstance(sub, dict) and len(sub) > 0 and
+            descend = (treehelper.is_mapping(sub) and len(sub) > 0 and
                        row.children is not None and
                        row.children.get_n_items() > 0)
             if not descend:

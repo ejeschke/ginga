@@ -5,6 +5,10 @@ column-key -> value.  An *interior* node holds its children, and may
 also carry column values of its own -- so a parent row can show data
 rather than only its key.
 
+"Dict" is meant loosely throughout: any mapping-like object will do
+(see `is_mapping`), which is how these trees have always been filled --
+``Bunch`` interiors and ``catalog.Star`` leaves are both common.
+
 Two forms are accepted for those values, matching the pg backend:
 
 * an explicit ``__values__`` entry::
@@ -33,8 +37,21 @@ wrappers cannot drift on the question of what counts as a child.
 
 VALUES_KEY = '__values__'
 
-__all__ = ['VALUES_KEY', 'split_node', 'row_values',
-           'normalize_column']
+__all__ = ['VALUES_KEY', 'is_mapping', 'split_node', 'row_values',
+           'supplied_keys', 'normalize_column']
+
+
+def is_mapping(obj):
+    """Is `obj` dict-like enough to be a node of one of these trees?
+
+    Deliberately duck-typed rather than ``isinstance(obj, dict)``: these
+    widgets have always been filled with mapping-like objects that are
+    not dicts -- ``Bunch`` interiors, ``catalog.Star`` leaves -- and the
+    tree walk only ever iterated them and indexed into them.  The
+    ``collections.abc.Mapping`` ABC is no help either, since neither of
+    those registers as one.
+    """
+    return hasattr(obj, 'keys') and hasattr(obj, '__getitem__')
 
 
 def split_node(node):
@@ -44,20 +61,25 @@ def split_node(node):
     interior nodes -- at leaf level the whole dict is column data, so
     the caller shouldn't split it (a leaf column value that happens to
     be a dict would otherwise look like a child).
+
+    A mapping-valued entry counts as a child.  When an interior really
+    does have a column whose value is a mapping, name its own values
+    explicitly with ``__values__``.
     """
-    if not isinstance(node, dict):
+    if not is_mapping(node):
         return {}, {}
 
     if VALUES_KEY in node:
-        values = node.get(VALUES_KEY) or {}
-        children = {key: value for key, value in node.items()
+        own = node[VALUES_KEY]
+        children = {key: node[key] for key in node.keys()
                     if key != VALUES_KEY}
-        return (dict(values) if isinstance(values, dict) else {}), children
+        return (dict(own) if is_mapping(own) else {}), children
 
     values = {}
     children = {}
-    for key, value in node.items():
-        if isinstance(value, dict):
+    for key in node.keys():
+        value = node[key]
+        if is_mapping(value):
             children[key] = value
         else:
             values[key] = value
@@ -82,6 +104,19 @@ def row_values(values, datakeys, key=None, blank=''):
         else:
             out[datakey] = blank
     return out
+
+
+def supplied_keys(node, datakeys=()):
+    """Which columns `node` actually supplied.
+
+    Leaf nodes are normally dicts, but a caller is free to hand these
+    widgets any mapping-like object -- ginga's own Catalogs plugin fills
+    a tree with ``catalog.Star`` instances -- so fall back to probing
+    the known columns when there is no ``keys()`` to ask.
+    """
+    if is_mapping(node):
+        return set(node.keys())
+    return set(key for key in datakeys if key in node)
 
 
 def normalize_column(col, index=0):

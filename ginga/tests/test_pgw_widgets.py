@@ -366,3 +366,29 @@ def test_treeview_reports_its_column_widths(app, sent):
     tree.get_column_widths()
 
     assert _calls(sent, 'get_column_widths') == [[]]
+
+
+def test_treeview_flattens_mapping_nodes_for_the_browser(app, sent):
+    """A tree may be filled with mapping-like objects that aren't dicts
+    -- ``Bunch`` interiors, ``catalog.Star`` leaves -- but only plain
+    JSON crosses to the browser, which splits values from children by
+    the same rules on its side."""
+    import json
+
+    from ginga.misc.Bunch import Bunch
+    from ginga.util.catalog import Star
+
+    tree = Widgets.TreeView()
+    tree.setup_table([('Name', 'name'), ('Seeing', 'seeing')], 2, 'name')
+    del sent[:]
+
+    tree.set_tree({'ob1': Bunch(name='OB-042',
+                                e1=Star(name='e1', seeing='0.6'),
+                                e2={'name': 'e2', 'seeing': '0.9'})})
+
+    args = _calls(sent, 'set_tree')[-1]
+    assert args == [{'ob1': {'name': 'OB-042',
+                             'e1': {'name': 'e1', 'seeing': '0.6'},
+                             'e2': {'name': 'e2', 'seeing': '0.9'}}}]
+    # a Star used to reach the encoder intact, which raised a TypeError
+    json.dumps(args)

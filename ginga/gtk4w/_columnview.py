@@ -64,7 +64,7 @@ class Row(GObject.Object):
         # the columns this row actually supplied, as opposed to the
         # blanks an interior is padded with.  Only supplied cells are
         # editable -- filler is not content.
-        self.supplied = set(self.values.keys())
+        self.supplied = treehelper.supplied_keys(self.values)
 
     # -- tree shape --
 
@@ -103,7 +103,7 @@ class Row(GObject.Object):
         so anything attached to the row stays attached."""
         self.values.clear()
         self.values.update(values)
-        self.supplied = set(values.keys())
+        self.supplied = treehelper.supplied_keys(values)
 
     def get(self, col_key, default=''):
         return self.values.get(col_key, default)

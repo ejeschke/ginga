@@ -58,6 +58,27 @@ Ver 7.4.0 (unreleased)
   ping-ponged on others.  ``TableView`` also gains ``clear_selection()``
   on ``qt`` and ``pg``, which only ``TreeView`` had.  (Needs the
   matching pgwidgets-js for the ``pg`` backend.)
+- Fixed a ``TreeView`` regression: a leaf node that is mapping-like but
+  not a ``dict`` raised ``AttributeError: ... has no attribute 'keys'``
+  when the tree was set.  Tracking which columns a row supplied (added
+  for per-column editing) asked the node for its ``keys()``; it now
+  falls back to probing the known columns.  ``catalog.Star``, which
+  the Catalogs plugin fills its table with, is one such node -- and it
+  now supports the rest of the dict protocol (``keys()``, ``items()``,
+  ``values()``, ``get()``, ``update()``, iteration, ``len()``) so
+  anything else expecting a mapping is satisfied too.
+- Along the same lines, an *interior* node may again be any mapping and
+  not only a ``dict`` -- a ``Bunch`` parent had been rendering with no
+  children at all since interior values were added, because splitting a
+  node into its own values and its children tested ``isinstance(node,
+  dict)``.  A mapping-valued entry counts as a child, as a dict-valued
+  one always has; name an interior's own values with ``__values__``
+  when one of its columns really does hold a mapping.  The ``pg``
+  backend, which flattens a tree before shipping it to the browser,
+  now converts any mapping rather than only ``Bunch``/``caselessDict``
+  -- so the same tree that raised an ``AttributeError`` on ``qt`` /
+  ``gtk`` no longer fails there with ``TypeError: Object of type Star
+  is not JSON serializable``.
 
 Ver 7.3.0 (2026.08.17)
 ======================

@@ -561,3 +561,36 @@ def test_tree_says_it_has_no_cell_mode(app, tree):
                  lambda: tree.paste_selection()):
         with pytest.raises(NotImplementedError):
             call()
+
+
+def test_a_leaf_node_need_not_be_a_plain_dict(app):
+    """ginga's own Catalogs plugin fills a flat tree with catalog.Star
+    objects rather than dicts, so a leaf only has to behave like a
+    mapping."""
+    from ginga.util.catalog import Star
+
+    tree = Widgets.TreeView()
+    tree.setup_table([('Name', 'name'), ('Grade', 'grade'),
+                      ('Seeing', 'seeing')], 1, 'name')
+
+    tree.set_tree({'0': Star(name='s0', grade='A', seeing='0.6')})
+    assert _row(tree, ['0']) == ['s0', 'A', '0.6']
+
+    # ... and it survives a second pass over the same key
+    tree.update_tree({'0': Star(name='s0', grade='B', seeing='0.6')})
+    assert _row(tree, ['0']) == ['s0', 'B', '0.6']
+
+
+def test_an_interior_node_need_not_be_a_plain_dict(tree):
+    """These trees were filled with Bunch interiors long before an
+    interior could carry values of its own, when the widget did nothing
+    with a parent but iterate it."""
+    from ginga.misc.Bunch import Bunch
+
+    tree.set_tree({'ob1': Bunch(name='OB-042',
+                                e1=Bunch(name='e1', seeing='0.6'),
+                                e2={'name': 'e2', 'seeing': '0.9'})})
+
+    assert _row(tree, ['ob1']) == ['OB-042', '', '']
+    assert _row(tree, ['ob1', 'e1']) == ['e1', '', '0.6']
+    assert _row(tree, ['ob1', 'e2']) == ['e2', '', '0.9']

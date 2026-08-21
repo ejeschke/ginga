@@ -17,6 +17,30 @@ class TestSplitNode:
         assert values == {'name': 'OB-042', 'grade': 'A'}
         assert sorted(children) == ['e1', 'e2']
 
+    def test_a_mapping_interior_is_split_like_a_dict(self):
+        """Bunch interiors predate interior values -- back when the
+        widget only iterated a parent, any mapping would do."""
+        from ginga.misc.Bunch import Bunch
+
+        values, children = treehelper.split_node(
+            Bunch(name='OB-042', e1=Bunch(name='e1'), e2={'name': 'e2'}))
+        assert values == {'name': 'OB-042'}
+        assert sorted(children) == ['e1', 'e2']
+
+    def test_a_mapping_valued_column_needs_the_values_key(self):
+        """A mapping alongside the children is read as a child; say so
+        explicitly when it is really this row's own column value."""
+        from ginga.misc.Bunch import Bunch
+
+        values, children = treehelper.split_node(
+            {'__values__': {'meta': Bunch(a=1)}, 'e1': {'name': 'e1'}})
+        assert list(values) == ['meta']
+        assert list(children) == ['e1']
+
+    def test_not_a_mapping_at_all(self):
+        assert treehelper.split_node('leaf') == ({}, {})
+        assert treehelper.split_node(None) == ({}, {})
+
     def test_explicit_values_key(self):
         values, children = treehelper.split_node(
             {'__values__': {'name': 'OB-042'}, 'e1': {'name': 'e1'}})
@@ -74,3 +98,38 @@ class TestRowValues:
     def test_no_key_means_no_fallback(self):
         out = treehelper.row_values({}, self.datakeys)
         assert out['name'] == ''
+
+
+class TestSuppliedKeys:
+
+    datakeys = ['name', 'grade', 'seeing']
+
+    def test_a_dict_reports_its_own_keys(self):
+        assert treehelper.supplied_keys({'name': 'x', 'extra': 1}) == \
+            {'name', 'extra'}
+
+    def test_a_mapping_without_keys_is_probed_by_column(self):
+        """catalog.Star used to be one of these: it answers ``in`` and
+        ``[]`` but has no ``keys()``, and a tree full of them must not
+        raise."""
+        class Star:
+            def __init__(self, **kwargs):
+                self._d = kwargs
+
+            def __contains__(self, key):
+                return key in self._d
+
+            def __getitem__(self, key):
+                return self._d[key]
+
+        star = Star(name='s0', seeing='0.6', extra=1)
+        # only the columns we know to ask about come back
+        assert treehelper.supplied_keys(star, self.datakeys) == \
+            {'name', 'seeing'}
+
+    def test_no_datakeys_means_nothing_to_probe(self):
+        class Opaque:
+            def __contains__(self, key):
+                return True
+
+        assert treehelper.supplied_keys(Opaque()) == set()
