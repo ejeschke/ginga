@@ -5,7 +5,7 @@
 # Please see the file LICENSE.txt for details.
 #
 
-from ginga.AstroImage import AstroImage, AstroHeader
+from ginga.AstroImage import AstroImage
 
 class RemoteImage(AstroImage):
 
