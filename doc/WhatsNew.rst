@@ -2,7 +2,7 @@
 What's New
 ++++++++++
 
-Ver 7.4.0 (unreleased)
+Ver 7.4.0 (2026.08.21)
 ======================
 - ``TextArea.scroll_to_lineno()`` (all backends) and ``TextSource``'s
   ``scroll_to_lineno()`` / ``scroll_to_ref()`` (``qt``, ``pg``) take
