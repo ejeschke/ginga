@@ -23,6 +23,21 @@ Since v7.4.0 (unreleased)
 - ``get_mean()`` and ``get_median()`` skip the masked-array machinery
   and a compacting copy when given a plain array that holds no
   non-finite values.
+- ``IQCalc.iqe()`` measures a single object by fitting a rotated 2D
+  elliptical Gaussian over every pixel of a small array, reporting
+  ``fwhm_maj``, ``fwhm_min`` and the position angle ``theta`` plus a
+  1-sigma error for each.  Unlike the 1D methods, which cut a row and a
+  column through the peak, it measures an elongated object correctly
+  whatever its orientation: a 9x3 pixel star reads 9.0/3.0 at every
+  angle, where the 1D cuts read 4.0/4.0 at 45 degrees.  It is built from
+  the new ``calc_background()`` (also now backing ``get_threshold()``),
+  ``calc_moments()`` and ``calc_fwhm_gaussian2d()``.  Passing
+  ``fwhm_method='gaussian2d'`` to ``get_fwhm()`` or ``evaluate_peaks()``
+  uses it in the existing pipeline, where it adds ``fwhm_maj``,
+  ``fwhm_min`` and ``theta`` to each result; ``fwhm_x`` and ``fwhm_y``
+  keep their meaning as cuts through the object's center.  The 1D
+  methods report `None` for the three new keys, as they cannot measure
+  an orientation.
 
 Ver 7.4.0 (2026.08.21)
 ======================

@@ -25,6 +25,9 @@ from ginga.misc import Bunch
 
 __all__ = ['get_mean', 'get_median', 'IQCalcError', 'IQCalc']
 
+# Gaussian sigma to FWHM
+SIG2FWHM = 2.0 * math.sqrt(2.0 * math.log(2.0))
+
 
 def get_mean(data_np):
     """Calculate mean for valid values.
@@ -326,7 +329,8 @@ class IQCalc:
             Median of the data. If not given, it is calculated from ``arr1d``.
 
         method_name : {'gaussian', 'moffat'}
-            Function to use for fitting.
+            Function to use for fitting.  This is a 1D calculation; for the
+            2D elliptical fit see :meth:`calc_fwhm_gaussian2d`.
 
         Returns
         -------
@@ -356,21 +360,33 @@ class IQCalc:
         data : array-like
             Data array.
 
-        medv, method_name
-            See :meth:`calc_fwhm`.
+        medv : float or `None`
+            Median of the data. If not given, it is calculated from ``data``.
+
+        method_name : {'gaussian', 'moffat', 'gaussian2d'}
+            Function to use for fitting.  The 1D methods cut a row and a
+            column through the peak; ``'gaussian2d'`` instead fits a rotated
+            2D elliptical Gaussian over the whole region, which measures an
+            elongated object correctly whatever its orientation.
 
         Returns
         -------
         fwhm_x, fwhm_y : float
-            FWHM in X and Y, respectively.
+            FWHM in X and Y, respectively.  For ``'gaussian2d'`` these are the
+            widths of cuts through the center of the fitted ellipse, so that
+            they keep the meaning they have for the 1D methods.
 
         ctr_x, ctr_y : float
             Center in X and Y, respectively.
 
         x_res, y_res : dict
-            Fit results from :meth:`calc_fwhm` in X and Y, respectively.
+            Fit results in X and Y, respectively.  For ``'gaussian2d'`` both
+            carry the ellipse in ``fwhm_maj``, ``fwhm_min`` and ``theta``.
 
         """
+        if method_name == 'gaussian2d':
+            return self._get_fwhm_2d(x, y, radius, data)
+
         if medv is None:
             medv = get_median(data)
 
@@ -389,6 +405,329 @@ class IQCalc:
         self.logger.debug("fwhm_x,fwhm_y=%f,%f center=%f,%f" % (
             fwhm_x, fwhm_y, ctr_x, ctr_y))
         return (fwhm_x, fwhm_y, ctr_x, ctr_y, x_res, y_res)
+
+    # 2-D ELLIPTICAL GAUSSIAN ("IQE") CALCULATION
+
+    def calc_moments(self, data, bgv=None, bgs=None, thresh_sigma=5.0):
+        """Second-moment analysis of an object in a small array.
+
+        Gives the centroid, the major and minor axis sigmas and the position
+        angle of the major axis.  Used to seed :meth:`calc_fwhm_gaussian2d`.
+
+        Parameters
+        ----------
+        data : array-like
+            2D array containing a single object.
+
+        bgv, bgs : float or `None`
+            Background level and spread.  Calculated with
+            :meth:`calc_background` if not given.
+
+        thresh_sigma : float
+            Only pixels this many multiples of ``bgs`` above ``bgv`` take part
+            in the moments.  Without a cut the moments integrate the noise and
+            the estimate degrades badly at low signal-to-noise.
+
+        Returns
+        -------
+        res : `~ginga.misc.Bunch.Bunch`
+            Has ``x``, ``y`` (centroid), ``sigma_maj``, ``sigma_min``,
+            ``theta`` (radians, counter-clockwise from +X), ``peak`` (above
+            background) and ``background``.
+
+        Raises
+        ------
+        IQCalcError
+            Missing dependency, or nothing found above the background.
+
+        """
+        if not have_scipy:
+            raise IQCalcError("Please install the 'scipy' module "
+                              "to use this function")
+        arr = np.asarray(data, dtype=float)
+        if arr.ndim != 2:
+            raise IQCalcError("data should be a 2D array")
+        if bgv is None or bgs is None:
+            bgv, bgs = self.calc_background(arr)
+
+        sub = arr - bgv
+        mask = sub > thresh_sigma * bgs
+        if not np.any(mask):
+            raise IQCalcError("moment analysis failed: "
+                              "nothing above the background")
+        # Keep only the blob holding the brightest pixel, so that a neighbour
+        # or a hot pixel elsewhere in the array cannot drag the moments.
+        labeled, _num = ndimage.label(mask)
+        pk = np.unravel_index(np.argmax(np.where(mask, sub, -np.inf)),
+                              sub.shape)
+        wt = np.where(labeled == labeled[pk], sub, 0.0)
+        total = wt.sum()
+        if total <= 0.0:
+            raise IQCalcError("moment analysis failed: no flux above "
+                              "the background")
+
+        ht, wd = wt.shape
+        y, x = np.mgrid[0:ht, 0:wd]
+        ctr_x = float((x * wt).sum() / total)
+        ctr_y = float((y * wt).sum() / total)
+        dx = x - ctr_x
+        dy = y - ctr_y
+        sxx = float((wt * dx * dx).sum() / total)
+        syy = float((wt * dy * dy).sum() / total)
+        sxy = float((wt * dx * dy).sum() / total)
+
+        # eigenvalues of the 2x2 moment covariance give the axes, and its
+        # eigenvectors the position angle
+        tr = sxx + syy
+        disc = max(tr * tr / 4.0 - (sxx * syy - sxy * sxy), 0.0)
+        lam_maj = max(tr / 2.0 + math.sqrt(disc), 1e-8)
+        lam_min = max(tr / 2.0 - math.sqrt(disc), 1e-8)
+
+        return Bunch.Bunch(x=ctr_x, y=ctr_y,
+                           sigma_maj=math.sqrt(lam_maj),
+                           sigma_min=math.sqrt(lam_min),
+                           theta=0.5 * math.atan2(2.0 * sxy, sxx - syy),
+                           peak=float(wt.max()), background=float(bgv))
+
+    def gaussian2d(self, xy, p):
+        """Evaluate a rotated 2D elliptical Gaussian.
+
+        Parameters
+        ----------
+        xy : tuple of array-like
+            ``(x, y)`` coordinate arrays.
+
+        p : tuple of float
+            ``(x_0, y_0, sigma_maj, sigma_min, theta, amplitude)``, with
+            ``theta`` in radians counter-clockwise from +X.
+
+        Returns
+        -------
+        z : array-like
+            Function values.
+
+        """
+        x, y = xy
+        x_0, y_0, s_maj, s_min, theta, amp = p
+        cos_t, sin_t = math.cos(theta), math.sin(theta)
+        dx, dy = x - x_0, y - y_0
+        x_r = dx * cos_t + dy * sin_t
+        y_r = -dx * sin_t + dy * cos_t
+        return amp * np.exp(-0.5 * ((x_r / s_maj) ** 2 + (y_r / s_min) ** 2))
+
+    def _gaussian2d_jac(self, xy, p):
+        """Analytic Jacobian of :meth:`gaussian2d` wrt its parameters."""
+        x, y = xy
+        x_0, y_0, s_maj, s_min, theta, amp = p
+        cos_t, sin_t = math.cos(theta), math.sin(theta)
+        dx, dy = x - x_0, y - y_0
+        x_r = dx * cos_t + dy * sin_t
+        y_r = -dx * sin_t + dy * cos_t
+        z = amp * np.exp(-0.5 * ((x_r / s_maj) ** 2 + (y_r / s_min) ** 2))
+        a2, b2 = s_maj ** 2, s_min ** 2
+        return np.column_stack((
+            (z * (x_r * cos_t / a2 - y_r * sin_t / b2)).ravel(),
+            (z * (x_r * sin_t / a2 + y_r * cos_t / b2)).ravel(),
+            (z * x_r ** 2 / s_maj ** 3).ravel(),
+            (z * y_r ** 2 / s_min ** 3).ravel(),
+            (z * x_r * y_r * (1.0 / b2 - 1.0 / a2)).ravel(),
+            (z / amp).ravel()))
+
+    def _gaussian_peak(self, x, p):
+        """1D Gaussian parameterized by its peak value, ``(mu, sdev, peak)``.
+
+        Unlike :meth:`gaussian`, whose amplitude parameter is a normalization,
+        this evaluates to ``peak`` at ``x == mu``.  Used by
+        :meth:`_get_fwhm_2d` so that the value does not depend on which
+        ``gaussian()`` a subclass provides.
+        """
+        mu, sdev, peak = p
+        return peak * np.exp(-((x - mu) ** 2) / (2.0 * sdev ** 2))
+
+    def calc_fwhm_gaussian2d(self, data, bgv=None, bgs=None, mom=None):
+        """Fit a rotated 2D elliptical Gaussian to an array holding one object.
+
+        Unlike the 1D methods, which cut a row and a column through the peak,
+        this uses every pixel in ``data`` and solves for a position angle.  It
+        therefore measures the true major and minor axes of an elongated
+        object however it happens to be oriented on the detector.
+
+        Parameters
+        ----------
+        data : array-like
+            2D array containing a single object.
+
+        bgv, bgs : float or `None`
+            Background level and spread; see :meth:`calc_background`.
+
+        mom : `~ginga.misc.Bunch.Bunch` or `None`
+            Starting estimate from :meth:`calc_moments`.  Calculated if not
+            given.
+
+        Returns
+        -------
+        res : `~ginga.misc.Bunch.Bunch`
+            Fitting results; see :meth:`iqe`.
+
+        Raises
+        ------
+        IQCalcError
+            Missing dependency, or the fit did not converge.
+
+        """
+        if not have_scipy:
+            raise IQCalcError("Please install the 'scipy' module "
+                              "to use this function")
+        arr = np.asarray(data, dtype=float)
+        if arr.ndim != 2:
+            raise IQCalcError("data should be a 2D array")
+        if bgv is None or bgs is None:
+            bgv, bgs = self.calc_background(arr)
+        if mom is None:
+            mom = self.calc_moments(arr, bgv=bgv, bgs=bgs)
+
+        ht, wd = arr.shape
+        y, x = np.mgrid[0:ht, 0:wd]
+        sub = arr - bgv
+
+        p0 = [mom.x, mom.y, max(mom.sigma_maj, 0.5), max(mom.sigma_min, 0.5),
+              mom.theta, mom.peak]
+        lo = [0.0, 0.0, 0.2, 0.2, -math.pi, 0.0]
+        hi = [wd - 1.0, ht - 1.0, float(wd), float(ht), math.pi, np.inf]
+        p0 = [min(max(v, a), b) for v, a, b in zip(p0, lo, hi)]
+
+        def errfunc(p):
+            return (self.gaussian2d((x, y), p) - sub).ravel()
+
+        def jacfunc(p):
+            return self._gaussian2d_jac((x, y), p)
+
+        with self.lock:
+            # NOTE: the mutex is here for the same reason as in the 1D fits
+            res = optimize.least_squares(errfunc, p0, jac=jacfunc,
+                                         bounds=(lo, hi))
+        if not res.success:
+            raise IQCalcError("FWHM 2D Gaussian fitting failed")
+
+        x_0, y_0, s_maj, s_min, theta, amp = (float(v) for v in res.x)
+        s_maj, s_min = abs(s_maj), abs(s_min)
+        if s_min > s_maj:
+            # the two axes are interchangeable to the fit; report major first
+            s_maj, s_min = s_min, s_maj
+            theta += math.pi / 2.0
+
+        npix, nparm = res.jac.shape
+        dof = max(npix - nparm, 1)
+        try:
+            cov = np.linalg.pinv(res.jac.T @ res.jac) * (2.0 * res.cost / dof)
+            err = np.sqrt(np.abs(np.diag(cov)))
+        except Exception as e:
+            self.logger.debug("Error estimating fit covariance: %s" % (str(e)))
+            err = np.full(nparm, np.nan)
+        e_maj, e_min = float(err[2]), float(err[3])
+        if e_min > e_maj and s_maj == abs(float(res.x[3])):
+            e_maj, e_min = e_min, e_maj
+
+        return Bunch.Bunch(
+            x=x_0, y=y_0,
+            fwhm_maj=SIG2FWHM * s_maj, fwhm_min=SIG2FWHM * s_min,
+            sigma_maj=s_maj, sigma_min=s_min,
+            theta=math.degrees(theta) % 180.0,
+            peak=amp, background=float(bgv),
+            e_x=float(err[0]), e_y=float(err[1]),
+            e_fwhm_maj=SIG2FWHM * e_maj, e_fwhm_min=SIG2FWHM * e_min,
+            e_theta=math.degrees(float(err[4])), e_peak=float(err[5]),
+            e_background=float(bgs),
+            fit_fn=self.gaussian2d,
+            fit_args=[x_0, y_0, s_maj, s_min, theta, amp])
+
+    def iqe(self, data, bgv=None, bgs=None, thresh_sigma=5.0):
+        """Image Quality Estimate for a single object in a small array.
+
+        Runs the three stages -- background, moment analysis, then a rotated
+        2D elliptical Gaussian fit -- over every pixel of ``data``.  This is
+        the same measurement the ESO ``iqe()`` routine makes.
+
+        Parameters
+        ----------
+        data : array-like
+            2D array containing a single object.  No peak search is done; the
+            brightest blob above the background is the one measured.
+
+        bgv, bgs : float or `None`
+            Background level and spread; see :meth:`calc_background`.
+
+        thresh_sigma : float
+            See :meth:`calc_moments`.
+
+        Returns
+        -------
+        res : `~ginga.misc.Bunch.Bunch`
+            Contains the following keys:
+
+            * ``x``, ``y``: Fitted centroid.
+            * ``fwhm_maj``, ``fwhm_min``: FWHM along the major and minor axes.
+            * ``sigma_maj``, ``sigma_min``: The same as Gaussian sigmas.
+            * ``theta``: Position angle of the major axis, in degrees
+              counter-clockwise from +X, in the range [0, 180).
+            * ``peak``: Fitted peak value above the background.
+            * ``background``: Background level that was subtracted.
+            * ``e_x``, ``e_y``, ``e_fwhm_maj``, ``e_fwhm_min``, ``e_theta``,
+              ``e_peak``: 1-sigma errors from the fit covariance.
+            * ``e_background``: Spread of the background.
+
+        Raises
+        ------
+        IQCalcError
+            Missing dependency, nothing found above the background, or the
+            fit did not converge.
+
+        """
+        arr = np.asarray(data, dtype=float)
+        if bgv is None or bgs is None:
+            bgv, bgs = self.calc_background(arr)
+        mom = self.calc_moments(arr, bgv=bgv, bgs=bgs,
+                                thresh_sigma=thresh_sigma)
+        return self.calc_fwhm_gaussian2d(arr, bgv=bgv, bgs=bgs, mom=mom)
+
+    def _get_fwhm_2d(self, x, y, radius, data):
+        """2D elliptical Gaussian variant of :meth:`get_fwhm`."""
+        x0, y0, arr = self.cut_region(int(round(x)), int(round(y)),
+                                      int(round(radius)), data)
+        res = self.calc_fwhm_gaussian2d(arr)
+        ctr_x = x0 + res.x
+        ctr_y = y0 + res.y
+
+        # Widths of the cuts along X and Y through the center of the fitted
+        # ellipse.  This is what the 1D methods measure, so fwhm_x/fwhm_y mean
+        # the same thing whichever method was used.
+        theta = math.radians(res.theta)
+        cos_t, sin_t = math.cos(theta), math.sin(theta)
+        sdev_x = 1.0 / math.sqrt((cos_t / res.sigma_maj) ** 2 +
+                                 (sin_t / res.sigma_min) ** 2)
+        sdev_y = 1.0 / math.sqrt((sin_t / res.sigma_maj) ** 2 +
+                                 (cos_t / res.sigma_min) ** 2)
+
+        def _res(mu, sdev):
+            # NOTE: fit_fn/fit_args are here so that callers such as
+            # evaluate_peaks() can recover the peak value the same way they do
+            # for the 1D methods.  This uses its own peak-parameterized
+            # Gaussian rather than self.gaussian(), whose third parameter is a
+            # normalization in this module but an amplitude in iqcalc_astropy.
+            return Bunch.Bunch(
+                fwhm=SIG2FWHM * sdev, mu=mu, sdev=sdev, maxv=res.peak,
+                fit_fn=self._gaussian_peak, fit_args=[mu, sdev, res.peak],
+                fwhm_maj=res.fwhm_maj, fwhm_min=res.fwhm_min, theta=res.theta,
+                sigma_maj=res.sigma_maj, sigma_min=res.sigma_min,
+                peak=res.peak, background=res.background,
+                e_fwhm_maj=res.e_fwhm_maj, e_fwhm_min=res.e_fwhm_min,
+                e_theta=res.e_theta)
+
+        x_res = _res(res.x, sdev_x)
+        y_res = _res(res.y, sdev_y)
+        self.logger.debug("fwhm_maj,fwhm_min=%f,%f theta=%f center=%f,%f" % (
+            res.fwhm_maj, res.fwhm_min, res.theta, ctr_x, ctr_y))
+        return (x_res.fwhm, y_res.fwhm, ctr_x, ctr_y, x_res, y_res)
 
     def starsize(self, fwhm_x, deg_pix_x, fwhm_y, deg_pix_y):
         """Calculate average FWHM in arcseconds.
@@ -456,6 +795,43 @@ class IQCalc:
 
     # FINDING BRIGHT PEAKS
 
+    def calc_background(self, data):
+        """Estimate the background level of an array and its spread.
+
+        Parameters
+        ----------
+        data : array-like
+            Data array.  May be masked and may contain Inf or NaN.
+
+        Returns
+        -------
+        median : float
+            Median of the good data, used as the background level.
+
+        dist : float
+            Mean absolute deviation from that median.  This is a robust
+            stand-in for the standard deviation; for noisy astronomical
+            data the plain standard deviation is biased by the sources.
+
+        """
+        if np.ma.isMaskedArray(data):
+            # remove masked elements
+            fdata = data[np.logical_not(np.ma.getmaskarray(data))]
+            # remove Inf or NaN
+            fdata = fdata[np.isfinite(fdata)]
+        else:
+            # NOTE: np.ma.getmaskarray() would allocate a full-size mask for a
+            # plain array; it also needs no compacting copy unless it actually
+            # contains non-finite values
+            fdata = np.asarray(data)
+            i = np.isfinite(fdata)
+            if not i.all():
+                fdata = fdata[i]
+
+        median = get_median(fdata)
+        dist = np.fabs(fdata - median).mean()
+        return float(median), float(dist)
+
     def get_threshold(self, data, sigma=5.0):
         """Calculate threshold for :meth:`find_bright_peaks`.
 
@@ -473,25 +849,9 @@ class IQCalc:
             Threshold based on good data, its median, and the given sigma.
 
         """
-        if np.ma.isMaskedArray(data):
-            # remove masked elements
-            fdata = data[np.logical_not(np.ma.getmaskarray(data))]
-            # remove Inf or NaN
-            fdata = fdata[np.isfinite(fdata)]
-        else:
-            # NOTE: np.ma.getmaskarray() would allocate a full-size mask for a
-            # plain array; it also needs no compacting copy unless it actually
-            # contains non-finite values
-            fdata = np.asarray(data)
-            i = np.isfinite(fdata)
-            if not i.all():
-                fdata = fdata[i]
-
-        # find the median
-        median = get_median(fdata)
+        median, dist = self.calc_background(data)
 
         # NOTE: for this method a good default sigma is 5.0
-        dist = np.fabs(fdata - median).mean()
         threshold = median + sigma * dist
 
         # NOTE: for this method a good default sigma is 2.0
@@ -845,6 +1205,10 @@ class IQCalc:
             * ``oid_x``, ``oid_y``: Center-of-mass centroid from :meth:`centroid`.
             * ``fwhm_x``, ``fwhm_y``: Fitted FWHM from :meth:`get_fwhm`.
             * ``fwhm``: Overall measure of fwhm as a single value.
+            * ``fwhm_maj``, ``fwhm_min``, ``theta``: Major and minor axis FWHM
+              and the position angle of the major axis, in degrees
+              counter-clockwise from +X.  `None` unless ``fwhm_method`` is
+              ``'gaussian2d'``; the 1D methods cannot measure an orientation.
             * ``fwhm_radius``: Input FWHM radius.
             * ``brightness``: Average peak value based on :meth:`get_fwhm` fits.
             * ``elipse``: A measure of ellipticity.
@@ -936,6 +1300,9 @@ class IQCalc:
                               oid_x=oid_x, oid_y=oid_y,
                               fwhm_x=fwhm_x, fwhm_y=fwhm_y,
                               fwhm=fwhm, fwhm_radius=fwhm_radius,
+                              fwhm_maj=x_res.get('fwhm_maj', None),
+                              fwhm_min=x_res.get('fwhm_min', None),
+                              theta=x_res.get('theta', None),
                               brightness=bright, elipse=elipse,
                               x=int(x), y=int(y),
                               skylevel=skylevel, background=median,
