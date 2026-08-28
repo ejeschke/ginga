@@ -259,9 +259,20 @@ The "Settings" tab controls aspects of the search within the pick area:
 * The "Calc center" parameter is used to determine whether the center
   is calculated from FWHM fitting ("fwhm") or centroiding ("centroid").
 * The "FWHM fitting" parameter is used to determine which function is
-  is used for FWHM fitting ("gaussian" or "moffat"). The option to use
-  "lorentz" is also available if "calc_fwhm_lib" is set to "astropy"
+  is used for FWHM fitting ("gaussian", "moffat" or "gaussian2d"). The
+  option to use "lorentz" is also available if "calc_fwhm_lib" is set to
+  "astropy"
   in ``~/.ginga/plugin_Pick.cfg``.
+* The 1D methods ("gaussian", "moffat", "lorentz") cut a row and a column
+  through the peak and fit each separately, so they measure the object
+  along the X and Y axes of the detector.  "gaussian2d" instead fits a
+  rotated 2D elliptical Gaussian over the whole region, which additionally
+  gives the true major and minor axes of an elongated object and the
+  position angle of its major axis, reported as "FWHM Maj", "FWHM Min" and
+  "PA".  An object elongated at 45 degrees, for example, has equal X and Y
+  widths and the 1D methods cannot tell it apart from a round one.  The
+  three fields are blank for the 1D methods, which cannot measure an
+  orientation.
 * The "Contour Interpolation" parameter is used to set the interpolation
   method used in rendering the background image in the "Contour" plot.
 * The "EE total radius" defines the radius (for encircled energy) and box
@@ -307,6 +318,11 @@ region_default_width = 30
 region_default_height = 30
 
 __all__ = ['Pick']
+
+
+def _nan_if_none(val):
+    """Report an unmeasured quantity as NaN, keeping the log numeric."""
+    return np.nan if val is None else val
 
 
 class Pick(GingaPlugin.LocalPlugin):
@@ -423,7 +439,7 @@ class Pick(GingaPlugin.LocalPlugin):
                                                      coord_offset)
         self.center_algs = ['fwhm', 'centroid']
         self.center_alg = self.settings.get('calc_center_alg', 'fwhm')
-        self.fwhm_algs = ['gaussian', 'moffat']
+        self.fwhm_algs = ['gaussian', 'moffat', 'gaussian2d']
         self.iqcalc_lib = self.settings.get('calc_fwhm_lib', 'native')
         if self.iqcalc_lib == 'astropy':
             self.fwhm_algs.append('lorentz')
@@ -440,6 +456,8 @@ class Pick(GingaPlugin.LocalPlugin):
         columns = [("RA", 'ra_txt'), ("DEC", 'dec_txt'), ("Equinox", 'equinox'),
                    ("X", 'x'), ("Y", 'y'), ("FWHM", 'fwhm'),
                    ("FWHM_X", 'fwhm_x'), ("FWHM_Y", 'fwhm_y'),
+                   ("FWHM_Maj", 'fwhm_maj'), ("FWHM_Min", 'fwhm_min'),
+                   ("PA", 'theta'),
                    ("EE_circ", 'encircled_energy'), ("EE_sq", 'ensquared_energy'),
                    ("EE_r", 'ee_sampling_radius'),
                    ("Star Size", 'starsize'),
@@ -641,6 +659,9 @@ class Pick(GingaPlugin.LocalPlugin):
                      'FWHM Y:', 'label', 'FWHM Y', 'llabel'),
                     ('FWHM:', 'label', 'FWHM', 'llabel',
                      'Star Size:', 'label', 'Star Size', 'llabel'),
+                    ('FWHM Maj:', 'label', 'FWHM Maj', 'llabel',
+                     'FWHM Min:', 'label', 'FWHM Min', 'llabel'),
+                    ('PA (deg):', 'label', 'PA', 'llabel'),
                     ('EE (circ):', 'label', 'Encircled energy', 'llabel',
                      'EE (sq):', 'label', 'Ensquared energy', 'llabel'),
                     ('Sample Area:', 'label', 'Sample Area', 'llabel',
@@ -655,6 +676,13 @@ class Pick(GingaPlugin.LocalPlugin):
         self.wdetail = b
         b.encircled_energy.set_tooltip(_tr("Encircled energy"))
         b.ensquared_energy.set_tooltip(_tr("Ensquared energy"))
+        b.fwhm_maj.set_tooltip(_tr("FWHM along the major axis "
+                                   "(gaussian2d fitting only)"))
+        b.fwhm_min.set_tooltip(_tr("FWHM along the minor axis "
+                                   "(gaussian2d fitting only)"))
+        b.pa.set_tooltip(_tr("Position angle of the major axis, degrees "
+                             "counter-clockwise from +X (gaussian2d "
+                             "fitting only)"))
         b.default_region.add_callback('activated',
                                       lambda w: self.reset_region())
         b.default_region.set_tooltip(_tr("Reset region size to default"))
@@ -1227,10 +1255,19 @@ class Pick(GingaPlugin.LocalPlugin):
         x, y = qs.x - self.pick_x1, qs.y - self.pick_y1
         radius = qs.fwhm_radius
 
+        # NOTE: this plot overlays a fit on the X and Y cuts through the
+        # peak, so it needs a 1D method.  A cut through a 2D Gaussian is
+        # itself a Gaussian, so 'gaussian' draws the right curve for the
+        # 'gaussian2d' fit; only the ellipse it additionally solves for
+        # cannot be shown here.
+        fwhm_method = self.fwhm_alg
+        if fwhm_method == 'gaussian2d':
+            fwhm_method = 'gaussian'
+
         try:
             self.fwhm_plot.plot_fwhm_data(x, y, radius, self.pick_data,
                                           iqcalc=self.iqcalc,
-                                          fwhm_method=self.fwhm_alg)
+                                          fwhm_method=fwhm_method)
 
         except Exception as e:
             self.logger.error("Error making fwhm plot: %s" % (
@@ -1502,6 +1539,11 @@ class Pick(GingaPlugin.LocalPlugin):
                       equinox=equinox,
                       fwhm=qs.fwhm,
                       fwhm_x=qs.fwhm_x, fwhm_y=qs.fwhm_y,
+                      # NaN rather than None for the 1D methods, so that the
+                      # pick log stays a numeric table
+                      fwhm_maj=_nan_if_none(qs.get('fwhm_maj', None)),
+                      fwhm_min=_nan_if_none(qs.get('fwhm_min', None)),
+                      theta=_nan_if_none(qs.get('theta', None)),
                       ellipse=qs.elipse, background=qs.background,
                       skylevel=qs.skylevel, brightness=qs.brightness,
                       encircled_energy=ee_circ, ensquared_energy=ee_sq,
@@ -1575,6 +1617,15 @@ class Pick(GingaPlugin.LocalPlugin):
             self.wdetail.fwhm_x.set_text('%.3f' % fwhm_x)
             self.wdetail.fwhm_y.set_text('%.3f' % fwhm_y)
             self.wdetail.fwhm.set_text('%.3f' % fwhm)
+            # only the 2D fit measures an ellipse; leave these blank otherwise
+            self.wdetail.fwhm_maj.set_text(
+                '' if qs.get('fwhm_maj', None) is None
+                else '%.3f' % qs.fwhm_maj)
+            self.wdetail.fwhm_min.set_text(
+                '' if qs.get('fwhm_min', None) is None
+                else '%.3f' % qs.fwhm_min)
+            self.wdetail.pa.set_text(
+                '' if qs.get('theta', None) is None else '%.2f' % qs.theta)
             self.wdetail.object_x.set_text('%.3f' % d.x)
             self.wdetail.object_y.set_text('%.3f' % d.y)
             self.wdetail.sky_level.set_text('%.3f' % qs.skylevel)
@@ -1628,6 +1679,7 @@ class Pick(GingaPlugin.LocalPlugin):
             #self.update_status("Error")
             for key in ('sky_level', 'background', 'brightness',
                         'star_size', 'fwhm_x', 'fwhm_y',
+                        'fwhm_maj', 'fwhm_min', 'pa',
                         'ra', 'dec', 'object_x', 'object_y',
                         'encircled_energy', 'ensquared_energy'):
                 self.wdetail[key].set_text('')

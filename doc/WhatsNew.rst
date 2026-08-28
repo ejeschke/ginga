@@ -38,6 +38,13 @@ Since v7.4.0 (unreleased)
   keep their meaning as cuts through the object's center.  The 1D
   methods report `None` for the three new keys, as they cannot measure
   an orientation.
+- The ``Pick`` plugin offers ``gaussian2d`` in its "FWHM fitting" menu,
+  and reports the ellipse it measures: "FWHM Maj", "FWHM Min" and "PA"
+  appear in the detail panel and as the ``FWHM_Maj``, ``FWHM_Min`` and
+  ``PA`` report columns.  They are blank (``NaN`` in the pick log) for
+  the 1D methods, which cannot measure an orientation.  "Star Size" is
+  unchanged: it stays paired with ``CDELT1``/``CDELT2`` through
+  ``fwhm_x``/``fwhm_y``, which the major and minor axes cannot replace.
 
 Ver 7.4.0 (2026.08.21)
 ======================
