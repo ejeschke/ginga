@@ -197,7 +197,7 @@ class TestIQCalcPhot:
         for res in (result_1, result_2, result_3):
             assert_allclose(res.objx, 5.353330481192139)
             assert_allclose(res.objy, 4.2480576624213455)
-            assert_allclose(res.pos, 0.9967616536846655)
+            assert_allclose(res.pos, 0.9481864589556771)
             assert_allclose(res.oid_x, 5.091012868410129)
             assert_allclose(res.oid_y, 4.072592361975923)
             assert_allclose(res.fwhm_x, 1.9625726210572922, rtol=5e-7)
@@ -219,7 +219,7 @@ class TestIQCalcPhot:
         # Relax tolerance for TestIQCalcPhotAstropy
         assert_allclose(result_4.objx, 5.35505379856564)
         assert_allclose(result_4.objy, 4.25153281221611)
-        assert_allclose(result_4.pos, 0.9951892891389722)
+        assert_allclose(result_4.pos, 0.9230286262198406)
         assert_allclose(result_4.oid_x, 4.091012868410129)
         assert_allclose(result_4.oid_y, 3.072592361975923)
         assert_allclose(result_4.fwhm_x, 1.8788622094597287, rtol=5e-7)

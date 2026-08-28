@@ -41,22 +41,42 @@ def get_mean(data_np):
         If array contains no finite values, returns NaN.
 
     """
+    if np.ma.isMaskedArray(data_np):
+        i = np.isfinite(data_np)
+        if not np.any(i):
+            return np.nan
+        # NOTE: we use "ma" version of mean because this can be used with
+        # masked arrays created by cutting out non-rectangular shapes
+        return np.ma.mean(data_np[i])
+
+    # NOTE: a plain array needs neither the masked-array machinery nor a
+    # compacted copy unless it actually contains non-finite values
     i = np.isfinite(data_np)
-    if not np.any(i):
+    if not i.any():
         return np.nan
-    # NOTE: we use "ma" version of mean because this can be used with
-    # masked arrays created by cutting out non-rectangular shapes
-    return np.ma.mean(data_np[i])
+    if i.all():
+        return np.mean(data_np)
+    return np.mean(data_np[i])
 
 
 def get_median(data_np):
     """Like :func:`get_mean` but for median."""
+    if np.ma.isMaskedArray(data_np):
+        i = np.isfinite(data_np)
+        if not np.any(i):
+            return np.nan
+        # NOTE: we use "ma" version of median because this can be used with
+        # masked arrays created by cutting out non-rectangular shapes
+        return np.ma.median(data_np[i])
+
+    # NOTE: a plain array needs neither the masked-array machinery nor a
+    # compacted copy unless it actually contains non-finite values
     i = np.isfinite(data_np)
-    if not np.any(i):
+    if not i.any():
         return np.nan
-    # NOTE: we use "ma" version of median because this can be used with
-    # masked arrays created by cutting out non-rectangular shapes
-    return np.ma.median(data_np[i])
+    if i.all():
+        return np.median(data_np)
+    return np.median(data_np[i])
 
 
 class IQCalcError(Exception):
@@ -453,10 +473,19 @@ class IQCalc:
             Threshold based on good data, its median, and the given sigma.
 
         """
-        # remove masked elements
-        fdata = data[np.logical_not(np.ma.getmaskarray(data))]
-        # remove Inf or NaN
-        fdata = fdata[np.isfinite(fdata)]
+        if np.ma.isMaskedArray(data):
+            # remove masked elements
+            fdata = data[np.logical_not(np.ma.getmaskarray(data))]
+            # remove Inf or NaN
+            fdata = fdata[np.isfinite(fdata)]
+        else:
+            # NOTE: np.ma.getmaskarray() would allocate a full-size mask for a
+            # plain array; it also needs no compacting copy unless it actually
+            # contains non-finite values
+            fdata = np.asarray(data)
+            i = np.isfinite(fdata)
+            if not i.all():
+                fdata = fdata[i]
 
         # find the median
         median = get_median(fdata)
@@ -627,9 +656,11 @@ class IQCalc:
         res = arr2[idx] - medv
         return float(res)
 
-    def fwhm_data(self, x, y, data, radius=15, method_name='gaussian'):
+    def fwhm_data(self, x, y, data, radius=15, method_name='gaussian',
+                  medv=None):
         """Equivalent to :meth:`get_fwhm`."""
-        return self.get_fwhm(x, y, radius, data, method_name=method_name)
+        return self.get_fwhm(x, y, radius, data, medv=medv,
+                             method_name=method_name)
 
     # Encircled and ensquared energies (EE)
 
@@ -719,9 +750,57 @@ class IQCalc:
 
     # EVALUATION ON A FIELD
 
+    def get_ee_fns(self, data, ctr_x, ctr_y, medv, ee_total_radius):
+        """Return encircled and ensquared energy functions for one object.
+
+        Parameters
+        ----------
+        data : array-like
+            Data array the object was found in.
+
+        ctr_x, ctr_y : float
+            Center of the object in ``data``.
+
+        medv : float
+            Background level to subtract before computing the energies.
+
+        ee_total_radius : float
+            Radius, in pixels, where encircled and ensquared energy fractions
+            are defined as 1.
+
+        Returns
+        -------
+        ee_sq_fn, ee_circ_fn : func or `None`
+            Ensquared and encircled energy functions, or `None` for either
+            one that could not be computed.
+
+        """
+        height, width = data.shape
+        iy1 = int(ctr_y - ee_total_radius)
+        iy2 = int(ctr_y + ee_total_radius) + 1
+        ix1 = int(ctr_x - ee_total_radius)
+        ix2 = int(ctr_x + ee_total_radius) + 1
+
+        if iy1 < 0 or iy2 > height or ix1 < 0 or ix2 > width:
+            self.logger.debug("Error calculating EE on object at %.2f,%.2f: Box out of range with radius=%.2f" % (ctr_x, ctr_y, ee_total_radius))
+            return (None, None)
+
+        ee_sq_fn = None
+        ee_circ_fn = None
+        ee_data = data[iy1:iy2, ix1:ix2] - medv
+        try:
+            ee_sq_fn = self.ensquared_energy(ee_data)
+        except Exception as e:
+            self.logger.debug("Error calculating ensquared energy on object at %.2f,%.2f: %s" % (ctr_x, ctr_y, str(e)))
+        try:
+            ee_circ_fn = self.encircled_energy(ee_data)
+        except Exception as e:
+            self.logger.debug("Error calculating encircled energy on object at %.2f,%.2f: %s" % (ctr_x, ctr_y, str(e)))
+        return (ee_sq_fn, ee_circ_fn)
+
     def evaluate_peaks(self, peaks, data, fwhm_radius=15,
                        fwhm_method='gaussian', ee_total_radius=10,
-                       cb_fn=None, ev_intr=None):
+                       cb_fn=None, ev_intr=None, do_ee=True):
         """Evaluate photometry for given peaks in data array.
 
         Parameters
@@ -747,6 +826,11 @@ class IQCalc:
         ev_intr : :py:class:`threading.Event` or `None`
             For threading, if applicable.
 
+        do_ee : bool
+            Calculate encircled and ensquared energy for each peak.  Set this
+            to `False` if only one object will be kept; the energies can then
+            be filled in for that object alone with :meth:`get_ee_fns`.
+
         .. note:: unused parameter `bright_radius` was removed in
                   release 4.0
 
@@ -769,16 +853,14 @@ class IQCalc:
               ``skylevel_magnification`` and ``skylevel_offset`` attributes.
             * ``background``: Median of the input array.
             * ``ensquared_energy_fn``: Function of ensquared energy for different pixel radii.
+              `None` if ``do_ee`` is `False`.
             * ``encircled_energy_fn``: Function of encircled energy for different pixel radii.
+              `None` if ``do_ee`` is `False`.
 
         """
         height, width = data.shape
         hh = float(height) / 2.0
-        ht = float(height)
-        h4 = float(height) * 4.0
         wh = float(width) / 2.0
-        wd = float(width)
-        w4 = float(width) * 4.0
 
         # Find the median (sky/background) level
         median = float(get_median(data))
@@ -804,8 +886,10 @@ class IQCalc:
 
             # Find the fwhm in x and y, using local peak
             try:
+                # NOTE: pass down the median we already have; otherwise
+                # get_fwhm() recomputes it over the whole array for every peak
                 res = self.fwhm_data(x, y, data, radius=fwhm_radius,
-                                     method_name=fwhm_method)
+                                     method_name=fwhm_method, medv=median)
                 fwhm_x, fwhm_y, ctr_x, ctr_y, x_res, y_res = res
 
                 bx = x_res.fit_fn(round(ctr_x),
@@ -829,11 +913,13 @@ class IQCalc:
             # calculate a measure of ellipticity
             elipse = math.fabs(min(fwhm_x, fwhm_y) / max(fwhm_x, fwhm_y))
 
-            # calculate a measure of distance from center of image
+            # calculate a measure of distance from center of image;
+            # normalized so that `pos` is 1.0 at the center of the frame and
+            # falls to 0.0 at the edge, matching the original SOSS qualsize()
             dx = wh - ctr_x
             dy = hh - ctr_y
-            dx2 = dx * dx / wd / w4
-            dy2 = dy * dy / ht / h4
+            dx2 = (dx / wh) ** 2
+            dy2 = (dy / hh) ** 2
             if dx2 > dy2:
                 pos = 1.0 - dx2
             else:
@@ -842,23 +928,9 @@ class IQCalc:
             # EE on background subtracted image
             ee_sq_fn = None
             ee_circ_fn = None
-            iy1 = int(ctr_y - ee_total_radius)
-            iy2 = int(ctr_y + ee_total_radius) + 1
-            ix1 = int(ctr_x - ee_total_radius)
-            ix2 = int(ctr_x + ee_total_radius) + 1
-
-            if iy1 < 0 or iy2 > height or ix1 < 0 or ix2 > width:
-                self.logger.debug("Error calculating EE on object at %.2f,%.2f: Box out of range with radius=%.2f" % (x, y, ee_total_radius))
-            else:
-                ee_data = data[iy1:iy2, ix1:ix2] - median
-                try:
-                    ee_sq_fn = self.ensquared_energy(ee_data)
-                except Exception as e:
-                    self.logger.debug("Error calculating ensquared energy on object at %.2f,%.2f: %s" % (x, y, str(e)))
-                try:
-                    ee_circ_fn = self.encircled_energy(ee_data)
-                except Exception as e:
-                    self.logger.debug("Error calculating encircled energy on object at %.2f,%.2f: %s" % (x, y, str(e)))
+            if do_ee:
+                ee_sq_fn, ee_circ_fn = self.get_ee_fns(
+                    data, ctr_x, ctr_y, median, ee_total_radius)
 
             obj = Bunch.Bunch(objx=ctr_x, objy=ctr_y, pos=pos,
                               oid_x=oid_x, oid_y=oid_y,
@@ -974,9 +1046,12 @@ class IQCalc:
             raise IQCalcError("Cannot find bright peaks")
 
         # Evaluate those peaks
+        # NOTE: only the selected object is returned, so computing EE for
+        # every candidate here would throw all but one of them away
         objlist = self.evaluate_peaks(peaks, data,
                                       fwhm_radius=fwhm_radius,
-                                      ee_total_radius=ee_total_radius)
+                                      ee_total_radius=ee_total_radius,
+                                      do_ee=False)
         if len(objlist) == 0:
             raise IQCalcError("Error evaluating bright peaks")
 
@@ -986,7 +1061,10 @@ class IQCalc:
         if len(results) == 0:
             raise IQCalcError("No object matches selection criteria")
 
-        return results[0]
+        res = results[0]
+        res.ensquared_energy_fn, res.encircled_energy_fn = self.get_ee_fns(
+            data, res.objx, res.objy, res.background, ee_total_radius)
+        return res
 
     def qualsize(self, image, x1=None, y1=None, x2=None, y2=None,
                  radius=5, fwhm_radius=15, threshold=None,

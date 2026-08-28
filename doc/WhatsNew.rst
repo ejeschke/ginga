@@ -2,6 +2,28 @@
 What's New
 ++++++++++
 
+Since v7.4.0 (unreleased)
+=========================
+- **Star selection in** ``IQCalc`` **now favors the center of the field,
+  as the original SOSS** ``qualsize()`` **did.**  The ``pos`` factor
+  computed by ``evaluate_peaks()`` was 16x too small, so it fell only to
+  0.9375 at the frame edge instead of 0.0; ``pick_field()`` and
+  ``qualsize()`` could return a bright star at the very edge of the
+  frame in preference to a better-placed one near the center.
+- ``IQCalc.qualsize()`` and ``pick_field()`` are much faster on fields
+  with many peaks -- 12x on 1024x1024 with 100 stars, 39x on 2048x2048
+  with 300 -- and give identical results.  ``get_fwhm()`` was
+  recomputing the median of the whole array for every peak;
+  ``evaluate_peaks()`` now passes down the one it already has, through a
+  new ``medv`` parameter on ``fwhm_data()``.
+- ``evaluate_peaks()`` takes ``do_ee`` to skip the encircled/ensquared
+  energy calculation, and the new ``IQCalc.get_ee_fns()`` computes it
+  for a single object.  ``pick_field()`` uses both to calculate EE only
+  for the object it returns, instead of for every candidate.
+- ``get_mean()`` and ``get_median()`` skip the masked-array machinery
+  and a compacting copy when given a plain array that holds no
+  non-finite values.
+
 Ver 7.4.0 (2026.08.21)
 ======================
 - ``TextArea.scroll_to_lineno()`` (all backends) and ``TextSource``'s
