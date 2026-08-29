@@ -1369,7 +1369,7 @@ class IQCalc:
         return results
 
     def pick_field(self, data, peak_radius=5, fwhm_radius=15,
-                   threshold=None,
+                   threshold=None, fwhm_method='gaussian',
                    minfwhm=2.0, maxfwhm=50.0, minelipse=0.5,
                    edgew=0.01, ee_total_radius=10):
         """Pick the first good object within the given field.
@@ -1382,7 +1382,7 @@ class IQCalc:
         peak_radius, threshold
             See :meth:`find_bright_peaks`.
 
-        fwhm_radius, ee_total_radius
+        fwhm_radius, fwhm_method, ee_total_radius
             See :meth:`evaluate_peaks`.
 
         minfwhm, maxfwhm, minelipse, edgew
@@ -1417,6 +1417,7 @@ class IQCalc:
         # every candidate here would throw all but one of them away
         objlist = self.evaluate_peaks(peaks, data,
                                       fwhm_radius=fwhm_radius,
+                                      fwhm_method=fwhm_method,
                                       ee_total_radius=ee_total_radius,
                                       do_ee=False)
         if len(objlist) == 0:
@@ -1435,6 +1436,7 @@ class IQCalc:
 
     def qualsize(self, image, x1=None, y1=None, x2=None, y2=None,
                  radius=5, fwhm_radius=15, threshold=None,
+                 fwhm_method='gaussian',
                  minfwhm=2.0, maxfwhm=50.0, minelipse=0.5,
                  edgew=0.01, ee_total_radius=10):
         """Run :meth:`pick_field` on the given image.
@@ -1450,7 +1452,7 @@ class IQCalc:
         radius, threshold
             See :meth:`find_bright_peaks`.
 
-        fwhm_radius, ee_total_radius
+        fwhm_radius, fwhm_method, ee_total_radius
             See :meth:`evaluate_peaks`.
 
         minfwhm, maxfwhm, minelipse, edgew
@@ -1481,6 +1483,7 @@ class IQCalc:
         qs = self.pick_field(data, peak_radius=radius,
                              fwhm_radius=fwhm_radius,
                              threshold=threshold,
+                             fwhm_method=fwhm_method,
                              minfwhm=minfwhm, maxfwhm=maxfwhm,
                              minelipse=minelipse, edgew=edgew,
                              ee_total_radius=ee_total_radius)

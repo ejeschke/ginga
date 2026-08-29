@@ -38,6 +38,11 @@ Since v7.4.0 (unreleased)
   keep their meaning as cuts through the object's center.  The 1D
   methods report `None` for the three new keys, as they cannot measure
   an orientation.
+- ``pick_field()`` and ``qualsize()`` take ``fwhm_method`` and pass it down
+  to ``evaluate_peaks()``.  They had always measured with the default
+  ``'gaussian'``, so ``'gaussian2d'`` could only be reached by driving
+  ``find_bright_peaks()``, ``evaluate_peaks()`` and ``objlist_select()``
+  separately.
 - The ``Pick`` plugin offers ``gaussian2d`` in its "FWHM fitting" menu,
   and reports the ellipse it measures: "FWHM Maj", "FWHM Min" and "PA"
   appear in the detail panel and as the ``FWHM_Maj``, ``FWHM_Min`` and
