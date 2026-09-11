@@ -4,6 +4,7 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import itertools
 import os
 import logging
 import logging.handlers
@@ -91,47 +92,73 @@ class BatchingQueueListener:
             pass
 
 
-class NullLogger:
+#: What the hand-written NullLogger printed when given a file, kept so that
+#: output looks the same as it did.
+NULL_LOG_FORMAT = '| %(levelname)1.1s | %(message)s'
+
+
+class NullLogger(logging.Logger):
+    """A logger for code that has not been given one.
+
+    Used in place of a real logger when logging should be suppressed, or to
+    avoid the overhead of one.
+
+    It is a real :py:class:`logging.Logger`, which is what makes it safe to
+    put in place of one.  The stand-in it replaces accepted the level
+    methods and little else, and what it did accept it did not always
+    honour:
+
+    * ``critical()`` could not be called at all -- its ``msg`` was declared
+      keyword-only after ``*args``, so every call raised TypeError;
+    * ``exception()``, ``log()``, ``isEnabledFor()`` and ``setLevel()`` were
+      simply absent, so code written against the standard library got an
+      AttributeError from the object meant to stand in for it;
+    * ``error()`` accepted ``exc_info`` and ignored it;
+    * arguments were accepted and dropped, so ``info("x %s", 1)`` logged the
+      format string;
+    * ``addHandler()`` did nothing, so a handler added to one was silently
+      never used.
+
+    Taking the arguments rather than a pre-formatted message is also what
+    makes it cheap: a disabled logger never formats them, where a caller
+    interpolating its own pays whether or not anything reads the result.
+
+    :param name: As :py:class:`logging.Logger`.  One is invented when none
+        is given, so that two throwaway loggers cannot share handlers.
+    :param level: As :py:class:`logging.Logger`.  The default discards
+        everything -- it is above CRITICAL, so no record is built at any
+        level -- unless ``f_out`` says otherwise.
+    :param f_out: Write records here instead of discarding them.
     """
-    The NullLogger can be used in the place of a "real" logging module logger
-    if the code just uses the standard levels/methods for logging.
 
-    It is useful when you need to suppress logging or bypass the overhead of
-    the logging module logger.
-    """
-    def __init__(self, f_out=None):
-        self.f_out = f_out
-        self.handlers = []
+    #: Names for the unnamed.  Deliberately not registered with the logging
+    #: manager: these are throwaways, and a process that makes many should
+    #: not accumulate them.
+    _serial = itertools.count()
 
-    def debug(self, msg, *args):
-        if self.f_out:
-            self.f_out.write("| D | %s\n" % msg)
-            self.f_out.flush()
+    def __init__(self, name=None, level=None, f_out=None):
+        if name is None:
+            name = 'ginga-null-%d' % (next(self._serial),)
+        if level is None:
+            # Nothing at all, unless somewhere was named to write it.
+            level = (logging.DEBUG if f_out is not None
+                     else logging.CRITICAL + 1)
+        super().__init__(name, level)
 
-    def info(self, msg, *args):
-        if self.f_out:
-            self.f_out.write("| I | %s\n" % msg)
-            self.f_out.flush()
+        # This stands in for having no logger, not for a quiet route into
+        # the root logger's handlers.
+        self.propagate = False
 
-    def warning(self, msg, *args):
-        if self.f_out:
-            self.f_out.write("| W | %s\n" % msg)
-            self.f_out.flush()
+        if f_out is None:
+            self.addHandler(logging.NullHandler())
+        else:
+            handler = logging.StreamHandler(f_out)
+            handler.setFormatter(logging.Formatter(NULL_LOG_FORMAT))
+            self.addHandler(handler)
 
-    warn = warning
-
-    def error(self, msg, *args, exc_info=False):
-        if self.f_out:
-            self.f_out.write("| E | %s\n" % msg)
-            self.f_out.flush()
-
-    def critical(self, *args, msg):
-        if self.f_out:
-            self.f_out.write("| C | %s\n" % msg)
-            self.f_out.flush()
-
-    def addHandler(self, hndlr):
-        pass
+    def warn(self, msg, *args, **kwargs):
+        """Kept because callers use it and Python 3.13 removed it."""
+        return self.warning(msg, *args, **kwargs)
 
 
 def get_logger(name='ginga', level=None, null=False,
