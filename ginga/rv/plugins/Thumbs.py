@@ -328,8 +328,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                 imname = image.get('name', None)
                 info = channel.get_image_info(imname)
             except KeyError:
-                self.logger.warn("no information in channel about image '%s'" % (
-                    imname))
+                self.logger.warning("no information in channel about "
+                                    "image '%s'", imname)
                 return False
 
         # Get any previously stored thumb information in the image info

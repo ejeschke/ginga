@@ -183,8 +183,8 @@ class GingaVision:
                 self.fps = float(fps)
             else:
                 self.fps = 30.0
-                self.logger.warn("No video rate found in metadata; "
-                                 "assuming %.2f fps" % (self.fps))
+                self.logger.warning("No video rate found in metadata; "
+                                    "assuming %.2f fps", self.fps)
 
         else:
             self.logger.info("Forcing a video rate of %d fps" % (self.fps))
