@@ -286,6 +286,46 @@ def test_worker_status_reports_the_running_workers(pool):
     assert all(isinstance(entry, tuple) for entry in status)
 
 
+class Recording:
+    """A logger that keeps the reports it is given."""
+
+    def __init__(self):
+        self.reports = []
+
+    def info(self, msg, *args, **kwargs):
+        self.reports.append(msg % args if args else msg)
+
+    def __getattr__(self, name):
+        return lambda *args, **kwargs: None
+
+
+def test_periodic_analysis_costs_a_thread_only_when_asked_for():
+    """It used to ride on the pool-monitoring thread, which every pool kept
+    whether anyone wanted reports or not."""
+    quiet = Task.ThreadPool(numthreads=2, logger=Recording())
+    quiet.startall(wait=True)
+    try:
+        assert quiet._analyze_thread is None
+    finally:
+        quiet.stopall(wait=True)
+
+
+def test_periodic_analysis_still_reports_when_it_is_asked_for():
+    log = Recording()
+    p = Task.ThreadPool(numthreads=2, logger=log, analyze_interval=0.3)
+    p.startall(wait=True)
+    try:
+        assert p._analyze_thread is not None
+        assert wait_for(
+            lambda: sum(1 for r in log.reports
+                        if 'analyzing active threads' in r) >= 2,
+            timeout=10.0)
+    finally:
+        p.stopall(wait=True)
+
+    assert p._analyze_thread is None, 'stopall takes it with the pool'
+
+
 def test_there_is_no_pool_monitoring_thread(pool):
     """Growth happens on the submitting thread and retirement on the worker,
     so nothing watches the pool."""
