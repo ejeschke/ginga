@@ -106,6 +106,25 @@ def test_it_grows_no_further_than_numthreads(pool):
         release.set()
 
 
+def test_a_floor_above_the_ceiling_is_brought_down_to_it(pool):
+    """Regression, and a startup hang rather than a wrong number.
+
+    startall(wait=True) waits for minthreads workers to register, and the
+    pool will not start more than numthreads -- so a floor above the ceiling
+    waited for workers that could never arrive, and waited for good.  A
+    service handed --minthreads greater than --numthreads simply never came
+    up, and said nothing about why.
+    """
+    p = pool(numthreads=6, minthreads=30)
+
+    assert p.minthreads == 6
+    assert len(p.running) == 6
+
+    done = threading.Event()
+    p.addTask(Task.FuncTask2(done.set))
+    assert done.wait(10), 'and it serves'
+
+
 def test_a_fixed_pool_stays_fixed(pool):
     """minthreads defaulting to numthreads is what every existing caller
     gets, and it must behave exactly as it always did."""

@@ -960,7 +960,12 @@ class ThreadPool:
         self.workerClass = workerClass
         if minthreads is None:
             minthreads = numthreads
-        self.minthreads = max(0, minthreads)
+        # Never above the ceiling.  A floor that cannot be reached is not a
+        # floor: startall(wait=True) would wait for a number of workers the
+        # pool is not allowed to start, and wait for good -- which is how a
+        # service given --minthreads greater than --numthreads would hang at
+        # startup rather than say anything.
+        self.minthreads = min(max(0, minthreads), self.numthreads)
         self.idle_limit_sec = idle_limit_sec
         self.analyze_interval = analyze_interval
 
