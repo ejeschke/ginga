@@ -89,6 +89,30 @@ class Callbacks:
             raise CallbackError("No callback category of '%s'" % (
                 name))
 
+    def replace_callback(self, name, fn, *args, **kwargs):
+        """Make `fn` the only callback registered for `name`.
+
+        The counterpart to add_callback, for a caller that is setting the
+        handler rather than joining a list of them -- a dialog that is kept
+        and reused, say, given a new handler each time it is shown.
+
+        add_callback will not register the same callback twice, but it
+        decides that by comparing the callable, and only some compare equal
+        across calls: a bound method does, while a lambda, a nested def and
+        a functools.partial are a new object each time.  So a caller that
+        passes one of those repeatedly -- which is what closing over a
+        local requires -- adds a handler on every call, and the object
+        fires all of them.
+
+        A block or a deferred call in progress is left alone: it belongs to
+        whoever set it up, not to whoever is replacing the handler.
+        """
+        if not self.has_callback(name):
+            self.enable_callback(name)
+        else:
+            self.cb[name][:] = []
+        return self.add_callback(name, fn, *args, **kwargs)
+
     def merge_callbacks_to(self, other):
         for name, cb_tups in self.cb.items():
             for tup in cb_tups:

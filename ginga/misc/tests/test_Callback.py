@@ -225,6 +225,94 @@ class TestCallbacks:
         with pytest.raises(Callback.CallbackError):
             test_callbacks.add_callback("test_name", test_callback_function)
 
+    def test_replace_callback(self):
+        test_callbacks = Callback.Callbacks()
+        test_callbacks.enable_callback("test_name")
+        fired = []
+
+        def first(obj, *args, **kwargs):
+            fired.append('first')
+
+        def second(obj, *args, **kwargs):
+            fired.append('second')
+
+        test_callbacks.replace_callback("test_name", first)
+        test_callbacks.replace_callback("test_name", second)
+
+        assert len(test_callbacks.cb["test_name"]) == 1
+        test_callbacks.make_callback("test_name")
+        assert fired == ['second']
+
+    def test_replace_callback_enables_an_unknown_name(self):
+        test_callbacks = Callback.Callbacks()
+
+        def a_callback(obj, *args, **kwargs):
+            pass
+
+        test_callbacks.replace_callback("test_name", a_callback)
+
+        assert "test_name" in test_callbacks.cb
+        assert test_callbacks.cb["test_name"] == [(a_callback, (), {})]
+
+    def test_replace_callback_takes_arguments(self):
+        test_callbacks = Callback.Callbacks()
+        test_callbacks.enable_callback("test_name")
+        seen = []
+
+        def a_callback(obj, *args, **kwargs):
+            seen.append((args, kwargs))
+
+        test_callbacks.replace_callback("test_name", a_callback, 'x', k=1)
+        test_callbacks.make_callback("test_name")
+
+        assert seen == [(('x',), {'k': 1})]
+
+    def test_replace_callback_replaces_a_fresh_callable(self):
+        """The case it is for.  add_callback will not register the same
+        callback twice, but it compares the callable, and a lambda is a new
+        object on every call -- so adding one repeatedly accumulates them.
+        """
+        test_callbacks = Callback.Callbacks()
+        test_callbacks.enable_callback("test_name")
+        fired = []
+
+        for n in range(3):
+            test_callbacks.add_callback(
+                "test_name", lambda obj, n=n: fired.append(n))
+        test_callbacks.make_callback("test_name")
+        assert fired == [0, 1, 2], "add_callback accumulates them"
+
+        fired[:] = []
+        for n in range(3):
+            test_callbacks.replace_callback(
+                "test_name", lambda obj, n=n: fired.append(n))
+        test_callbacks.make_callback("test_name")
+        assert fired == [2], "replace_callback keeps only the last"
+
+    def test_replace_callback_leaves_a_block_alone(self):
+        """A block belongs to whoever set it up.  clear_callback resets the
+        block state along with the handlers, which would unblock a callback
+        someone else is suppressing and leave their count negative on the
+        way out.
+        """
+        test_callbacks = Callback.Callbacks()
+        test_callbacks.enable_callback("test_name")
+        fired = []
+
+        def a_callback(obj, *args, **kwargs):
+            fired.append(1)
+
+        test_callbacks.block_callback("test_name")
+        test_callbacks.replace_callback("test_name", a_callback)
+
+        assert test_callbacks._cb_block["test_name"]['count'] == 1
+        test_callbacks.make_callback("test_name")
+        assert fired == [], "still blocked"
+
+        test_callbacks.unblock_callback("test_name")
+        test_callbacks.make_callback("test_name")
+        assert fired == [1]
+
     def test_set_callback(self):
         test_callbacks = Callback.Callbacks()
 
