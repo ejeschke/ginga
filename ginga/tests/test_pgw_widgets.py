@@ -43,6 +43,51 @@ def _calls(msgs, method):
             if isinstance(m, dict) and m.get('method') == method]
 
 
+# ----- TreeView selection ------------------------------------------
+
+def test_treeview_select_path_defaults_to_selecting(app, sent):
+    """``select_path(path)`` must select, as it does on qt/gtk.
+
+    The pgwidgets proxy forwards only the arguments it is given, so
+    without the wrapper's ``state=True`` the browser sees an undefined
+    ``state`` and the call quietly does nothing -- the row never
+    highlights and ``get_selected()`` comes back empty.
+    """
+    tree = Widgets.TreeView()
+    del sent[:]
+    tree.select_path(['Messier', 'M31'])
+    assert _calls(sent, 'select_path')[-1] == [['Messier', 'M31'], True]
+
+    del sent[:]
+    tree.select_path(['Messier', 'M31'], False)
+    assert _calls(sent, 'select_path')[-1] == [['Messier', 'M31'], False]
+
+
+def test_treeview_select_paths_and_all_default_to_selecting(app, sent):
+    tree = Widgets.TreeView()
+    del sent[:]
+    tree.select_paths([['Messier', 'M31'], ['NGC', 'N1275']])
+    assert _calls(sent, 'select_paths')[-1] == [
+        [['Messier', 'M31'], ['NGC', 'N1275']], True]
+
+    del sent[:]
+    # select_all() with no argument selects; it must not clear
+    tree.select_all()
+    assert _calls(sent, 'select_all')[-1] == [True]
+
+
+def test_treeview_select_cell_defaults_to_selecting(app, sent):
+    tree = Widgets.TreeView()
+    del sent[:]
+    tree.select_cell(['Messier', 'M31'], 'name')
+    assert _calls(sent, 'select_cell')[-1] == [['Messier', 'M31'],
+                                               'name', True]
+
+    del sent[:]
+    tree.select_cells([(['Messier', 'M31'], 'name')])
+    assert _calls(sent, 'select_cells')[-1][1] is True
+
+
 # ----- TreeView cell-level callbacks -------------------------------
 
 def test_treeview_enables_cell_callbacks(app):

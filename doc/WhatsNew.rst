@@ -4,6 +4,17 @@ What's New
 
 Since v7.4.0 (unreleased)
 =========================
+- **Selecting a row from code now works on the pg backend.**
+  ``TreeView.select_path(path)``, ``select_paths()``, ``select_all()``,
+  ``select_cell()`` and ``select_cells()`` take ``state=True`` by default,
+  as the qt and gtk trees do.  The pg TreeView did not spell those
+  signatures out, so the calls fell through to the pgwidgets proxy, which
+  forwards only the arguments it was given; the browser then saw an
+  undefined ``state`` and the call quietly did nothing -- the row never
+  highlighted and ``get_selected()`` came back empty -- while
+  ``select_all()`` cleared the selection instead of filling it.  Callers
+  that pass ``state`` explicitly, and the pg ``TableView`` (which has
+  always declared the defaults), were unaffected.
 - **The background/border box drawn around canvas text no longer clips
   descenders.**  ``Text`` built its box as if ``(x, y)`` were the bottom
   of the string, but every backend anchors text on its *baseline*, so the

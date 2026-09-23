@@ -1136,6 +1136,29 @@ class TreeView(WidgetMixin, PGW.TreeView):
     def get_selected_paths(self):
         return super().get_selected()
 
+    # NOTE: these five only restate the portable signature -- `state`
+    # defaults to True, as it does in the qtw TreeView, so that
+    # `select_path(path)` selects.  Without them the call falls through to
+    # the pgwidgets proxy, which forwards just the arguments it was given;
+    # the browser side then sees an undefined `state` and the call does
+    # nothing at all.  (The TableView wrapper below has always spelled
+    # them out for the same reason.)
+
+    def select_path(self, path, state=True):
+        super().select_path(path, state)
+
+    def select_paths(self, paths, state=True):
+        super().select_paths(paths, state)
+
+    def select_all(self, state=True):
+        super().select_all(state)
+
+    def select_cell(self, path, col_key, state=True):
+        super().select_cell(path, col_key, state)
+
+    def select_cells(self, cells, state=True):
+        super().select_cells(cells, state)
+
 
 class TableView(WidgetMixin, PGW.TableView):
     """Flat tabular view, API-compatible with the qtw TableView.
