@@ -10,7 +10,7 @@ from io import BytesIO
 import matplotlib
 
 from ginga import ImageView
-from ginga import Mixins, Bindings
+from ginga import Mixins, Bindings, events
 from ginga.cursors import cursor_info
 
 # NOTE: this import is necessary to register the 'ginga' projection
@@ -121,11 +121,14 @@ class ImageViewMpl(ImageView.ImageViewBase):
         if hasattr(canvas, 'viewer'):
             canvas.set_viewer(self)
         else:
-            canvas.mpl_connect("resize_event", self._resize_cb)
+            canvas.mpl_connect("resize_event", self.resize_event)
 
-        # Because we don't know if resize callback works with all backends
+        # # Because we don't know if resize callback works with all backends
         left, bottom, wd, ht = self.ax_img.bbox.bounds
-        self.configure_window(wd, ht)
+        g_event = events.MapEvent(state='mapped', width=wd, height=ht,
+                                  viewer=self)
+        return self.make_callback('map', g_event)
+        # self.configure_window(wd, ht)
 
     def get_figure(self):
         return self.figure
@@ -253,14 +256,16 @@ class ImageViewMpl(ImageView.ImageViewBase):
     def configure_window(self, width, height):
         self.configure(width, height)
 
-    def _resize_cb(self, event):
+    def resize_event(self, event):
         # NOTE: this no longer works, need to calculate canvas size
         # from the figure
         #wd, ht = event.width, event.height
         wd = int(self.figure.get_figwidth() * self.figure.dpi)
         ht = int(self.figure.get_figheight() * self.figure.dpi)
         self.logger.debug("canvas resized %dx%d" % (wd, ht))
-        self.configure_window(wd, ht)
+
+        g_event = events.ResizeEvent(width=wd, height=ht, viewer=self)
+        self.make_callback('resize', g_event)
 
     def add_axes(self):
         ax = self.figure.add_axes(self.ax_img.get_position(),
@@ -362,6 +367,8 @@ class MplEventMixin:
             'pagedown': 'page_down',
         }
 
+        self._modifiers = frozenset([])
+
         # Define cursors
         from matplotlib.backend_tools import Cursors
         cursor_names = cursor_info.get_cursor_names()
@@ -378,9 +385,7 @@ class MplEventMixin:
             self.enable_callback(name)
 
     def set_figure(self, figure):
-        super().set_figure(figure)
-
-        canvas = self.figure.canvas
+        canvas = figure.canvas
         if canvas is None:
             raise ValueError("matplotlib canvas is not yet created")
         connect = canvas.mpl_connect
@@ -401,6 +406,8 @@ class MplEventMixin:
 
         # TODO: drag-drop event
 
+        super().set_figure(figure)
+
     def transkey(self, keyname):
         self.logger.debug("matplotlib keyname='%s'" % (keyname))
         if keyname is None:
@@ -419,35 +426,55 @@ class MplEventMixin:
     def get_key_table(self):
         return self._keytbl
 
-    def focus_event(self, event, hasFocus):
-        return self.make_callback('focus', hasFocus)
+    def focus_event(self, event, has_focus):
+        g_event = events.FocusEvent(state='focus', mode=None,
+                                    focus=has_focus, viewer=self)
+        return self.make_callback('focus', g_event)
 
     def enter_notify_event(self, event):
         enter_focus = self.t_.get('enter_focus', False)
         if enter_focus:
             self.focus_event(event, True)
-        return self.make_callback('enter')
+        g_event = events.EnterLeaveEvent(state='enter', mode=None,
+                                         data_x=self.last_data_x,
+                                         data_y=self.last_data_y,
+                                         viewer=self)
+        return self.make_callback('enter', g_event)
 
     def leave_notify_event(self, event):
         self.logger.debug("leaving widget...")
         enter_focus = self.t_.get('enter_focus', False)
         if enter_focus:
             self.focus_event(event, False)
-        return self.make_callback('leave')
+        g_event = events.EnterLeaveEvent(state='leave', mode=None,
+                                         data_x=self.last_data_x,
+                                         data_y=self.last_data_y,
+                                         viewer=self)
+        return self.make_callback('leave', g_event)
 
     def key_press_event(self, event):
         keyname = event.key
         keyname = self.transkey(keyname)
         if keyname is not None:
             self.logger.debug("key press event, key=%s" % (keyname))
-            return self.make_ui_callback_viewer(self, 'key-press', keyname)
+            g_event = events.KeyEvent(key=keyname, state='down', mode=None,
+                                      modifiers=self._modifiers,
+                                      data_x=self.last_data_x,
+                                      data_y=self.last_data_y,
+                                      viewer=self)
+            return self.make_ui_callback_viewer(self, 'key-press', g_event)
 
     def key_release_event(self, event):
         keyname = event.key
         keyname = self.transkey(keyname)
         if keyname is not None:
             self.logger.debug("key release event, key=%s" % (keyname))
-            return self.make_ui_callback_viewer(self, 'key-release', keyname)
+            g_event = events.KeyEvent(key=keyname, state='up', mode=None,
+                                      modifiers=self._modifiers,
+                                      data_x=self.last_data_x,
+                                      data_y=self.last_data_y,
+                                      viewer=self)
+            return self.make_ui_callback_viewer(self, 'key-release', g_event)
 
     def button_press_event(self, event):
         x, y = event.x, event.y
@@ -460,8 +487,11 @@ class MplEventMixin:
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback_viewer(self, 'button-press', button,
-                                            data_x, data_y)
+        g_event = events.PointEvent(button=button, state='down', mode=None,
+                                    modifiers=self._modifiers,
+                                    data_x=data_x, data_y=data_y,
+                                    viewer=self)
+        return self.make_ui_callback_viewer(self, 'button-press', g_event)
 
     def button_release_event(self, event):
         x, y = event.x, event.y
@@ -474,8 +504,11 @@ class MplEventMixin:
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback_viewer(self, 'button-release', button,
-                                            data_x, data_y)
+        g_event = events.PointEvent(button=button, state='up', mode=None,
+                                    modifiers=self._modifiers,
+                                    data_x=data_x, data_y=data_y,
+                                    viewer=self)
+        return self.make_ui_callback_viewer(self, 'button-release', g_event)
 
     def motion_notify_event(self, event):
         button = 0
@@ -489,8 +522,11 @@ class MplEventMixin:
         data_x, data_y = self.check_cursor_location()
         self.logger.debug("motion event at DATA %dx%d" % (data_x, data_y))
 
-        return self.make_ui_callback_viewer(self, 'motion', button,
-                                            data_x, data_y)
+        g_event = events.PointEvent(button=button, state='move', mode=None,
+                                    modifiers=self._modifiers,
+                                    data_x=data_x, data_y=data_y,
+                                    viewer=self)
+        return self.make_ui_callback_viewer(self, 'motion', g_event)
 
     def scroll_event(self, event):
         x, y = event.x, event.y
@@ -511,8 +547,12 @@ class MplEventMixin:
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback_viewer(self, 'scroll', direction, amount,
-                                            data_x, data_y)
+        g_event = events.ScrollEvent(button=0, state='scroll', mode=None,
+                                     modifiers=self._modifiers,
+                                     direction=direction, amount=amount,
+                                     data_x=data_x, data_y=data_y,
+                                     viewer=self)
+        return self.make_ui_callback_viewer(self, 'scroll', g_event)
 
 
 class ImageViewEvent(Mixins.UIMixin, MplEventMixin, ImageViewMpl):

@@ -187,13 +187,22 @@ class ImageViewPg(ImageView.ImageViewBase):
         self.onscreen_message(None)
 
     def configure_window(self, width, height):
+        # Not quite ready for prime-time--browser seems to mess with the
+        # aspect ratio
+        self.logger.info("canvas resized to %dx%d" % (width, height))
         self.configure(width, height)
+        g_event = events.ResizeEvent(width=width, height=height, viewer=self)
+        self.make_callback('resize', g_event)
 
     def canvas_map_cb(self, canvas_w, event):
-        wd, ht = event['width'], event['height']
-        self.logger.debug(f"window mapped to {wd}x{ht}")
-        self.configure_window(wd, ht)
-        return self.make_callback('map')
+        self.logger.debug("window mapped to %dx%d" % (
+            event.width, event.height))
+        g_event = events.MapEvent(state='mapped',
+                                  width=event.width, height=event.height,
+                                  viewer=self)
+        self.make_callback('map', g_event)
+
+        self.configure_window(event.width, event.height)
 
     def canvas_resize_cb(self, canvas_w, event):
         with self._timer_resize_lock:
@@ -274,12 +283,7 @@ class PgEventMixin:
             "NumpadMultiply": 'numpad_*',
         }
 
-        # define cursor names to web names now--they will be reset
-        # in set_widget()
-        cursor_names = cursor_info.get_cursor_names()
-        for curname in cursor_names:
-            curinfo = cursor_info.get_cursor_info(curname)
-            self.define_cursor(curinfo.name, curinfo.web)
+        self._modifiers = frozenset([])
 
         for name in ['motion', 'button-press', 'button-release',
                      'key-press', 'key-release', 'drag-drop',
@@ -325,6 +329,12 @@ class PgEventMixin:
 
         canvas_w.set_cursor('pick')
 
+        # see event binding setup in Viewers.py
+        wd, ht = canvas_w.get_size()
+        g_event = events.MapEvent(state='mapped', width=wd, height=ht,
+                                  viewer=self)
+        return self.make_callback('map', g_event)
+
     def build_cursor(self, canvas_w, curinfo):
         size_px = 16
         wd = int(curinfo.scale_width * size_px)
@@ -363,18 +373,28 @@ class PgEventMixin:
 
     def focus_event(self, event, has_focus):
         self.logger.debug("focus event: focus=%s" % (has_focus))
-        return self.make_callback('focus', has_focus)
+        g_event = events.FocusEvent(state='focus', mode=None,
+                                    focus=has_focus, viewer=self)
+        return self.make_callback('focus', g_event)
 
     def enter_notify_event(self, event):
         self.logger.debug("entering widget...")
-        enter_focus = self.t_.get('enter_focus', False)
-        if enter_focus:
-            self.pgcanvas.set_focus()
-        return self.make_callback('enter')
+        ## enter_focus = self.t_.get('enter_focus', False)
+        ## if enter_focus:
+        ##     self.pgcanvas.set_focus()
+        g_event = events.EnterLeaveEvent(state='enter', mode=None,
+                                         data_x=self.last_data_x,
+                                         data_y=self.last_data_y,
+                                         viewer=self)
+        return self.make_callback('enter', g_event)
 
     def leave_notify_event(self, event):
         self.logger.debug("leaving widget...")
-        return self.make_callback('leave')
+        g_event = events.EnterLeaveEvent(state='leave', mode=None,
+                                         data_x=self.last_data_x,
+                                         data_y=self.last_data_y,
+                                         viewer=self)
+        return self.make_callback('leave', g_event)
 
     def key_press_event(self, event):
         # For key_press_events, javascript reports the actual printable
@@ -385,7 +405,12 @@ class PgEventMixin:
         if keyname in self._keytbl3:
             keyname = self._keytbl3[keyname]
         self.logger.debug("making key-press cb, key=%s" % (keyname))
-        return self.make_ui_callback_viewer(self, 'key-press', keyname)
+        g_event = events.KeyEvent(key=keyname, state='down', mode=None,
+                                  modifiers=self._modifiers,
+                                  data_x=self.last_data_x,
+                                  data_y=self.last_data_y,
+                                  viewer=self)
+        return self.make_ui_callback_viewer(self, 'key-press', g_event)
 
     def key_down_event(self, event):
         # For key down events, javascript only validly reports a key code.
@@ -396,8 +421,17 @@ class PgEventMixin:
         keyname = self.transkey(event['key'], keycode)
         self.logger.debug("keyname=%s" % (keyname))
 
-        self.logger.debug("making key-press cb, key=%s" % (keyname))
-        return self.make_ui_callback_viewer(self, 'key-press', keyname)
+        if keyname in self._browser_problem_keys:
+            # JS doesn't report key press callbacks for certain keys
+            # so we synthesize one here for those
+            self.logger.debug("making key-press cb, key=%s" % (keyname))
+            g_event = events.KeyEvent(key=keyname, state='down', mode=None,
+                                      modifiers=self._modifiers,
+                                      data_x=self.last_data_x,
+                                      data_y=self.last_data_y,
+                                      viewer=self)
+            return self.make_ui_callback_viewer(self, 'key-press', g_event)
+        return False
 
     def key_up_event(self, event):
         keycode = event['keycode']
@@ -405,7 +439,12 @@ class PgEventMixin:
         keyname = self.transkey(event['key'], keycode)
 
         self.logger.debug("making key-release cb, key=%s" % (keyname))
-        return self.make_ui_callback_viewer(self, 'key-release', keyname)
+        g_event = events.KeyEvent(key=keyname, state='up', mode=None,
+                                  modifiers=self._modifiers,
+                                  data_x=self.last_data_x,
+                                  data_y=self.last_data_y,
+                                  viewer=self)
+        return self.make_ui_callback_viewer(self, 'key-release', g_event)
 
     def button_press_event(self, event):
         x, y = event['x'], event['y']
@@ -416,8 +455,11 @@ class PgEventMixin:
         self.logger.debug("button event at %dx%d, button=%x" % (x, y, button))
 
         data_x, data_y = self.check_cursor_location()
-        return self.make_ui_callback_viewer(self, 'button-press', button,
-                                            data_x, data_y)
+        g_event = events.PointEvent(button=button, state='down', mode=None,
+                                    modifiers=self._modifiers,
+                                    data_x=data_x, data_y=data_y,
+                                    viewer=self)
+        return self.make_ui_callback_viewer(self, 'button-press', g_event)
 
     def button_release_event(self, event):
         x, y = event['x'], event['y']
@@ -428,8 +470,11 @@ class PgEventMixin:
         self.logger.debug("button release at %dx%d button=%x" % (x, y, button))
 
         data_x, data_y = self.check_cursor_location()
-        return self.make_ui_callback_viewer(self, 'button-release', button,
-                                            data_x, data_y)
+        g_event = events.PointEvent(button=button, state='up', mode=None,
+                                    modifiers=self._modifiers,
+                                    data_x=data_x, data_y=data_y,
+                                    viewer=self)
+        return self.make_ui_callback_viewer(self, 'button-release', g_event)
 
     def motion_notify_event(self, event):
         #button = 0
@@ -441,8 +486,11 @@ class PgEventMixin:
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback_viewer(self, 'motion', button,
-                                            data_x, data_y)
+        g_event = events.PointEvent(button=button, state='move', mode=None,
+                                    modifiers=self._modifiers,
+                                    data_x=data_x, data_y=data_y,
+                                    viewer=self)
+        return self.make_ui_callback_viewer(self, 'motion', g_event)
 
     def scroll_event(self, event):
         x, y = event['x'], event['y']
@@ -450,12 +498,29 @@ class PgEventMixin:
         dx, dy = event['delta_x'], event['delta_y']
         self.last_win_x, self.last_win_y = x, y
 
-        # if (dx != 0 or dy != 0):
-        #     # <= This browser gives us deltas for x and y
-        #     # Synthesize this as a pan gesture event
-        #     self.make_ui_callback_viewer(self, 'pan', 'start', 0, 0)
-        #     self.make_ui_callback_viewer(self, 'pan', 'move', dx, dy)
-        #     return self.make_ui_callback_viewer(self, 'pan', 'stop', 0, 0)
+        data_x, data_y = self.last_data_x, self.last_data_y
+
+        if (dx != 0 or dy != 0):
+            # <= This browser gives us deltas for x and y
+            # Synthesize this as a pan gesture event
+            g_event = events.PanEvent(button=0, state='start', mode=None,
+                                      modifiers=self._modifiers,
+                                      delta_x=0, delta_y=0,
+                                      data_x=data_x, data_y=data_y,
+                                      viewer=self)
+            self.make_ui_callback_viewer(self, 'pan', g_event)
+            g_event = events.PanEvent(button=0, state='move', mode=None,
+                                      modifiers=self._modifiers,
+                                      delta_x=dx, delta_y=dy,
+                                      data_x=data_x, data_y=data_y,
+                                      viewer=self)
+            self.make_ui_callback_viewer(self, 'pan', g_event)
+            g_event = events.PanEvent(button=0, state='stop', mode=None,
+                                      modifiers=self._modifiers,
+                                      delta_x=0, delta_y=0,
+                                      data_x=data_x, data_y=data_y,
+                                      viewer=self)
+            return self.make_ui_callback_viewer(self, 'pan', g_event)
 
         # 15 deg is standard 1-click turn for a wheel mouse
         # delta usually returns +/- 1.0
@@ -474,8 +539,12 @@ class PgEventMixin:
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback_viewer(self, 'scroll', direction,
-                                            num_degrees, data_x, data_y)
+        g_event = events.ScrollEvent(button=0, state='scroll', mode=None,
+                                     modifiers=self._modifiers,
+                                     direction=direction, amount=num_degrees,
+                                     data_x=data_x, data_y=data_y,
+                                     viewer=self)
+        return self.make_ui_callback_viewer(self, 'scroll', g_event)
 
     def drop_progress_event(self, event):
         pass
