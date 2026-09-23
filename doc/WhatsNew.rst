@@ -2,8 +2,8 @@
 What's New
 ++++++++++
 
-Since v7.4.0 (unreleased)
-=========================
+Ver 7.5.0 (2026.09.22)
+======================
 - **Selecting a row from code now works on the pg backend.**
   ``TreeView.select_path(path)``, ``select_paths()``, ``select_all()``,
   ``select_cell()`` and ``select_cells()`` take ``state=True`` by default,
