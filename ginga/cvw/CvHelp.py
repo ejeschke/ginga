@@ -93,10 +93,15 @@ class CvContext:
         self.canvas = canvas
 
     def text_extents(self, text, font):
+        wd_px, ascent, descent = self.text_metrics(text, font)
+        return wd_px, ascent + descent
+
+    def text_metrics(self, text, font):
         _font, _scale = font.render.font, font.render.scale
-        retval, baseline = _font.getTextSize(text, _scale, -1)
-        wd_px, ht_px = retval
-        return wd_px, ht_px
+        # getTextSize() measures only the part above the baseline; the
+        # second return value is the descent below it
+        (wd_px, ht_px), baseline = _font.getTextSize(text, _scale, -1)
+        return wd_px, ht_px, baseline
 
     def image(self, pt, rgb_arr):
         # TODO: is there a faster way to copy this array in?

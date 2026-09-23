@@ -175,14 +175,29 @@ class TextP(OnePointMixin, CanvasObjectBase):
         return (min(x1, x2) <= x and x <= max(x1, x2) and
                 min(y1, y2) <= y and y <= max(y1, y2))
 
+    def _get_text_metrics(self, viewer):
+        """Return (width, ascent, descent) of our text, in pixels.
+
+        The text is anchored at its baseline, so it occupies `ascent` pixels
+        above the anchor and `descent` pixels below it (see the note on the
+        anchor convention in `ginga.canvas.render`).
+        """
+        cr = viewer.renderer.setup_cr(self)
+        cr.set_font_from_shape(self)
+        return cr.text_metrics(self.text)
+
     def _get_unrotated_text_llur(self, viewer):
         # convert coordinate to data point and then pixel pt
         x1, y1 = self.get_data_points()[0]
         cx1, cy1 = viewer.tform['data_to_native'].to_((x1, y1))
-        # width and height of text define bbox
-        wd_px, ht_px = viewer.renderer.get_dimensions(self)
-        cx2, cy2 = cx1 + wd_px, cy1 - ht_px
+        # width and height of text define bbox.  The anchor is on the
+        # baseline, so the box reaches `descent` px past it on the near side
+        # and `ascent` px on the far side.
+        wd_px, ascent, descent = self._get_text_metrics(viewer)
+        cx1, cy1 = cx1, cy1 + descent
+        cx2, cy2 = cx1 + wd_px, cy1 - (ascent + descent)
         # convert back to data points and construct bbox
+        x1, y1 = viewer.tform['data_to_native'].from_((cx1, cy1))
         x2, y2 = viewer.tform['data_to_native'].from_((cx2, cy2))
         x1, y1, x2, y2 = self.swapxy(x1, y1, x2, y2)
         return (x1, y1, x2, y2)
@@ -202,7 +217,14 @@ class TextP(OnePointMixin, CanvasObjectBase):
 
         # draw background/border
         if self.borderalpha + self.bgalpha > 0.0:
-            cwd, cht = cr.text_extents(self.text)
+            # NOTE: the text is anchored on its *baseline*, so the box has
+            # to be built from baseline-relative metrics.  Using the bare
+            # text height (as if the anchor were the bottom of the text)
+            # clips the descenders -- "g", "p", "y" -- and leaves a matching
+            # gap at the top.  The ink bbox hugs the glyphs actually in this
+            # string, which is what `borderpadding` promises: exactly that
+            # many pixels between the text and the border on every side.
+            x0, y0, x1, y1 = cr.text_ink_bbox(self.text)
             pad = self.borderpadding
             # The background/border is a fixed pixel-size box around the text.
             # Build it in *window* coordinates around the text's window anchor
@@ -212,9 +234,10 @@ class TextP(OnePointMixin, CanvasObjectBase):
             # zoom under a 3D camera, since native is then the scene space.
             wx, wy = viewer.tform['data_to_window'].to_(
                 np.asarray([(x, y)], dtype=float))[0][:2]
-            bbox = np.array([(wx - pad, wy + pad), (wx + cwd + pad, wy + pad),
-                             (wx + cwd + pad, wy - cht - pad),
-                             (wx - pad, wy - cht - pad)])
+            lft, rgt = wx + x0 - pad, wx + x1 + pad
+            top, bot = wy + y0 - pad, wy + y1 + pad
+            bbox = np.array([(lft, bot), (rgt, bot),
+                             (rgt, top), (lft, top)])
             x_arr, y_arr = bbox.T
             xa, ya = trcalc.rotate_pt(x_arr, y_arr, -self.rot_deg,
                                       xoff=wx, yoff=wy)

@@ -20,6 +20,24 @@ class RenderContext(render.RenderContextBase):
             font = self.font
         return self.renderer.text_extents(text, font)
 
+    def text_metrics(self, text, font=None):
+        if font is None:
+            font = self.font
+        # renderers that have not been ported fall back to the base class,
+        # which derives what it can from text_extents()
+        meth = getattr(self.renderer, 'text_metrics', None)
+        if meth is None:
+            return super().text_metrics(text, font=font)
+        return meth(text, font)
+
+    def text_ink_bbox(self, text, font=None):
+        if font is None:
+            font = self.font
+        meth = getattr(self.renderer, 'text_ink_bbox', None)
+        if meth is None:
+            return super().text_ink_bbox(text, font=font)
+        return meth(text, font)
+
     ##### DRAWING OPERATIONS #####
 
     def draw_image(self, image_id, cpoints, rgb_arr, whence, order='RGB'):

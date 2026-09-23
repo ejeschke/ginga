@@ -88,15 +88,41 @@ def load_font(font_tup, font_size):
     return ImageFont.truetype(info.font_path, font_size)
 
 
-def text_size(text, font):
+def text_metrics(text, font):
+    """Return (width, ascent, descent) of `text` in `font`, in pixels.
+
+    The ascent/descent are the *font's*, not this particular string's ink
+    extent, so that every string drawn in a given font shares one baseline
+    and one box height.
+    """
     f = get_font(font.fontname, font.fontsize)
-    if hasattr(f, 'getbbox'):
-        # PIL v10.0
+    ascent, descent = f.getmetrics()
+    if hasattr(f, 'getlength'):
+        wd_px = int(round(f.getlength(text)))
+    elif hasattr(f, 'getbbox'):
         l, t, r, b = f.getbbox(text)
-        wd_px, ht_px = int(abs(round(r - l))), int(abs(round(b - t)))
+        wd_px = int(abs(round(r - l)))
     else:
-        wd_px, ht_px = f.getsize(text)
-    return wd_px, ht_px
+        wd_px = f.getsize(text)[0]
+    return wd_px, int(ascent), int(descent)
+
+
+def text_ink_bbox(text, font):
+    """Return the ink bbox of `text` as offsets from its baseline anchor."""
+    f = get_font(font.fontname, font.fontsize)
+    ascent, descent = f.getmetrics()
+    if hasattr(f, 'getbbox'):
+        # getbbox() is relative to the "la" (ascender) origin; shift onto
+        # the baseline
+        l, t, r, b = f.getbbox(text)
+        return int(l), int(t - ascent), int(r), int(b - ascent)
+    wd, ht = f.getsize(text)
+    return 0, -ascent, int(wd), int(descent)
+
+
+def text_size(text, font):
+    wd_px, ascent, descent = text_metrics(text, font)
+    return wd_px, ascent + descent
 
 
 def rasterize_text(text, pil_font, color=(1.0, 1.0, 1.0, 1.0)):
@@ -104,8 +130,17 @@ def rasterize_text(text, pil_font, color=(1.0, 1.0, 1.0, 1.0)):
     tile with the glyphs drawn in ``color`` (an RGB or RGBA tuple in 0..1).
 
     ``pil_font`` is a loaded Pillow truetype font (e.g. from :func:`get_font`).
-    Returns ``(arr, width, height)``.  Used by the GPU renderers to blit text
-    as a textured quad.
+    Returns ``(arr, width, height, dx, dy)``, where ``(dx, dy)`` is the offset
+    of the tile's top-left corner from the text's *baseline* anchor, y
+    increasing downward (so ``dy`` is normally negative).  Used by the GPU
+    renderers to blit text as a textured quad: placing the tile at
+    ``(cx + dx, cy + dy)`` puts the glyphs where the CPU renderers draw them
+    for the same ``(cx, cy)``.
+
+    NOTE: the tile is cropped to the string's ink, so its height varies with
+    which glyphs the string contains.  Anchoring the tile by an edge rather
+    than by ``(dx, dy)`` therefore slides the baseline around from string to
+    string.
     """
     dummy = ImageDraw.Draw(Image.new('RGBA', (4, 4)))
     try:
@@ -121,7 +156,11 @@ def rasterize_text(text, pil_font, color=(1.0, 1.0, 1.0, 1.0)):
     ImageDraw.Draw(img).text((pad - l, pad - t), text, font=pil_font,
                              fill=(rr, gg, bb, aa))
     arr = np.ascontiguousarray(np.asarray(img, dtype=np.uint8))
-    return arr, arr.shape[1], arr.shape[0]
+    # textbbox() is measured from the "la" (ascender) origin; shift onto the
+    # baseline, then out by the tile's transparent margin
+    ascent = pil_font.getmetrics()[0]
+    dx, dy = l - pad, t - ascent - pad
+    return arr, arr.shape[1], arr.shape[0], dx, dy
 
 
 def text_to_array(text, font, rot_deg=0.0):
@@ -172,6 +211,9 @@ class PilContext:
     def text_extents(self, text, font):
         return text_size(text, font)
 
+    def text_metrics(self, text, font):
+        return text_metrics(text, font)
+
     def image(self, pt, rgb_arr):
         p_image = Image.fromarray(rgb_arr)
 
@@ -189,9 +231,10 @@ class PilContext:
             kwargs['stroke_fill'] = line.render.color
         self.ctx.text((x, y), text, **kwargs)
 
-    def text_rotated(self, pt, wd, ht, text, font, line, fill, rot_deg):
+    def text_rotated(self, pt, wd, ascent, descent, text, font, line, fill,
+                     rot_deg):
         """Draw ``text`` rotated by ``rot_deg`` degrees about the anchor
-        ``pt`` (the bottom-left of the unrotated text box).
+        ``pt`` (the left end of the unrotated text's baseline).
 
         PIL's ``ImageDraw.text`` cannot rotate, so we render the string onto
         a transparent square scratch tile with the anchor at the tile's
@@ -215,13 +258,15 @@ class PilContext:
         # hypot(wd, ht) away from it (its far corner), so the tile radius
         # must be that far corner distance, plus a margin for the stroke.
         pad = int(line.linewidth) + 2 if line is not None else 2
+        ht = ascent + descent
         radius = int(math.ceil(math.hypot(wd, ht))) + pad
         side = 2 * radius
         ctr = radius
 
         tile = Image.new('RGBA', (side, side), (0, 0, 0, 0))
-        # place the text box so its bottom-left (the anchor) is at the center
-        ImageDraw.Draw(tile, 'RGBA').text((ctr, ctr - ht), text, **kwargs)
+        # place the text so the left end of its baseline (the anchor) is at
+        # the center; ImageDraw.text() positions by the ascender line
+        ImageDraw.Draw(tile, 'RGBA').text((ctr, ctr - ascent), text, **kwargs)
 
         # PIL rotates counter-clockwise for a positive angle, matching Ginga's
         # rot_deg convention (cf. the cairo/agg backends).  expand=False keeps

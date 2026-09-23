@@ -4,6 +4,40 @@ What's New
 
 Since v7.4.0 (unreleased)
 =========================
+- **The background/border box drawn around canvas text no longer clips
+  descenders.**  ``Text`` built its box as if ``(x, y)`` were the bottom
+  of the string, but every backend anchors text on its *baseline*, so the
+  box lost the descent below the baseline -- "g", "p", "y" were cut off --
+  and gained that same space above.  The box is now built from the text's
+  ink bounding box, giving exactly ``borderpadding`` pixels on all four
+  sides.  The same fix applies to the boxes behind the ``Crosshair``
+  readout, the ``ModeIndicator`` and the onscreen message, and the
+  onscreen message is now centered on its baseline rather than half a
+  text-height above where it belongs.
+- Two backends also drew text at a baseline that moved with the string's
+  content, so labels drawn at the same ``y`` did not line up: the PIL
+  renderer offset by the ink height rather than the font ascent, and the
+  Vulkan and OpenGL renderers anchored their rasterized glyph tile by its
+  bottom edge.  All backends now put the baseline where the shape asks.
+- ``RenderContext`` gains ``text_metrics()``, returning
+  ``(width, ascent, descent)`` from the font, and ``text_ink_bbox()``,
+  returning the ink box relative to the baseline; use the former when
+  several labels must share a baseline and a box height, the latter to fit
+  a box tightly around one label.  ``text_extents()`` is unchanged in
+  signature but its height is now consistently ``ascent + descent`` --
+  it had meant the ink height, the font ascent, or the height above the
+  baseline, depending on the backend.  A backend that implements neither
+  new method keeps its previous behavior.
+- Text drawn through the Vulkan renderer rotated the opposite way from its
+  own background box, so a rotated label landed outside it.
+- The matplotlib backend could not load any of Ginga's fonts --
+  ``MplHelp.load_font()`` was called with the wrong number of arguments and
+  read a non-existent attribute, and both errors were swallowed -- so text
+  silently failed to draw.  ``get_font()`` now also falls back to a font it
+  does have, matching the generic family (serif / sans-serif / monospace)
+  and the requested style and weight as closely as it can, instead of
+  raising.  Its text measurements use the font actually resolved and are
+  scaled by the figure's dpi, so the box around the text is the right size.
 - **Star selection in** ``IQCalc`` **now favors the center of the field,
   as the original SOSS** ``qualsize()`` **did.**  The ``pos`` factor
   computed by ``evaluate_peaks()`` was 16x too small, so it fell only to

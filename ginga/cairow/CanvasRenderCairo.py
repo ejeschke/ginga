@@ -52,6 +52,16 @@ class RenderContext(render.RenderContextBase):
         wd, ht = CairoHelp.text_size(text, font)
         return wd, ht
 
+    def text_metrics(self, text, font=None):
+        if font is None:
+            font = self.font
+        return CairoHelp.text_metrics(text, font)
+
+    def text_ink_bbox(self, text, font=None):
+        if font is None:
+            font = self.font
+        return CairoHelp.text_ink_bbox(text, font)
+
     ##### DRAWING OPERATIONS #####
 
     def draw_image(self, cvs_img, cpoints, rgb_arr, whence, order='RGBA'):

@@ -112,9 +112,15 @@ class AggContext:
         return get_font(font.fontname, font.fontsize)
 
     def text_extents(self, text, prop):
-        # prop is a matplotlib FontProperties
+        wd, ascent, descent = self.text_metrics(text, prop)
+        return wd, ascent + descent
+
+    def text_metrics(self, text, prop):
+        # prop is a matplotlib FontProperties.  mpl's height is measured
+        # from the top of the text down to its descent, so the part above
+        # the baseline is (ht - descent).
         wd, ht, descent = _meas_renderer.get_text_width_height_descent(
             text, prop, False)
-        return wd, ht
+        return int(round(wd)), int(round(ht - descent)), int(round(descent))
 
 # END

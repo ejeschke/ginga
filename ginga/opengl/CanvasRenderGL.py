@@ -84,6 +84,16 @@ class RenderContext(render.RenderContextBase):
             font = self.font
         return self.cr.text_extents(text, font)
 
+    def text_metrics(self, text, font=None):
+        if font is None:
+            font = self.font
+        return self.cr.text_metrics(text, font)
+
+    def text_ink_bbox(self, text, font=None):
+        if font is None:
+            font = self.font
+        return self.cr.text_ink_bbox(text, font)
+
     ##### DRAWING OPERATIONS #####
 
     def draw_image(self, cvs_img, cp, cache, whence, order='RGB'):
@@ -822,33 +832,35 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPipelineRenderer):
             self._text_cache.move_to_end(key)
             return hit
         pil_font = GlHelp.get_cached_font(key[1], key[2])
-        arr, w, h = PilHelp.rasterize_text(text, pil_font, color)
+        arr, w, h, dx, dy = PilHelp.rasterize_text(text, pil_font, color)
         tex_id = gl.glGenTextures(1)
         # upload as a native RGBA texture (no RGB map)
         self.gl_set_image(tex_id, arr, 0x0)
-        self._text_cache[key] = (tex_id, w, h)
+        self._text_cache[key] = (tex_id, w, h, dx, dy)
         # bound cache: delete the least-recently-used texture when over budget
         if len(self._text_cache) > self._text_cache_max:
-            _key, (old_tex, _w, _h) = self._text_cache.popitem(last=False)
+            _key, (old_tex, _w, _h, _dx, _dy) = self._text_cache.popitem(last=False)
             gl.glDeleteTextures([old_tex])
-        return (tex_id, w, h)
+        return (tex_id, w, h, dx, dy)
 
     def gl_draw_text(self, cx, cy, text, rot_deg, font, color, screen=False):
         if not self._drawing or not text:
             return
-        tex_id, w, h = self._get_text_texture(text, font, color)
+        tex_id, w, h, dx, dy = self._get_text_texture(text, font, color)
 
         # screen-fixed text: anchor in window pixels, drawn with the 2D ortho
         if screen:
             cx, cy = self._native_to_window([[cx, cy]])[0]
         # size the quad by 1/scale so the text stays a constant pixel size
-        # (the camera applies the zoom; ortho is 1:1 so scale = 1); anchor
-        # bottom-left at (cx, cy) with the text extending right (+x) and up
-        # (-y), matching the CPU renderers
+        # (the camera applies the zoom; ortho is 1:1 so scale = 1).  (cx, cy)
+        # anchors the left end of the text baseline, matching the CPU
+        # renderers; the tile is cropped to the ink, so it is placed by the
+        # rasterizer's baseline-relative origin rather than by an edge.
         scale = 1.0 if screen else self.viewer.get_scale()
         wc, hc = w / scale, h / scale
-        cp = np.array([(cx, cy - hc), (cx + wc, cy - hc),
-                       (cx + wc, cy), (cx, cy)], dtype=np.float32)
+        x0, y0 = cx + dx / scale, cy + dy / scale
+        cp = np.array([(x0, y0), (x0 + wc, y0),
+                       (x0 + wc, y0 + hc), (x0, y0 + hc)], dtype=np.float32)
         rot = rot_deg - self.viewer.get_rotation()
         if rot != 0.0:
             cp = trcalc.rotate_coord(cp, [rot], (cx, cy))
@@ -1186,6 +1198,14 @@ class CanvasRenderer(vec.VectorRenderMixin, render.StandardPipelineRenderer):
     def text_extents(self, text, font):
         cr = RenderContext(self, self.viewer, self.surface)
         return cr.text_extents(text, font=font)
+
+    def text_metrics(self, text, font):
+        cr = RenderContext(self, self.viewer, self.surface)
+        return cr.text_metrics(text, font=font)
+
+    def text_ink_bbox(self, text, font):
+        cr = RenderContext(self, self.viewer, self.surface)
+        return cr.text_ink_bbox(text, font=font)
 
     def calc_const_len(self, clen):
         # zoom is accomplished by viewing distance in OpenGL, so we

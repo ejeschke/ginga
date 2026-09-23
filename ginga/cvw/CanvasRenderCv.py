@@ -48,12 +48,17 @@ class RenderContext(render.RenderContextBase):
         return font
 
     def text_extents(self, text, font=None):
+        wd, ascent, descent = self.text_metrics(text, font=font)
+        return wd, ascent + descent
+
+    def text_metrics(self, text, font=None):
         if font is None:
             font = self.font
         _font, _scale = font.render.font, font.render.scale
-        retval, baseline = _font.getTextSize(text, _scale, -1)
-        wd_px, ht_px = retval
-        return wd_px, ht_px
+        # getTextSize() measures only the part above the baseline; the
+        # second return value is the descent below it
+        (wd_px, ht_px), baseline = _font.getTextSize(text, _scale, -1)
+        return wd_px, ht_px, baseline
 
     ##### DRAWING OPERATIONS #####
 

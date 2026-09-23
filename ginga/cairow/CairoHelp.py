@@ -32,13 +32,49 @@ def text_size(text, font):
     (wd, ht) : tuple of int
         Size the text would occupy in pixels.
     """
+    wd, ascent, descent = text_metrics(text, font)
+    return wd, ascent + descent
+
+
+def text_metrics(text, font):
+    """Calculate (width, ascent, descent) of text at a given font.
+
+    Parameters
+    ----------
+    text : str
+        A text string
+
+    font : `~ginga.opengl.GlHelp.Font` or compatible object
+        A Ginga font descriptor
+
+    Returns
+    -------
+    (wd, ascent, descent) : tuple of int
+        Advance width of the string, and the font's ascent above and
+        descent below the baseline, in pixels.
+    """
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, 0, 0)
     ctx = cairo.Context(surface)
     ctx.select_font_face(font.fontname, cairo.FONT_SLANT_NORMAL)
     ctx.set_font_size(font.fontsize)
-    tup = ctx.text_extents(text)
-    wd, ht = int(round(tup[2])), int(round(tup[3]))
-    return wd, ht
+    # x_advance, not the ink width, so trailing spaces count
+    wd = int(round(ctx.text_extents(text)[4]))
+    # font_extents(): (ascent, descent, height, max_x_adv, max_y_adv)
+    ascent, descent = ctx.font_extents()[:2]
+    return wd, int(round(ascent)), int(round(descent))
+
+
+def text_ink_bbox(text, font):
+    """Return the ink bbox of `text` as offsets from its baseline anchor."""
+    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, 0, 0)
+    ctx = cairo.Context(surface)
+    ctx.select_font_face(font.fontname, cairo.FONT_SLANT_NORMAL)
+    ctx.set_font_size(font.fontsize)
+    # (x_bearing, y_bearing, width, height, x_advance, y_advance); the
+    # bearings are already relative to the baseline origin
+    xb, yb, wd, ht = ctx.text_extents(text)[:4]
+    return (int(np.floor(xb)), int(np.floor(yb)),
+            int(np.ceil(xb + wd)), int(np.ceil(yb + ht)))
 
 
 def text_to_paths(text, font, cx=0, cy=0, rot_deg=0.0, flip_y=False):

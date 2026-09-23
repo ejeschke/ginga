@@ -49,16 +49,18 @@ class RenderContext(render.RenderContextBase):
         return font
 
     def text_extents(self, text, font=None):
+        wd_px, ascent, descent = self.text_metrics(text, font=font)
+        return wd_px, ascent + descent
+
+    def text_metrics(self, text, font=None):
         if font is None:
             font = self.font
-        _font = font.render.font
-        if hasattr(_font, 'getbbox'):
-            # PIL v10.0
-            l, t, r, b = _font.getbbox(text)
-            wd_px, ht_px = int(abs(round(r - l))), int(abs(round(b - t)))
-        else:
-            wd_px, ht_px = _font.getsize(text)
-        return wd_px, ht_px
+        return PilHelp.text_metrics(text, font)
+
+    def text_ink_bbox(self, text, font=None):
+        if font is None:
+            font = self.font
+        return PilHelp.text_ink_bbox(text, font)
 
     def get_affine_transform(self, cx, cy, rot_deg):
         x, y = 0, 0          # old center
@@ -82,15 +84,23 @@ class RenderContext(render.RenderContextBase):
 
     def draw_text(self, cx, cy, text, rot_deg=0.0, font=None, fill=None,
                   line=None):
-        wd, ht = self.ctx.text_extents(text, font=font)
+        # (cx, cy) is the left end of the text *baseline* (see the anchor
+        # note in ginga.canvas.render).  Pillow's ImageDraw.text() positions
+        # by the ascender line ("la", its default anchor), so step up by the
+        # font ascent.  NOTE: it must be the ascent and not the height of
+        # this particular string -- offsetting by the string's ink height
+        # (as this did formerly) slides the baseline around depending on
+        # which glyphs the string happens to contain, so two labels drawn at
+        # the same y do not line up.
+        wd, ascent, descent = self.text_metrics(text, font=font)
 
         if rot_deg == 0.0:
             # fast path: draw directly onto the surface
-            self.ctx.text((cx, cy - ht), text, font, line, fill)
+            self.ctx.text((cx, cy - ascent), text, font, line, fill)
         else:
             # rotate about the anchor (cx, cy) via a scratch tile
-            self.ctx.text_rotated((cx, cy), wd, ht, text, font, line, fill,
-                                  rot_deg)
+            self.ctx.text_rotated((cx, cy), wd, ascent, descent, text, font,
+                                  line, fill, rot_deg)
 
     def draw_polygon(self, cpoints, line=None, fill=None):
         cpoints = trcalc.strip_z(cpoints)
@@ -200,5 +210,10 @@ class CanvasRenderer(render.StandardPipelineRenderer):
         cr = RenderContext(self, self.viewer, self.surface)
         cr.set_font(font.fontname, font.fontsize)
         return cr.text_extents(text)
+
+    def text_metrics(self, text, font):
+        cr = RenderContext(self, self.viewer, self.surface)
+        cr.set_font(font.fontname, font.fontsize)
+        return cr.text_metrics(text)
 
 #END

@@ -303,6 +303,16 @@ class RenderContext(render.RenderContextBase):
             font = self.font
         return self.renderer.text_extents(text, font)
 
+    def text_metrics(self, text, font=None):
+        if font is None:
+            font = self.font
+        return self.renderer.text_metrics(text, font)
+
+    def text_ink_bbox(self, text, font=None):
+        if font is None:
+            font = self.font
+        return self.renderer.text_ink_bbox(text, font)
+
     ##### DRAWING OPERATIONS #####
 
     def draw_image(self, cvs_img, cpoints, cache, whence, order='RGB'):
@@ -823,19 +833,28 @@ class CanvasRendererGPU(vec.VectorRenderMixin, render.StandardPipelineRenderer):
         tile = self._rasterize_text(text, font, color)
         if tile is None:
             return
-        rgba, w, h = tile
+        rgba, w, h, dx, dy = tile
         # screen-fixed text in mode3d: anchor at window pixels, drawn 2D
         target = self._texts
         if self._mode3d and screen:
             cx, cy = self._native_to_window([[cx, cy]])[0]
             target = self._texts_screen
-        # place the tile so its bottom-left sits at the (cx, cy) anchor
-        x0, y0 = float(cx), float(cy) - h
+        # (cx, cy) anchors the left end of the text baseline; the tile is
+        # cropped to the ink, so offset it by the rasterizer's reported
+        # baseline-relative origin (anchoring a tile edge instead would put
+        # strings with descenders higher than strings without)
+        x0, y0 = float(cx) + dx, float(cy) + dy
         corners = np.array([[x0, y0], [x0 + w, y0],
                             [x0, y0 + h], [x0 + w, y0 + h]], dtype=np.float32)
         if abs(rot_deg) > 1e-3:
+            # native y runs downward here, so a positive (counter-clockwise)
+            # ginga rotation is a negative rotation of the tile corners --
+            # the same sign the shapes use (cf. TextP.draw, which rotates the
+            # text's background box by -rot_deg).  Rotating by +rot_deg spins
+            # the glyphs the opposite way from their own background box.
             corners = np.asarray(
-                trcalc.rotate_coord(corners, [rot_deg], (float(cx), float(cy))),
+                trcalc.rotate_coord(corners, [-rot_deg],
+                                    (float(cx), float(cy))),
                 dtype=np.float32)[:, :2]
         quad_uv = np.array([[0, 0], [1, 0], [0, 1], [1, 1]], dtype=np.float32)
         target.append((rgba, corners, quad_uv))
@@ -901,18 +920,36 @@ class CanvasRendererGPU(vec.VectorRenderMixin, render.StandardPipelineRenderer):
 
     # ---- text (stub until native text is implemented) --------------------
 
-    def text_extents(self, text, font):
-        from PIL import Image, ImageDraw
+    def _pil_font(self, font):
         from ginga.pilw import PilHelp
         fontname = getattr(font, 'fontname', 'sans')
         fontsize = max(1, int(round(getattr(font, 'fontsize', 12))))
+        return PilHelp.get_font(fontname, fontsize), fontsize
+
+    def text_extents(self, text, font):
+        wd, ascent, descent = self.text_metrics(text, font)
+        return wd, ascent + descent
+
+    def text_metrics(self, text, font):
         try:
-            pil_font = PilHelp.get_font(fontname, fontsize)
+            pil_font, _ = self._pil_font(font)
+            ascent, descent = pil_font.getmetrics()
+            return int(round(pil_font.getlength(text))), ascent, descent
+        except Exception:
+            fontsize = max(1, int(round(getattr(font, 'fontsize', 12))))
+            return int(len(text) * fontsize * 0.5), int(fontsize), 0
+
+    def text_ink_bbox(self, text, font):
+        from PIL import Image, ImageDraw
+        try:
+            pil_font, _ = self._pil_font(font)
+            ascent = pil_font.getmetrics()[0]
             d = ImageDraw.Draw(Image.new('RGBA', (4, 4)))
             l, t, r, b = d.textbbox((0, 0), text, font=pil_font)
-            return (max(1, r - l), max(1, b - t))
+            return int(l), int(t - ascent), int(r), int(b - ascent)
         except Exception:
-            return (int(len(text) * fontsize * 0.5), int(fontsize))
+            wd, ascent, descent = self.text_metrics(text, font)
+            return 0, -ascent, wd, descent
 
     def get_dimensions(self, shape):
         cr = vec.RenderContext(self, self.viewer, None)

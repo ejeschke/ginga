@@ -35,6 +35,16 @@ class RenderContext(render.RenderContextBase):
             font = self.font
         return self.ctx.text_extents(text, font)
 
+    def text_metrics(self, text, font=None):
+        if font is None:
+            font = self.font
+        return self.ctx.text_metrics(text, font)
+
+    def text_ink_bbox(self, text, font=None):
+        if font is None:
+            font = self.font
+        return self.ctx.text_ink_bbox(text, font)
+
     ##### DRAWING OPERATIONS #####
 
     def draw_image(self, cvs_img, cpoints, rgb_arr, whence, order='RGBA'):
@@ -151,6 +161,14 @@ class CanvasRenderer(render.StandardPipelineRenderer):
     def text_extents(self, text, font):
         cr = RenderContext(self, self.viewer, self.viewer.ax_util)
         return cr.text_extents(text, font=font)
+
+    def text_metrics(self, text, font):
+        cr = RenderContext(self, self.viewer, self.viewer.ax_util)
+        return cr.text_metrics(text, font=font)
+
+    def text_ink_bbox(self, text, font):
+        cr = RenderContext(self, self.viewer, self.viewer.ax_util)
+        return cr.text_ink_bbox(text, font=font)
 
 
 #END

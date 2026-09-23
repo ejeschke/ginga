@@ -198,6 +198,67 @@ class RenderContextBase:
         # TO BE EVENTUALLY DEPRECATED
         return self.renderer.scale_fontsize(fontsize)
 
+    ##### TEXT MEASUREMENT #####
+    #
+    # NOTE on the text anchor convention.  `draw_text(cx, cy, ...)` anchors
+    # the string at the left end of its *baseline*: ascenders rise above cy
+    # and descenders ("g", "p", "y", ...) hang below it.  This is what the
+    # underlying toolkits do natively (cairo's show_text(), Qt's drawText(),
+    # cv2's putText(), matplotlib's draw_text()), so backends should pass the
+    # anchor straight through rather than shifting it.
+    #
+    # `text_extents()` answers only "how big is this string", and its height
+    # is not enough to place a box around the text, because it says nothing
+    # about how that height is split around the baseline.  Use
+    # `text_metrics()` for that.
+
+    def text_extents(self, text, font=None):
+        """Return (width, height) of `text` rendered in `font`, in pixels.
+
+        Every backend overrides this.  Retained for backward compatibility;
+        prefer `text_metrics()` when the caller needs to position anything
+        relative to the text.
+        """
+        raise RenderError("subclass should override this method!")
+
+    def text_metrics(self, text, font=None):
+        """Return (width, ascent, descent) of `text` in `font`, in pixels.
+
+        `width` is the advance width of the string; `ascent` is the distance
+        from the baseline up to the top of the text and `descent` the
+        distance from the baseline down to the bottom of the descenders.
+        Both are >= 0.  Since `draw_text()` anchors at the baseline, a box
+        enclosing the text spans `cy - ascent` .. `cy + descent` vertically
+        and `cx` .. `cx + width` horizontally.
+
+        Backends should override this with their native font metrics.  The
+        fallback here reports the whole extent as ascent, which reproduces
+        the historical (descender-clipping) behavior for any backend that
+        has not been ported.
+        """
+        wd, ht = self.text_extents(text, font=font)
+        return wd, ht, 0
+
+    def text_ink_bbox(self, text, font=None):
+        """Return the *ink* bbox of `text` relative to its baseline anchor.
+
+        Returns (x0, y0, x1, y1) in pixels, offsets from the (cx, cy) passed
+        to `draw_text()`, with y increasing downward: `y0` is negative (the
+        top of the tallest glyph, above the baseline) and `y1` positive when
+        the string has descenders.  y is *always* reported downward, i.e. in
+        screen orientation, even for a backend whose native space is y-up
+        (mpl); the caller works in window coordinates.
+
+        Unlike `text_metrics()`, this hugs the glyphs actually present, so
+        it varies with the string's content.  Use it to fit a box tightly
+        around one label; use `text_metrics()` when several labels must
+        share a baseline and a box height.
+
+        The fallback derives a box from the font metrics.
+        """
+        wd, ascent, descent = self.text_metrics(text, font=font)
+        return 0, -ascent, wd, descent
+
     ##### DRAWING OPERATIONS #####
 
     def draw_image(self, cvs_img, cpoints, cache, whence, order='RGBA'):

@@ -503,10 +503,15 @@ class ModeIndicator(CanvasObjectBase):
 
         font = cr.get_font(self.font, fontsize=self.fontsize)
         fg_fill = cr.get_fill(color=color, alpha=self.alpha)
-        txt_wd, txt_ht = cr.text_extents(text, font=font)
+        # NOTE: the baseline-relative metrics (not the bare text height) are
+        # what size this box and place the text in it; see the anchor note in
+        # ginga.canvas.render.  Font metrics rather than the ink bbox, so the
+        # indicator does not change size as the mode name changes.
+        txt_wd, ascent, descent = cr.text_metrics(text, font=font)
 
         # draw bg
-        box_wd, box_ht = 2 * self.xpad + txt_wd, 2 * self.ypad + txt_ht
+        box_wd = 2 * self.xpad + txt_wd
+        box_ht = 2 * self.ypad + ascent + descent
         if self.corner == 'lr':
             x_base, y_base = win_wd - self.offset - box_wd, win_ht - self.offset - box_ht
         elif self.corner == 'll':
@@ -526,7 +531,7 @@ class ModeIndicator(CanvasObjectBase):
         #cr.set_line(color=color, linewidth=0, alpha=self.alpha)
         #cr.set_fill(color=color, alpha=self.alpha)
 
-        cx, cy = x_base + self.xpad, y_base + txt_ht + self.ypad
+        cx, cy = x_base + self.xpad, y_base + self.ypad + ascent
         cx, cy = tr.to_((cx, cy))
         cr.draw_text(cx, cy, text, font=font, fill=fg_fill)
 

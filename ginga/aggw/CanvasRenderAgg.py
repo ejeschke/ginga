@@ -82,11 +82,15 @@ class RenderContext(render.RenderContextBase):
         return font
 
     def text_extents(self, text, font=None):
+        wd, ascent, descent = self.text_metrics(text, font=font)
+        return wd, ascent + descent
+
+    def text_metrics(self, text, font=None):
         if font is None:
             font = self.font
         if getattr(font.render, 'prop', None) is None:
             font.render.prop = self.ctx._get_font(font)
-        return self.ctx.text_extents(text, font.render.prop)
+        return self.ctx.text_metrics(text, font.render.prop)
 
     # --- graphics-context / path helpers -----------------------------------
 
@@ -129,14 +133,12 @@ class RenderContext(render.RenderContextBase):
         # Unlike draw_path (which we feed y-up coords via self.flip),
         # RendererAgg.draw_text positions glyphs in top-left/y-down window
         # space directly (buffer row ~= the y passed in), so we do NOT apply
-        # the flip here.  Ginga's (cx, cy) anchors the bottom-left of the
-        # text box; matplotlib positions by the baseline, so drop by the
-        # descent to put the box bottom on the anchor (matching the other
-        # backends).
-        _wd, _ht, descent = self.ctx.canvas.get_text_width_height_descent(
-            text, prop, False)
-        y = cy - descent
-        self.ctx.canvas.draw_text(gc, cx, y, text, prop, rot_deg,
+        # the flip here.  Ginga's (cx, cy) anchors the left end of the text
+        # baseline and matplotlib also positions by the baseline, so the
+        # anchor passes straight through.  (It formerly dropped by the
+        # descent, which put this backend's text a few px lower than every
+        # other backend's for the same shape.)
+        self.ctx.canvas.draw_text(gc, cx, cy, text, prop, rot_deg,
                                   ismath=False)
 
     def draw_polygon(self, cpoints, line=None, fill=None):

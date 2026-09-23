@@ -610,18 +610,27 @@ class CrosshairP(OnePointMixin, CanvasObjectBase):
         # draw vertical line
         cr.draw_line(vx1, vy1, vx2, vy2, line=line)
 
-        # draw background for text readability
-        txtwd, txtht = cr.text_extents(text, font=font)
+        # draw background for text readability.  NOTE: text is anchored on
+        # its baseline, so the box is sized from the font's ascent/descent
+        # and the baseline placed inside it -- measuring only the text height
+        # and drawing the baseline on the box's bottom edge (as this did
+        # formerly) leaves every descender hanging outside the box.  The font
+        # metrics are used rather than the ink bbox so the box does not
+        # change height as the readout's digits change.
+        txtwd, ascent, descent = cr.text_metrics(text, font=font)
+        xpad, ypad = 3, 2
         bx, by = cx + 8, cy + 4
+        box_wd, box_ht = txtwd + 2 * xpad, ascent + descent + 2 * ypad
         cr.set_fill('black', alpha=0.70)
-        cr.draw_polygon([(bx, by), (bx, by + txtht + 4),
-                         (bx + txtwd + 6, by + txtht + 4),
-                         (bx + txtwd + 6, by)],
+        cr.draw_polygon([(bx, by), (bx, by + box_ht),
+                         (bx + box_wd, by + box_ht),
+                         (bx + box_wd, by)],
                         fill=cr.fill)
 
         # draw text
         cr.set_fill(self.textcolor, alpha=self.alpha)
-        cr.draw_text(cx + 10, cy + 4 + txtht, text, font=font, fill=cr.fill)
+        cr.draw_text(bx + xpad, by + ypad + ascent, text, font=font,
+                     fill=cr.fill)
 
 
 class Crosshair(CrosshairP):

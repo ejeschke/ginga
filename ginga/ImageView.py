@@ -3625,17 +3625,21 @@ class ImageViewBase(ViewerBase):
         # measure the text accurately (via PIL) for centering, rather than
         # guessing at its extents
         if text is None:
-            wd, ht = font_size, font_size
+            wd, ascent, descent = font_size, font_size, 0
         else:
             try:
                 from ginga.pilw import PilHelp
-                wd, ht = PilHelp.text_size(
+                wd, ascent, descent = PilHelp.text_metrics(
                     text, Bunch.Bunch(fontname=font, fontsize=font_size))
             except Exception:
-                wd, ht = int(len(text) * font_size * 1.1), int(font_size)
+                wd = int(len(text) * font_size * 1.1)
+                ascent, descent = int(font_size), 0
 
+        # (x, y) positions the text's baseline, so centering the text block
+        # on the target point means offsetting the baseline by half the
+        # difference of the ascent and descent -- not by half its height.
         x = (width // 2) - (wd // 2)
-        y = ((height // 3) * 2) - (ht // 2)
+        y = ((height // 3) * 2) + ((ascent - descent) // 2)
 
         tag = '_$onscreen_msg'
 

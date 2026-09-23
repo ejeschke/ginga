@@ -41,17 +41,35 @@ class GlContext:
     def __init__(self, widget):
         self.widget = widget
 
+    def _pil_font(self, font):
+        return get_cached_font(getattr(font, 'fontname', 'sans'),
+                               int(round(getattr(font, 'fontsize', 12))))
+
     def text_extents(self, text, font):
-        pil_font = get_cached_font(getattr(font, 'fontname', 'sans'),
-                                   int(round(getattr(font, 'fontsize', 12))))
+        wd, ascent, descent = self.text_metrics(text, font)
+        return wd, ascent + descent
+
+    def text_metrics(self, text, font):
         try:
-            from PIL import Image, ImageDraw
-            d = ImageDraw.Draw(Image.new('RGBA', (4, 4)))
-            l, t, r, b = d.textbbox((0, 0), text, font=pil_font)
-            return (max(1, r - l), max(1, b - t))
+            pil_font = self._pil_font(font)
+            ascent, descent = pil_font.getmetrics()
+            return int(round(pil_font.getlength(text))), ascent, descent
         except Exception:
             # last-resort approximation
-            return (int(len(text) * font.fontsize * 0.45), int(font.fontsize))
+            return (int(len(text) * font.fontsize * 0.45),
+                    int(font.fontsize), 0)
+
+    def text_ink_bbox(self, text, font):
+        try:
+            from PIL import Image, ImageDraw
+            pil_font = self._pil_font(font)
+            ascent = pil_font.getmetrics()[0]
+            d = ImageDraw.Draw(Image.new('RGBA', (4, 4)))
+            l, t, r, b = d.textbbox((0, 0), text, font=pil_font)
+            return int(l), int(t - ascent), int(r), int(b - ascent)
+        except Exception:
+            wd, ascent, descent = self.text_metrics(text, font)
+            return 0, -ascent, wd, descent
 
 
 class ShaderManager:

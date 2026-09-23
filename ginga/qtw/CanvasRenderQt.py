@@ -71,12 +71,26 @@ class RenderContext(render.RenderContextBase):
         return font
 
     def text_extents(self, text, font=None):
+        wd, ascent, descent = self.text_metrics(text, font=font)
+        return wd, ascent + descent
+
+    def text_metrics(self, text, font=None):
         if font is None:
             font = self.font
         fm = QFontMetrics(font.render.font)
-        rect = fm.boundingRect(text)
-        width, height = rect.width(), fm.ascent()  # rect.height()
-        return width, height
+        if hasattr(fm, 'horizontalAdvance'):
+            wd = fm.horizontalAdvance(text)
+        else:
+            wd = fm.width(text)
+        return wd, fm.ascent(), fm.descent()
+
+    def text_ink_bbox(self, text, font=None):
+        if font is None:
+            font = self.font
+        fm = QFontMetrics(font.render.font)
+        # tightBoundingRect() is relative to the baseline origin
+        rect = fm.tightBoundingRect(text)
+        return rect.left(), rect.top(), rect.right(), rect.bottom()
 
     ##### DRAWING OPERATIONS #####
 
@@ -311,11 +325,17 @@ class CanvasRenderer(render.StandardPipelineRenderer):
         return cr.text_extents(shape.text, font=font)
 
     def text_extents(self, text, font):
+        wd, ascent, descent = self.text_metrics(text, font)
+        return wd, ascent + descent
+
+    def text_metrics(self, text, font):
         qfont = get_font(font.fontname, font.fontsize)
         fm = QFontMetrics(qfont)
-        rect = fm.boundingRect(text)
-        width, height = rect.width(), fm.ascent()   # rect.height()
-        return width, height
+        if hasattr(fm, 'horizontalAdvance'):
+            wd = fm.horizontalAdvance(text)
+        else:
+            wd = fm.width(text)
+        return wd, fm.ascent(), fm.descent()
 
 
 class VectorRenderContext(vec.RenderContext, RenderContext):
