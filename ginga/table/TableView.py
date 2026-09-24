@@ -98,13 +98,14 @@ class TableViewGw(TableViewBase):
         return self.widget
 
     def _get_table_type(self, val):
-        if isinstance(val, numbers.Number):
-            if isinstance(val, int):
-                return 'int'
-            else:
-                return 'float'
-        elif isinstance(val, bool) or val in [np.True_, np.False_]:
+        # bool before the numbers: Python's bool is an int.  Array-valued
+        # cells (vector columns) are none of these and display as 'str'.
+        if isinstance(val, (bool, np.bool_)):
             return 'bool'
+        elif isinstance(val, numbers.Integral):
+            return 'int'
+        elif isinstance(val, numbers.Number):
+            return 'float'
         else:
             return 'str'
 
