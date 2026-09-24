@@ -2,6 +2,9 @@
 What's New
 ++++++++++
 
+Since 7.5.0 (unreleased)
+========================
+
 Ver 7.5.0 (2026.09.22)
 ======================
 - **Selecting a row from code now works on the pg backend.**
