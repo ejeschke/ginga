@@ -15,7 +15,7 @@ try:
 except ImportError:
     from tkinter import PhotoImage
 
-from ginga import ImageView, Mixins, Bindings  # noqa
+from ginga import ImageView, Mixins, Bindings, events  # noqa
 from ginga.canvas.mixins import DrawingMixin, CanvasMixin, CompoundMixin  # noqa
 from ginga.canvas import render
 
@@ -61,7 +61,7 @@ class ImageViewTk(ImageView.ImageViewBase):
         """
         self.tkcanvas = canvas
 
-        canvas.bind("<Configure>", self._resize_cb)
+        canvas.bind("<Configure>", self.resize_event)
         width = canvas.winfo_width()
         height = canvas.winfo_height()
 
@@ -73,7 +73,9 @@ class ImageViewTk(ImageView.ImageViewBase):
         self.msgtask.add_callback('expired',
                                   lambda timer: self.onscreen_message(None))
 
-        self.configure_window(width, height)
+        g_event = events.MapEvent(state='mapped', width=width, height=height,
+                                  viewer=self)
+        self.make_callback('map', g_event)
 
     def get_widget(self):
         return self.tkcanvas
@@ -139,8 +141,10 @@ class ImageViewTk(ImageView.ImageViewBase):
     def configure_window(self, width, height):
         self.configure(width, height)
 
-    def _resize_cb(self, event):
-        self.configure_window(event.width, event.height)
+    def resize_event(self, event):
+        g_event = events.ResizeEvent(width=event.width, height=event.height,
+                                     viewer=self)
+        self.make_callback('resize', g_event)
 
     def set_cursor(self, cursor):
         if self.tkcanvas is None:
@@ -236,6 +240,8 @@ class TkEventMixin:
             'next': 'page_down',
         }
 
+        self._modifiers = frozenset([])
+
         # Define default cursors
         for cur_name, tk_cur_name in [('pan', 'fleur'),
                                       ('pick', 'cross'),
@@ -249,8 +255,6 @@ class TkEventMixin:
             self.enable_callback(name)
 
     def set_widget(self, canvas):
-        super().set_widget(canvas)
-
         canvas.bind("<Enter>", self.enter_notify_event)
         canvas.bind("<Leave>", self.leave_notify_event)
         canvas.bind("<FocusIn>", lambda evt: self.focus_event(evt, True))
@@ -272,7 +276,7 @@ class TkEventMixin:
 
         # TODO: Set up widget as a drag and drop destination
 
-        return self.make_callback('map')
+        super().set_widget(canvas)
 
     def transkey(self, keyname):
         self.logger.debug("key name in tk '%s'" % (keyname))
@@ -285,19 +289,29 @@ class TkEventMixin:
     def get_key_table(self):
         return self._keytbl
 
-    def focus_event(self, event, hasFocus):
-        return self.make_callback('focus', hasFocus)
+    def focus_event(self, event, has_focus):
+        g_event = events.FocusEvent(state='focus', mode=None,
+                                    focus=has_focus, viewer=self)
+        return self.make_callback('focus', g_event)
 
     def enter_notify_event(self, event):
         # Does widget accept focus when mouse enters window
         enter_focus = self.t_.get('enter_focus', False)
         if enter_focus:
             self.tkcanvas.focus_set()
-        return self.make_callback('enter')
+        g_event = events.EnterLeaveEvent(state='enter', mode=None,
+                                         data_x=self.last_data_x,
+                                         data_y=self.last_data_y,
+                                         viewer=self)
+        return self.make_callback('enter', g_event)
 
     def leave_notify_event(self, event):
         self.logger.debug("leaving widget...")
-        return self.make_callback('leave')
+        g_event = events.EnterLeaveEvent(state='leave', mode=None,
+                                         data_x=self.last_data_x,
+                                         data_y=self.last_data_y,
+                                         viewer=self)
+        return self.make_callback('leave', g_event)
 
     def key_press_event(self, event):
         # without this we do not get key release events if the focus
@@ -307,7 +321,12 @@ class TkEventMixin:
         keyname = event.keysym
         keyname = self.transkey(keyname)
         self.logger.debug("key press event, key=%s" % (keyname))
-        return self.make_ui_callback_viewer(self, 'key-press', keyname)
+        g_event = events.KeyEvent(key=keyname, state='down', mode=None,
+                                  modifiers=self._modifiers,
+                                  data_x=self.last_data_x,
+                                  data_y=self.last_data_y,
+                                  viewer=self)
+        return self.make_ui_callback_viewer(self, 'key-press', g_event)
 
     def key_release_event(self, event):
         self.tkcanvas.grab_release()
@@ -315,7 +334,12 @@ class TkEventMixin:
         keyname = event.keysym
         keyname = self.transkey(keyname)
         self.logger.debug("key release event, key=%s" % (keyname))
-        return self.make_ui_callback_viewer(self, 'key-release', keyname)
+        g_event = events.KeyEvent(key=keyname, state='up', mode=None,
+                                  modifiers=self._modifiers,
+                                  data_x=self.last_data_x,
+                                  data_y=self.last_data_y,
+                                  viewer=self)
+        return self.make_ui_callback_viewer(self, 'key-release', g_event)
 
     def button_press_event(self, event):
         x = event.x
@@ -338,16 +362,24 @@ class TkEventMixin:
 
                 data_x, data_y = self.check_cursor_location()
 
-                return self.make_ui_callback_viewer(self, 'scroll', direction,
-                                                    num_degrees, data_x, data_y)
+                g_event = events.ScrollEvent(button=0, state='scroll', mode=None,
+                                             modifiers=self._modifiers,
+                                             direction=direction, amount=num_degrees,
+                                             data_x=data_x, data_y=data_y,
+                                             viewer=self)
+                return self.make_ui_callback_viewer(self, 'scroll', g_event)
+
         button |= 0x1 << (event.num - 1)
         self._button = button
         self.logger.debug("button event at %dx%d, button=%x" % (x, y, button))
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback_viewer(self, 'button-press', button,
-                                            data_x, data_y)
+        g_event = events.PointEvent(button=button, state='down', mode=None,
+                                    modifiers=self._modifiers,
+                                    data_x=data_x, data_y=data_y,
+                                    viewer=self)
+        return self.make_ui_callback_viewer(self, 'button-press', g_event)
 
     def button_release_event(self, event):
         # event.button, event.x, event.y
@@ -366,8 +398,11 @@ class TkEventMixin:
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback_viewer(self, 'button-release', button,
-                                            data_x, data_y)
+        g_event = events.PointEvent(button=button, state='up', mode=None,
+                                    modifiers=self._modifiers,
+                                    data_x=data_x, data_y=data_y,
+                                    viewer=self)
+        return self.make_ui_callback_viewer(self, 'button-release', g_event)
 
     def motion_notify_event(self, event):
         #button = 0
@@ -386,8 +421,11 @@ class TkEventMixin:
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback_viewer(self, 'motion', button,
-                                            data_x, data_y)
+        g_event = events.PointEvent(button=button, state='move', mode=None,
+                                    modifiers=self._modifiers,
+                                    data_x=data_x, data_y=data_y,
+                                    viewer=self)
+        return self.make_ui_callback_viewer(self, 'motion', g_event)
 
     def scroll_event(self, event):
         x = event.x
@@ -406,8 +444,12 @@ class TkEventMixin:
 
         data_x, data_y = self.check_cursor_location()
 
-        return self.make_ui_callback_viewer(self, 'scroll', direction,
-                                            num_degrees, data_x, data_y)
+        g_event = events.ScrollEvent(button=0, state='scroll', mode=None,
+                                     modifiers=self._modifiers,
+                                     direction=direction, amount=num_degrees,
+                                     data_x=data_x, data_y=data_y,
+                                     viewer=self)
+        return self.make_ui_callback_viewer(self, 'scroll', g_event)
 
     ## def drop_event(self, widget, context, x, y, selection, targetType,
     ##                time):

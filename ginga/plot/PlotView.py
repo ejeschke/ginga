@@ -137,7 +137,7 @@ class PlotViewBase(ViewerBase):
         # For callbacks
         for name in ['image-set', 'image-unset',
                      'limits-set', 'range-set', 'redraw',
-                     'configure']:
+                     'configure', 'map', 'resize']:
             self.enable_callback(name)
 
         if figure is None:
@@ -312,17 +312,20 @@ class PlotViewBase(ViewerBase):
 
         self.redraw()
 
-    def canvas_map_cb(self, canvas_w, event):
+    def canvas_map_cb(self, viewer, event):
         # *** only called by pg widgets when the canvas is mapped ***
-        wd, ht = event['width'], event['height']
+        wd, ht = event.width, event.height
         self.logger.debug(f"window mapped to {wd}x{ht}")
         self.set_window_size(wd, ht)
         self.redraw(whence=0)
 
-    def canvas_resize_cb(self, canvas_w, event):
+    def canvas_resize_cb(self, viewer, event):
         # *** only called by pg widgets when the canvas is resized ***
-        wd_px, ht_px = event['width'], event['height']
+        wd_px, ht_px = event.width, event.height
+        # we schedule a resize in the near future, if the resize is ongoing
+        # we can avoid extra work
         self.reschedule_resize(wd_px, ht_px)
+
 
     def delayed_resize(self):
         """Called when the timer for a delayed resize expires."""
