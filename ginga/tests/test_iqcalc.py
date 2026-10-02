@@ -7,7 +7,7 @@ from numpy.testing import assert_allclose, assert_array_equal
 
 from ginga.AstroImage import AstroImage
 from ginga.util import iqcalc, iqcalc_astropy
-from ginga.util.iqcalc import have_scipy  # noqa
+from ginga.util.iqcalc import have_scipy, have_sep  # noqa
 from ginga.util.iqcalc_astropy import have_photutils  # noqa
 
 ASTROPY_LT_6_1_3 = not minversion("astropy", "6.1.3")
@@ -406,3 +406,132 @@ class TestIQCalcFWHMAstropy(TestIQCalcFWHM):
                         (2.77949, 2.6735),  # Moffat
                         lorentz_ans  # Lorentz
                         )
+
+
+def _star_field(n=60, fwhm=4.0, bg=1000.0, noise=10.0, grad=0.0, hot=0,
+                size=256, seed=7):
+    """A field of Gaussian stars, optionally over a left-to-right
+    background ramp, optionally with single hot pixels."""
+    rng = np.random.default_rng(seed)
+    y, x = np.mgrid[0:size, 0:size]
+    data = np.full((size, size), bg, dtype=np.float32)
+    if grad:
+        data += (bg * grad * (x / size)).astype(np.float32)
+    data += rng.normal(0, noise, (size, size)).astype(np.float32)
+    sigma = fwhm / iqcalc.SIG2FWHM
+    xs = rng.uniform(25, size - 25, n)
+    ys = rng.uniform(25, size - 25, n)
+    for x_0, y_0 in zip(xs, ys):
+        data += (900.0 * np.exp(-(((x - x_0) ** 2 + (y - y_0) ** 2) /
+                                  (2 * sigma ** 2)))).astype(np.float32)
+    for _ in range(hot):
+        data[rng.integers(10, size - 10), rng.integers(10, size - 10)] += 5.0e4
+    return data.astype(float), n
+
+
+@pytest.mark.skipif('not have_scipy')
+class TestPeakMethods:
+    """The peak finding methods each class offers, and the sep one."""
+
+    logger = logging.getLogger("TestIQCalc")
+
+    def test_get_peak_methods_native(self):
+        methods = iqcalc.IQCalc(logger=self.logger).get_peak_methods()
+        assert methods[0] == 'native'
+        assert ('sep' in methods) is have_sep
+        assert 'photutils' not in methods
+
+    @pytest.mark.skipif('not have_photutils')
+    def test_get_peak_methods_astropy(self):
+        methods = iqcalc_astropy.IQCalc(logger=self.logger).get_peak_methods()
+        # photutils first, so that class keeps its existing behavior
+        assert methods[0] == 'photutils'
+        assert ('sep' in methods) is have_sep
+        assert 'native' in methods
+
+    def test_unknown_method_raises(self):
+        iq = iqcalc.IQCalc(logger=self.logger)
+        data, _n = _star_field(n=5)
+        with pytest.raises(iqcalc.IQCalcError):
+            iq.find_bright_peaks(data, method='bogus')
+
+    @pytest.mark.skipif('have_sep')
+    def test_sep_absent_raises(self):
+        iq = iqcalc.IQCalc(logger=self.logger)
+        data, _n = _star_field(n=5)
+        with pytest.raises(iqcalc.IQCalcError):
+            iq.find_bright_peaks(data, method='sep')
+
+    @pytest.mark.skipif('not have_sep')
+    def test_sep_finds_the_stars(self):
+        iq = iqcalc.IQCalc(logger=self.logger)
+        data, n = _star_field()
+        peaks = iq.find_bright_peaks(data, method='sep')
+        assert abs(len(peaks) - n) <= 3
+        # same shape of result as the native method: (x, y) pairs in
+        # 0-based array coordinates
+        assert len(peaks[0]) == 2
+        ys, xs = data.shape
+        assert all(0 <= x < xs and 0 <= y < ys for x, y in peaks)
+
+    @pytest.mark.skipif('not have_sep')
+    def test_sep_result_feeds_evaluate_peaks(self):
+        iq = iqcalc.IQCalc(logger=self.logger)
+        data, n = _star_field()
+        peaks = iq.find_bright_peaks(data, method='sep')
+        objlist = iq.evaluate_peaks(peaks, data, fwhm_radius=10, do_ee=False)
+        assert len(objlist) > 0
+        fwhm = np.median([obj.fwhm for obj in objlist])
+        assert_allclose(fwhm, 4.0, rtol=0.05)
+
+    @pytest.mark.skipif('not have_sep')
+    def test_sep_is_unmoved_by_a_background_ramp(self):
+        """The reason sep is offered: it meshes the background out, so it
+        finds the same sources however uneven the background is, where a
+        single threshold for the whole array loses the faint ones."""
+        iq = iqcalc.IQCalc(logger=self.logger)
+        counts = {}
+        for method in ('native', 'sep'):
+            counts[method] = [
+                len(iq.find_bright_peaks(_star_field(grad=grad)[0],
+                                         method=method))
+                for grad in (0.0, 0.5)]
+        assert counts['sep'][0] == counts['sep'][1]
+        assert counts['native'][1] < counts['native'][0]
+
+    @pytest.mark.skipif('not have_sep')
+    def test_sep_minarea_rejects_hot_pixels(self):
+        iq = iqcalc.IQCalc(logger=self.logger)
+        data, n = _star_field(hot=20)
+        assert len(iq.find_bright_peaks(data, method='sep')) <= n + 3
+        # the native method has no notion of area, so it reports them
+        assert len(iq.find_bright_peaks(data, method='native')) > n + 10
+
+    @pytest.mark.skipif('not have_sep')
+    def test_sep_honors_a_mask(self):
+        iq = iqcalc.IQCalc(logger=self.logger)
+        data, _n = _star_field(size=256)
+        mask = np.zeros(data.shape, dtype=bool)
+        mask[:, :128] = True
+        peaks = iq.find_bright_peaks(np.ma.array(data, mask=mask),
+                                     method='sep')
+        assert len(peaks) > 0
+        assert all(x >= 128 for x, y in peaks)
+
+    @pytest.mark.skipif('not have_sep')
+    def test_sep_absolute_threshold(self):
+        iq = iqcalc.IQCalc(logger=self.logger)
+        data, _n = _star_field()
+        many = iq.find_bright_peaks(data, threshold=100.0, method='sep')
+        few = iq.find_bright_peaks(data, threshold=800.0, method='sep')
+        assert len(few) < len(many)
+
+    @pytest.mark.skipif('not (have_sep and have_photutils)')
+    def test_astropy_class_reaches_both_inherited_methods(self):
+        iq = iqcalc_astropy.IQCalc(logger=self.logger)
+        data, n = _star_field()
+        for method in ('photutils', 'sep', 'native'):
+            peaks = iq.find_bright_peaks(data, method=method)
+            assert len(peaks) > 0, method
+        with pytest.raises(iqcalc.IQCalcError):
+            iq.find_bright_peaks(data, method='bogus')

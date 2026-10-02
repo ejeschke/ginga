@@ -7,6 +7,7 @@
 #
 
 import math
+import importlib.util
 import logging
 import threading
 
@@ -22,6 +23,11 @@ except ImportError:
     have_scipy = False
 
 from ginga.misc import Bunch
+
+# sep is imported lazily (inside the method that uses it) so that merely
+# importing this module does not pull it in; here we only record whether
+# it is available.
+have_sep = importlib.util.find_spec('sep') is not None
 
 __all__ = ['get_mean', 'get_median', 'IQCalcError', 'IQCalc']
 
@@ -861,7 +867,8 @@ class IQCalc:
         self.logger.debug("calc threshold=%f" % (threshold))
         return threshold
 
-    def find_bright_peaks(self, data, threshold=None, sigma=5, radius=5):
+    def find_bright_peaks(self, data, threshold=None, sigma=5, radius=5,
+                          method='native'):
         """Find bright peak candidates in in the given data.
 
         Parameters
@@ -880,13 +887,36 @@ class IQCalc:
         radius : float
             Pixel radius for determining local maxima. If the
             desired objects are larger in size, specify a larger radius.
+            Not used by the ``'sep'`` method, which judges size by area;
+            see :meth:`find_bright_peaks_sep`.
+
+        method : str
+            How to find the peaks; see :meth:`get_peak_methods` for the
+            ones this object can use.  ``'native'`` takes the local maxima
+            above a single threshold for the whole array.  ``'sep'``
+            subtracts a background mesh first and thresholds against its
+            noise map, so it finds sources evenly across an array whose
+            background is uneven, and it rejects detections smaller than
+            ``minarea`` pixels.
 
         Returns
         -------
         peaks : list of tuple
             A list of candidate object coordinate tuples ``(x, y)`` in data.
 
+        Raises
+        ------
+        IQCalcError
+            Missing dependency, or an unknown ``method``.
+
         """
+        if method == 'sep':
+            return self.find_bright_peaks_sep(data, threshold=threshold,
+                                              sigma=sigma)
+        if method != 'native':
+            raise IQCalcError("Peak finding method '%s' is unsupported" % (
+                method))
+
         if not have_scipy:
             raise IQCalcError("Please install the 'scipy' module "
                               "to use this function")
@@ -914,6 +944,119 @@ class IQCalc:
             # calculation to refine further
             peaks.append((xc, yc))
 
+        self.logger.debug("peaks=%s" % (str(peaks)))
+        return peaks
+
+    def get_peak_methods(self):
+        """Names of the peak finding methods this object can use.
+
+        Only those whose dependencies are installed are listed, and the
+        first is the one to prefer, so a caller can offer the list without
+        knowing which packages are present.
+        """
+        methods = []
+        if have_scipy:
+            methods.append('native')
+        if have_sep:
+            methods.append('sep')
+        return methods
+
+    def find_bright_peaks_sep(self, data, threshold=None, sigma=5,
+                              minarea=5, filter_kernel=None,
+                              deblend_nthresh=32, deblend_cont=0.005,
+                              clean=True, clean_param=1.0,
+                              back_size=64, back_filtersize=3):
+        """Find bright peak candidates using the ``sep`` package.
+
+        Unlike :meth:`find_bright_peaks`, this estimates the background on
+        a mesh and thresholds against its noise map rather than against one
+        number for the whole array.  That matters where the background is
+        uneven: a single global threshold finds fewer sources wherever the
+        background runs high, which biases any measurement made from the
+        resulting population.  It also deblends, and ignores anything
+        smaller than ``minarea`` pixels, so a hot pixel is not a candidate.
+
+        Parameters
+        ----------
+        data : array-like
+            Input data to find peaks from.  May be a masked array, in which
+            case the masked pixels take no part.
+
+        threshold : float or `None`
+            Detection threshold, as an absolute value above the background.
+            If not given, ``sigma`` is used against the background noise
+            map instead, which is this method's more usual mode.
+
+        sigma : float
+            Threshold in multiples of the local background noise.  Ignored
+            if ``threshold`` is given.
+
+        minarea : int
+            Smallest number of connected pixels above the threshold that
+            counts as a source.
+
+        filter_kernel : array-like or `None`
+            Convolution kernel applied before detection.  `None` means
+            sep's default 3x3 Gaussian.
+
+        deblend_nthresh, deblend_cont, clean, clean_param
+            Passed to ``sep.extract``.
+
+        back_size, back_filtersize : int
+            Size of the background mesh, and of the median filter applied
+            to it.
+
+        Returns
+        -------
+        peaks : list of tuple
+            A list of candidate object coordinate tuples ``(x, y)`` in data.
+
+        Raises
+        ------
+        IQCalcError
+            Missing dependency, or sep could not measure the background.
+
+        """
+        if not have_sep:
+            raise IQCalcError("Please install the 'sep' package "
+                              "to use this function")
+        import sep
+
+        mask = None
+        if np.ma.isMaskedArray(data):
+            mask = np.ma.getmaskarray(data)
+            data = data.data
+        # NOTE: sep refuses an array whose byte order is not native, which
+        # is what comes out of a FITS file, so this conversion is required
+        # rather than merely tidy
+        arr = np.ascontiguousarray(data, dtype=np.float32)
+
+        try:
+            bkg = sep.Background(arr, mask=mask,
+                                 bw=back_size, bh=back_size,
+                                 fw=back_filtersize, fh=back_filtersize)
+            sub = arr - bkg
+            if threshold is None:
+                thresh, err = sigma, bkg.rms()
+                self.logger.debug("sep threshold is %f x the background "
+                                  "noise map" % (sigma))
+            else:
+                # an absolute threshold, so sep is given no error map to
+                # scale it by
+                thresh, err = threshold, None
+                self.logger.debug("sep threshold is %f above background" % (
+                    threshold))
+
+            objs = sep.extract(sub, thresh, err=err, mask=mask,
+                               minarea=minarea,
+                               filter_kernel=filter_kernel,
+                               deblend_nthresh=deblend_nthresh,
+                               deblend_cont=deblend_cont,
+                               clean=clean, clean_param=clean_param)
+        except Exception as e:
+            raise IQCalcError("sep source extraction failed: %s" % (str(e)))
+
+        peaks = list(zip(objs['x'], objs['y']))
         self.logger.debug("peaks=%s" % (str(peaks)))
         return peaks
 

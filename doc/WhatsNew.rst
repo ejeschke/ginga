@@ -4,6 +4,17 @@ What's New
 
 Since 7.5.0 (unreleased)
 ========================
+- ``IQCalc.find_bright_peaks()`` takes a ``method``, and offers ``'sep'``
+  where that package is installed.  It estimates the background on a mesh
+  and thresholds against its noise map, so it finds sources evenly across
+  an array whose background is uneven -- the ``'native'`` method applies
+  one threshold to the whole array and loses the fainter sources wherever
+  the background runs high -- and it ignores anything smaller than
+  ``minarea`` pixels, so a hot pixel is not a candidate.
+  ``get_peak_methods()`` reports the ones a given object can actually use,
+  preferred first; for ``iqcalc_astropy`` that is ``'photutils'``,
+  ``'sep'`` and ``'native'``.  The ``Pick`` plugin offers them in a "Peak
+  finding" combobox in its Settings panel, saved as ``calc_peak_alg``.
 
 Ver 7.5.0 (2026.09.22)
 ======================

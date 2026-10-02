@@ -8,7 +8,8 @@ from astropy.modeling import models, fitting
 from ginga.misc import Bunch
 
 # Reuse shared items from the old module until we can merge old and new together.
-from ginga.util.iqcalc import IQCalcError, get_median, have_scipy
+from ginga.util.iqcalc import (IQCalcError, get_median, have_scipy,
+                               have_sep)
 from ginga.util.iqcalc import IQCalc as _IQCalc
 
 # Import the rest into namespace so we can use this module like iqcalc.
@@ -337,7 +338,39 @@ class IQCalc(_IQCalc):
         cx, cy = centroid_com(np.asarray(arr))  # Return (X, Y), not (Y, X)
         return (x0 + cx, y0 + cy)
 
-    def find_bright_peaks(self, data, threshold=None, sigma=5, radius=5):
+    def get_peak_methods(self):
+        """Names of the peak finding methods this object can use.
+
+        ``'photutils'`` comes first, so that this class keeps finding peaks
+        the way it always has.  ``'native'`` is the superclass's own
+        implementation, which is still reachable from here.
+        """
+        methods = []
+        if have_photutils:
+            methods.append('photutils')
+        if have_sep:
+            methods.append('sep')
+        if have_scipy:
+            methods.append('native')
+        return methods
+
+    def find_bright_peaks(self, data, threshold=None, sigma=5, radius=5,
+                          method='photutils'):
+        """Find peaks with photutils, or with either of the superclass's
+        methods.
+
+        Defaults to ``'photutils'``, which is what this class has always
+        used.  ``'native'`` and ``'sep'`` are the superclass's, and are
+        inherited unchanged -- neither depends on which library this class
+        uses for anything else.
+        """
+        if method in ('native', 'sep'):
+            return super().find_bright_peaks(data, threshold=threshold,
+                                             sigma=sigma, radius=radius,
+                                             method=method)
+        if method != 'photutils':
+            raise IQCalcError("Peak finding method '%s' is unsupported" % (
+                method))
         if not have_photutils:
             raise IQCalcError("Please install the 'photutils' package "
                               "to use this function")

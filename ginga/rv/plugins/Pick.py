@@ -258,6 +258,14 @@ The "Settings" tab controls aspects of the search within the pick area:
   in a FITS-compliant manner and "0" if you prefer 0-based indexing.
 * The "Calc center" parameter is used to determine whether the center
   is calculated from FWHM fitting ("fwhm") or centroiding ("centroid").
+* The "Peak finding" parameter is used to determine how bright peaks are
+  found in the cutout.  "native" takes the local maxima above a single
+  threshold for the whole cutout; "sep" subtracts a background mesh and
+  thresholds against its noise map instead, which finds sources evenly
+  across a cutout whose background is uneven and ignores detections only
+  a pixel or two in area; "photutils" is offered when "calc_fwhm_lib" is
+  set to "astropy".  Only the methods whose packages are installed are
+  listed.
 * The "FWHM fitting" parameter is used to determine which function is
   is used for FWHM fitting ("gaussian", "moffat" or "gaussian2d"). The
   option to use "lorentz" is also available if "calc_fwhm_lib" is set to
@@ -391,6 +399,21 @@ class Pick(GingaPlugin.LocalPlugin):
             raise ImportError('Please install scipy to use this plugin')
 
         self.iqcalc = iqcalc.IQCalc(self.logger)
+
+        # NOTE: which peak finders can be offered depends on what is
+        # installed, so ask the IQCalc object rather than assuming.  It
+        # lists the preferred one first.  sync_preferences() has run by now
+        # and may have named one that is not available, in which case fall
+        # back rather than fail.
+        self.peak_algs = self.iqcalc.get_peak_methods()
+        if len(self.peak_algs) == 0:
+            raise ImportError('No peak finding method is available')
+        if self.peak_alg not in self.peak_algs:
+            if self.peak_alg is not None:
+                self.logger.warning("peak finding method '%s' is not "
+                                    "available; using '%s'" % (
+                                        self.peak_alg, self.peak_algs[0]))
+            self.peak_alg = self.peak_algs[0]
         self.copy_attrs = ['transforms', 'cutlevels']
         if (self.settings.get('pick_cmap_name', None) is None and
                 self.settings.get('pick_imap_name', None) is None):
@@ -444,6 +467,9 @@ class Pick(GingaPlugin.LocalPlugin):
         if self.iqcalc_lib == 'astropy':
             self.fwhm_algs.append('lorentz')
         self.fwhm_alg = self.settings.get('calc_fwhm_alg', 'gaussian')
+        # NOTE: resolved against what is installed in __init__, once the
+        # IQCalc object has been made; None means take its preferred one
+        self.peak_alg = self.settings.get('calc_peak_alg', None)
         self.center_on_pick = self.settings.get('center_on_pick', False)
 
         # For controls
@@ -752,6 +778,8 @@ class Pick(GingaPlugin.LocalPlugin):
                      "Calc center", 'combobox'),
                     ("FWHM fitting:", 'label', '^xlbl_fwhmfitting', 'label',
                      "FWHM fitting", 'combobox'),
+                    ("Peak finding:", 'label', '^xlbl_peakfinding', 'label',
+                     "Peak finding", 'combobox'),
                     ('Contour Interpolation:', 'label', '^xlbl_cinterp', 'label',
                      'Contour Interpolation', 'combobox'),
                     ('EE total radius:', 'label', '^xlbl_ee_total_radius', 'label',
@@ -956,6 +984,20 @@ class Pick(GingaPlugin.LocalPlugin):
         combobox.set_index(index)
         combobox.add_callback('activated', chg_fwhmfitting)
         b.xlbl_fwhmfitting.set_text(self.fwhm_alg)
+
+        def chg_peakfinding(w, idx):
+            self.peak_alg = self.peak_algs[idx]
+            self.w.xlbl_peakfinding.set_text(self.peak_alg)
+            return True
+
+        combobox = b.peak_finding
+        for name in self.peak_algs:
+            combobox.append_text(name)
+        index = self.peak_algs.index(self.peak_alg)
+        combobox.set_index(index)
+        combobox.add_callback('activated', chg_peakfinding)
+        b.peak_finding.set_tooltip("How bright peaks are found in the cutout")
+        b.xlbl_peakfinding.set_text(self.peak_alg)
 
         sw2 = Widgets.ScrollArea()
         sw2.set_widget(w)
@@ -1428,7 +1470,8 @@ class Pick(GingaPlugin.LocalPlugin):
                 # Find bright peaks in the cutout
                 peaks = self.iqcalc.find_bright_peaks(data,
                                                       threshold=self.threshold,
-                                                      radius=self.radius)
+                                                      radius=self.radius,
+                                                      method=self.peak_alg)
                 num_peaks = len(peaks)
                 if num_peaks == 0:
                     raise Exception("Cannot find bright peaks")
