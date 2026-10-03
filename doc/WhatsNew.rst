@@ -4,6 +4,16 @@ What's New
 
 Since 7.5.0 (unreleased)
 ========================
+- **A plot viewer no longer draws into a figure that has no area.**  A
+  widget reports a size of zero until it has been laid out -- a web canvas
+  always does -- and a figure sized from that has nothing to draw in.
+  matplotlib does not refuse: its layout engine warns that "axes sizes
+  collapsed to zero", and the degenerate transforms left behind make the
+  tick locator fail on a NaN ("cannot convert float NaN to integer"), once
+  per redraw for as long as the widget stays that size.  ``PlotViewBase``
+  now ignores a resize to a degenerate size, keeping the figure's previous
+  one, and skips the redraw (and the tick-reading font-size pass) until
+  there is room; the resize that gives the figure a real size redraws it.
 - **astropy's log messages now appear in the Log plugin** instead of going
   to stderr.  astropy installs a ``StreamHandler`` on stderr of its own and
   never propagates to the viewer's logger, so its messages bypassed the

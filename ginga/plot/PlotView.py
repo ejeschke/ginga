@@ -291,11 +291,45 @@ class PlotViewBase(ViewerBase):
         (x_lo, y_lo), (x_hi, y_hi) = self.get_limits()
         return (x_hi, y_hi)
 
+    def has_drawable_area(self):
+        """Return True if the figure is big enough to draw on.
+
+        A widget can report a size of zero -- a web canvas does so until
+        the page has laid it out, and any widget does while it is still
+        being packed -- and a figure sized from that has no area to draw
+        in.  matplotlib does not refuse to draw such a figure: the layout
+        engine warns that "axes sizes collapsed to zero", and the
+        degenerate transforms it leaves behind can make the tick locator
+        divide by a zero-width axis and fail on the NaN that comes out.
+        Neither tells the user anything useful, since there is nothing to
+        look at until the real size arrives.
+        """
+        fig = self.get_figure()
+        if fig is None:
+            return False
+        wd_in, ht_in = fig.get_size_inches()
+        dpi = fig.dpi
+        vals = (wd_in, ht_in, dpi)
+        if not all(np.isfinite(vals)):
+            return False
+        # a couple of pixels is already too small for the decorations, but
+        # the point here is only to reject the degenerate case
+        return wd_in * dpi >= 1.0 and ht_in * dpi >= 1.0
+
     def set_window_size(self, wd_px, ht_px):
         with self._resize_lock:
             self.time_last_resize = time.time()
 
             fig = self.get_figure()
+            if not (np.isfinite(wd_px) and np.isfinite(ht_px) and
+                    wd_px >= 1 and ht_px >= 1):
+                # Keep the figure's previous size rather than adopting a
+                # degenerate one; the widget reports 0 until it has been
+                # laid out, and a resize with the real size follows.
+                self.logger.debug("ignoring degenerate resize to %sx%s" % (
+                    wd_px, ht_px))
+                return
+
             fig.set_size_inches(float(wd_px) / fig.dpi, float(ht_px) / fig.dpi)
             self.logger.debug("figure resized to %dx%d" % (wd_px, ht_px))
 
@@ -371,6 +405,11 @@ class PlotViewBase(ViewerBase):
 
     def _set_variable_font_sizes(self):
         if self.ax is None:
+            return
+        if not self.has_drawable_area():
+            # reading the tick labels runs the tick locator, which fails on
+            # a figure with no area (see has_drawable_area); the resize
+            # that gives it one comes back through here anyway
             return
         # recalculate font sizes if left to variable setting
         width, height = self.get_window_size()
@@ -727,6 +766,14 @@ class PlotViewBase(ViewerBase):
         self.redraw()
 
     def redraw_now(self, whence=0):
+        if not self.has_drawable_area():
+            # nothing to draw into yet -- drawing anyway only produces
+            # layout warnings and tick-locator errors (see
+            # has_drawable_area).  The resize that gives the figure a real
+            # size redraws it.
+            self.logger.debug("skipping redraw: figure has no drawable area")
+            return
+
         try:
             time_start = time.time()
             self.figure.canvas.draw()
