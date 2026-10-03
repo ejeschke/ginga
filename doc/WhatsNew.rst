@@ -4,6 +4,28 @@ What's New
 
 Since 7.5.0 (unreleased)
 ========================
+- **astropy's log messages now appear in the Log plugin** instead of going
+  to stderr.  astropy installs a ``StreamHandler`` on stderr of its own and
+  never propagates to the viewer's logger, so its messages bypassed the
+  viewer's log entirely on the desktop -- and, running in-situ under
+  Pyodide, were painted onto the page behind the viewer, since there stderr
+  is rendered into the document.  The reference viewer now hands that logger
+  its own handlers, through the new
+  ``ReferenceViewer.redirect_logger(name)``, which also replaces the
+  hand-rolled ``py.warnings`` redirect that did the same thing for Python
+  warnings.  Messages reach whatever the viewer's logging was asked for --
+  the Log plugin, plus any ``--log`` file or ``--stderr``.
+- Running in-situ under Pyodide, Python warnings stay captured into the
+  ``py.warnings`` logger for the life of the application, so they reach the
+  Log plugin too.  ``run()`` had always handed warnings back to a plain
+  stderr writer once the GUI was up, which is what a desktop user wants --
+  but in-situ stderr is the page, so every warning raised while the viewer
+  ran was printed across it.  The desktop behavior is unchanged.
+- Running in-situ under Pyodide, ``logging.lastResort`` is pointed at a
+  ``NullHandler``.  It is a stderr handler at WARNING level that Python uses
+  for records from any logger with no handler of its own -- which is every
+  logger until the GUI log handler is attached partway through startup --
+  so those records were painted onto the page as well.
 - ``IQCalc.find_bright_peaks()`` takes a ``method``, and offers ``'sep'``
   where that package is installed.  It estimates the background on a mesh
   and thresholds against its noise map, so it finds sources evenly across

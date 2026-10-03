@@ -31,6 +31,16 @@ from ginga.locale import localize
 # Catch warnings
 logging.captureWarnings(True)
 
+# Under Pyodide (the in-situ web backend) there is no terminal: stderr is
+# rendered into the page, so anything that falls back to it ends up painted
+# behind the viewer.  Python's ``logging.lastResort`` is a stderr handler at
+# WARNING level, used for records from any logger that has no handler of its
+# own -- which is every logger here until the GUI log handler is attached
+# partway through startup (see build_toplevel).  Send those nowhere instead;
+# everything logged after that point reaches the Log plugin normally.
+if sys.platform == 'emscripten':
+    logging.lastResort = logging.NullHandler()
+
 __all__ = ['ReferenceViewer']
 
 default_layout = ['seq', {},
@@ -397,6 +407,25 @@ class ReferenceViewer:
                      help="Prefer WCS module NAME")
         log.addlogopts(argprs)
 
+    def redirect_logger(self, name):
+        """Route the logger called `name` into the viewer's own logger.
+
+        Replaces that logger's handlers with ours, so its records appear
+        wherever the viewer's do -- the Log plugin, and whatever `--log` /
+        `--stderr` asked for -- instead of wherever the library that owns it
+        decided to put them.  Used for `astropy`, which installs a stderr
+        handler of its own, and for `py.warnings`, which is where
+        `logging.captureWarnings()` sends Python warnings.
+
+        Call this only after the viewer's handlers are in place; records
+        logged before then go nowhere.
+        """
+        logger = logging.getLogger(name)
+        for hdlr in list(logger.handlers):
+            logger.removeHandler(hdlr)
+        for hdlr in self.logger.handlers:
+            logger.addHandler(hdlr)
+
     def setup(self):
         """
         Setup routine for running the reference viewer.
@@ -589,6 +618,17 @@ class ReferenceViewer:
                 log_queue, guiHdlr)
             self._gui_log_listener.start()
 
+        # Funnel astropy's logging into ours, so its messages land in the Log
+        # plugin with everything else.  astropy installs a StreamHandler on
+        # stderr of its own and never propagates anything to us, which on the
+        # desktop means its messages bypass the viewer's log entirely, and
+        # in-situ means they are painted onto the page behind the viewer.
+        # Drop that handler and give it ours.  (``propagate`` is left alone:
+        # with handlers of its own the records no longer reach lastResort,
+        # and an embedding application that has configured the root logger
+        # should still see them.)
+        self.redirect_logger('astropy')
+
         # Set loader priorities, if user has saved any
         # (see LoaderConfig plugin)
         path = os.path.join(self.basedir, 'loaders.yml')
@@ -742,8 +782,7 @@ class ReferenceViewer:
                     self.appname, str(e)), exc_info=True)
 
         # Redirect warnings to logger
-        for hdlr in self.logger.handlers:
-            logging.getLogger('py.warnings').addHandler(hdlr)
+        self.redirect_logger('py.warnings')
 
         return ginga_shell
 
@@ -806,7 +845,19 @@ class ReferenceViewer:
         """
         Activate and run the GUI event loop.
         """
-        disable_warnings()
+        # Once the GUI is up, warnings go back to being written plainly on
+        # stderr rather than through the logging machinery.  Not in-situ,
+        # though: there stderr is rendered into the page, so the warnings
+        # would be painted across the document behind the viewer.  Leaving
+        # capture on sends them to the 'py.warnings' logger, which has the
+        # viewer's handlers by now (see build_toplevel), so they land in the
+        # Log plugin with everything else.  The GuiLogHandler's re-entrancy
+        # guard covers logging from inside the GUI update that logging
+        # itself triggers.
+        in_situ = (self.ginga_shell.is_web_backend() and
+                   self.ginga_shell.is_in_situ())
+        if not in_situ:
+            disable_warnings()
 
         # If we are *hosted* inside an already-running event loop (e.g. the
         # browser's under Pyodide), ``mainloop()`` installs a cooperative

@@ -9,6 +9,7 @@ arguments and handlers given to it were silently dropped.
 
 import io
 import logging
+import warnings
 
 import pytest
 
@@ -127,3 +128,115 @@ def test_given_a_file_it_writes_and_otherwise_it_does_not():
 
 def test_get_logger_still_hands_one_back():
     assert isinstance(get_logger(null=True), NullLogger)
+
+
+# -------------------------------------------- redirecting other loggers --
+
+"""A library that configures its own handlers keeps its messages out of the
+viewer's log.  astropy is the one that matters: it installs a StreamHandler
+on stderr, so on the desktop its messages bypass the Log plugin, and in-situ
+under Pyodide -- where stderr is rendered into the page -- they are painted
+behind the viewer.  ReferenceViewer.redirect_logger() hands such a logger
+the viewer's own handlers instead.
+"""
+
+
+def _collecting_viewer():
+    """A ReferenceViewer whose logger just collects, as the GUI handler
+    would once build_toplevel() has attached it."""
+    from ginga.rv.main import ReferenceViewer
+
+    records = []
+
+    class Collecting(logging.Handler):
+        def emit(self, record):
+            records.append(record.getMessage())
+
+    rv = ReferenceViewer()
+    rv.logger = logging.Logger('ginga')
+    rv.logger.addHandler(Collecting())
+    return rv, records
+
+
+def test_redirect_logger_hands_over_our_handlers():
+    rv, records = _collecting_viewer()
+    other = logging.getLogger('test_redirect_target')
+    other.addHandler(logging.StreamHandler(io.StringIO()))
+
+    rv.redirect_logger('test_redirect_target')
+
+    assert other.handlers == rv.logger.handlers, \
+        "the library's own handlers should be replaced by ours"
+    other.warning('heard by the viewer')
+    assert records == ['heard by the viewer']
+
+
+def test_redirect_logger_keeps_the_messages_off_stderr(capsys):
+    """The point of it: nothing lands on stderr, which under Pyodide is
+    the page the viewer is drawn on."""
+    rv, records = _collecting_viewer()
+    other = logging.getLogger('test_redirect_stderr')
+    other.addHandler(logging.StreamHandler())      # i.e. sys.stderr
+
+    other.warning('before')
+    assert 'before' in capsys.readouterr().err
+
+    rv.redirect_logger('test_redirect_stderr')
+    other.warning('after')
+
+    assert capsys.readouterr().err == ''
+    assert records == ['after']
+
+
+def test_redirect_logger_catches_a_sublogger_too():
+    """astropy logs from astropy.wcs, astropy.io.fits and friends; those
+    propagate to the parent, so redirecting the parent is enough."""
+    rv, records = _collecting_viewer()
+    rv.redirect_logger('test_redirect_parent')
+
+    logging.getLogger('test_redirect_parent.child').warning('from a child')
+
+    assert records == ['from a child']
+
+
+# ------------------------------------------------- warnings and the GUI --
+
+"""Python warnings are a second stream of messages that has to end up
+somewhere.  The reference viewer captures them into the 'py.warnings'
+logger, but ``run()`` used to hand them straight back to stderr for the
+life of the application -- fine on a desktop, where stderr is the
+terminal, and wrong in-situ under Pyodide, where stderr is rendered into
+the page the viewer is drawn on.  In-situ the capture is left in place so
+they reach the Log plugin instead.
+"""
+
+
+def test_disable_warnings_sends_them_to_stderr(capsys):
+    """What the desktop wants: a plain warning on the terminal."""
+    from ginga.rv.main import disable_warnings
+
+    try:
+        disable_warnings()
+        warnings.simplefilter('always')
+        warnings.warn('axes sizes collapsed to zero', UserWarning)
+
+        assert 'axes sizes collapsed to zero' in capsys.readouterr().err
+    finally:
+        logging.captureWarnings(False)
+
+
+def test_captured_warnings_reach_the_viewers_log_not_stderr(capsys):
+    """What in-situ needs: the same warning in the viewer's log, and
+    nothing on stderr, since there stderr is the page."""
+    rv, records = _collecting_viewer()
+    try:
+        logging.captureWarnings(True)
+        rv.redirect_logger('py.warnings')
+        warnings.simplefilter('always')
+        warnings.warn('axes sizes collapsed to zero', UserWarning)
+
+        assert capsys.readouterr().err == ''
+        assert len(records) == 1
+        assert 'axes sizes collapsed to zero' in records[0]
+    finally:
+        logging.captureWarnings(False)
