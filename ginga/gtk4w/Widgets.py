@@ -1633,8 +1633,8 @@ class TreeView(_columnview.ColumnViewTreeMixin, WidgetBase):
         # click selects the column instead.
         spec = (self.col_specs[col_idx] if col_idx < len(self.col_specs)
                 else {})
-        if (treehelper.column_is_sortable(spec, self.sortable)
-                and not (ctrl or shift)):
+        if (treehelper.column_is_sortable(spec, self.sortable) and
+                not (ctrl or shift)):
             return
 
         anchor = getattr(self, '_col_anchor', None)
