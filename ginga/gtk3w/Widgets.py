@@ -2705,10 +2705,18 @@ class TableView(TreeView):
         return [c['key'] for c in self._user_columns]
 
     def _build_col_specs(self):
-        specs = [(c['label'], c['key'], c['type'])
+        # Everything else about a column -- editability, widget cells,
+        # halign -- is re-applied in _post_setup_columns, so the parent
+        # only needs label/key/type.  ``sortable`` is the exception: it
+        # decides whether the parent wires the header's 'clicked'
+        # signal to the sort at all, and a column that is wired cannot
+        # usefully be un-wired afterwards.
+        specs = [dict(label=c['label'], key=c['key'], type=c['type'],
+                      sortable=c.get('sortable', True))
                  for c in self._user_columns]
         if self._show_row_numbers:
-            specs = [('', _TABLE_VIEW_ROW_NUM_KEY, 'str')] + specs
+            specs = [dict(label='', key=_TABLE_VIEW_ROW_NUM_KEY,
+                          type='str', sortable=False)] + specs
         return specs
 
     def _rebuild_table(self, rows=None):
