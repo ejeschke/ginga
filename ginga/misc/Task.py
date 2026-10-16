@@ -943,12 +943,14 @@ class ThreadPool:
         which no longer exists; asking for it now starts a thread of its own,
         so a pool that does not want the reports does not pay for one.
         :py:meth:`analyze_threads` is also callable directly.
+    :param starved_warn_sec: How often, at most, to warn that a task was
+        queued with no worker able to take it.  ``None`` to never warn.
     """
 
     def __init__(self, numthreads=1, logger=None, ev_quit=None,
                  minthreads=None, idle_limit_sec=10.0,
                  workerClass=WorkerThread, analyze_interval=None,
-                 priority=False):
+                 priority=False, starved_warn_sec=10.0):
 
         self.numthreads = max(1, numthreads)
         self.logger = logger
@@ -967,6 +969,8 @@ class ThreadPool:
         self.minthreads = min(max(0, minthreads), self.numthreads)
         self.idle_limit_sec = idle_limit_sec
         self.analyze_interval = analyze_interval
+        self.starved_warn_sec = starved_warn_sec
+        self._starved_last = 0.0
 
         self.priority = priority
         if priority:
@@ -1153,7 +1157,41 @@ class ThreadPool:
         if self._idle.acquire(blocking=False):
             # Somebody is idle and will take it.
             return
-        self._grow()
+        if not self._grow():
+            self._report_starved()
+
+    def _report_starved(self):
+        """Warn that a task was queued with no worker able to take it.
+
+        Hitting the ceiling is ordinary and nearly always momentary: a
+        busy worker finishes, asks the queue for more, and drains it.
+
+        It stops being momentary when the workers are not coming back.
+        A pool shared with tasks that run for the life of the process --
+        an RPC server's request workers, a pub/sub delivery daemon, any
+        ``while not ev_quit`` loop submitted as a task -- can have every
+        worker parked in one, and then a queued task waits for a worker
+        that will never ask for it.  Nothing about that is visible from
+        outside: ``addTask`` succeeds, and the task simply never runs.
+
+        Rate-limited, because a pool at its ceiling under a burst is
+        working as intended and should not shout once per submission.
+        """
+        if self.logger is None or self.starved_warn_sec is None:
+            return
+        now = time.time()
+        with self.lock:
+            if now - self._starved_last < self.starved_warn_sec:
+                return
+            self._starved_last = now
+        with self.regcond:
+            running, spare = len(self.running), len(self.waiting)
+        self.logger.warning(
+            "thread pool has no worker to run a queued task: "
+            "%d running (ceiling %d), %d unstarted, %d queued.  A task "
+            "that never returns holds its worker for good; raise "
+            "numthreads, or give such tasks a pool of their own." % (
+                running, self.numthreads, spare, self.queue.qsize()))
 
     def analyze_threads(self):
         """Log what every thread in the process is currently doing."""

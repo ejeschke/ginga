@@ -310,9 +310,13 @@ class Recording:
 
     def __init__(self):
         self.reports = []
+        self.warnings = []
 
     def info(self, msg, *args, **kwargs):
         self.reports.append(msg % args if args else msg)
+
+    def warning(self, msg, *args, **kwargs):
+        self.warnings.append(msg % args if args else msg)
 
     def __getattr__(self, name):
         return lambda *args, **kwargs: None
@@ -352,3 +356,90 @@ def test_there_is_no_pool_monitoring_thread(pool):
 
     assert not hasattr(p, 'mon_thread') or p.mon_thread is None
     assert not hasattr(p, 'pool_attendant')
+
+
+# ------------------------------------------------- nobody left to run it --
+
+def test_a_full_pool_says_so_instead_of_queueing_in_silence():
+    """A queued task with no worker able to take it used to be invisible.
+
+    Reaching the ceiling is ordinarily momentary -- a busy worker finishes
+    and drains the queue.  It is not momentary when the workers never
+    return, which is what a pool shared with an RPC server's request
+    workers or a pub/sub delivery daemon looks like: every worker parked
+    in a loop for the life of the process, and a submitted task simply
+    never running.  ``addTask`` still accepts it, so the only symptom is
+    the work not happening.
+    """
+    log = Recording()
+    release = threading.Event()
+    p = Task.ThreadPool(numthreads=4, logger=log, minthreads=2,
+                        idle_limit_sec=60.0)
+    p.startall(wait=True)
+    try:
+        occupy(p, 4, release)
+        assert wait_for(lambda: len(p.running) == 4), 'every worker busy'
+
+        ran = threading.Event()
+        p.addTask(Task.FuncTask2(ran.set))
+
+        assert not ran.wait(1.0), 'nothing can run it, by construction'
+        assert len(log.warnings) == 1, log.warnings
+        msg = log.warnings[0]
+        assert 'no worker to run a queued task' in msg
+        assert '4 running (ceiling 4)' in msg
+    finally:
+        release.set()
+        p.stopall(wait=True)
+
+
+def test_the_warning_does_not_repeat_once_per_submission():
+    """A pool at its ceiling under a burst is working as intended."""
+    log = Recording()
+    release = threading.Event()
+    p = Task.ThreadPool(numthreads=2, logger=log, minthreads=2,
+                        idle_limit_sec=60.0, starved_warn_sec=30.0)
+    p.startall(wait=True)
+    try:
+        occupy(p, 2, release)
+        assert wait_for(lambda: len(p.running) == 2)
+
+        for _ in range(20):
+            p.addTask(Task.FuncTask2(lambda: None))
+
+        assert len(log.warnings) == 1, (
+            '20 submissions, %d warnings' % (len(log.warnings),))
+    finally:
+        release.set()
+        p.stopall(wait=True)
+
+
+def test_a_pool_with_room_to_grow_stays_quiet(pool):
+    log = Recording()
+    release = threading.Event()
+    p = Task.ThreadPool(numthreads=16, logger=log, minthreads=2,
+                        idle_limit_sec=60.0)
+    p.startall(wait=True)
+    try:
+        occupy(p, 8, release)
+        assert wait_for(lambda: len(p.running) == 8)
+        assert log.warnings == []
+    finally:
+        release.set()
+        p.stopall(wait=True)
+
+
+def test_warning_can_be_turned_off():
+    log = Recording()
+    release = threading.Event()
+    p = Task.ThreadPool(numthreads=2, logger=log, minthreads=2,
+                        idle_limit_sec=60.0, starved_warn_sec=None)
+    p.startall(wait=True)
+    try:
+        occupy(p, 2, release)
+        assert wait_for(lambda: len(p.running) == 2)
+        p.addTask(Task.FuncTask2(lambda: None))
+        assert log.warnings == []
+    finally:
+        release.set()
+        p.stopall(wait=True)
