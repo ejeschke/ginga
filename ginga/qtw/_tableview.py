@@ -24,6 +24,7 @@ from ginga.qtw.QtHelp import QtGui, QtCore, QFont
 from ginga.qtw import QtHelp
 from ginga.qtw.Widgets import (WidgetBase, WidgetError, _CellWrapper,
                                _CELL_WIDGETS)
+from ginga.util import treehelper
 
 __all__ = ['TableView', 'TableWidgetItem']
 
@@ -171,13 +172,33 @@ class TableView(WidgetBase):
         self._enter_mode = False
         # guards cell_edited during programmatic writes (we also blockSignals)
         self._populating = False
+        # The active sort, as (column index, ascending), or None.  Qt's
+        # own click-to-sort is switched off -- see
+        # _header_section_clicked -- so this is where it lives, and
+        # _apply_sort() is what puts it back after rows are added.
+        self._sort_col = None
+        self._sort_ascending = True
 
         tw.itemDoubleClicked.connect(self._activated_cb)
         tw.itemSelectionChanged.connect(self._selection_cb)
         tw.currentCellChanged.connect(self._current_cell_cb)
         tw.cellChanged.connect(self._cell_changed_cb)
-        tw.horizontalHeader().sortIndicatorChanged.connect(
-            self._sort_indicator_cb)
+        hdr = tw.horizontalHeader()
+        # QTableView wires its own header behaviour: click-to-sort when
+        # sorting is enabled, click-to-select-the-column when it is
+        # not.  Neither can be asked about one column at a time -- a
+        # QHeaderView's clickability belongs to the whole header -- so
+        # take both off and answer the click ourselves.  Qt's
+        # sectionPressed/sectionEntered connections are the
+        # column-select half; dropping them leaves resize drags and
+        # section moves alone.
+        for signal in (hdr.sectionPressed, hdr.sectionEntered):
+            try:
+                signal.disconnect()
+            except TypeError:
+                pass        # nothing was connected
+        hdr.setSectionsClickable(True)
+        hdr.sectionClicked.connect(self._header_section_clicked)
         tw.verticalScrollBar().valueChanged.connect(self._scroll_cb)
         tw.horizontalScrollBar().valueChanged.connect(self._scroll_cb)
 
@@ -303,7 +324,14 @@ class TableView(WidgetBase):
                         tw.setColumnWidth(i, int(c['colwidth']))
                     except (TypeError, ValueError):
                         pass
-            tw.setSortingEnabled(self.sortable)
+            # Never Qt's own sorting; see _header_section_clicked.
+            # Deliberately *not* setSortingEnabled(False): a fresh
+            # QTableWidget is already not sorting, and calling it would
+            # reinstate the built-in click-to-select-the-column that
+            # __init__ took off the header.
+            tw.horizontalHeader().setSortIndicatorShown(self.sortable)
+            self._sort_col = None
+            self._sort_ascending = True
         finally:
             tw.blockSignals(blk)
             self._populating = False
@@ -384,8 +412,6 @@ class TableView(WidgetBase):
         rows = list(rows)
         self._populating = True
         blk = tw.blockSignals(True)
-        was_sorting = tw.isSortingEnabled()
-        tw.setSortingEnabled(False)
         try:
             self._overrides.clear()
             self._cell_widgets.clear()
@@ -394,9 +420,10 @@ class TableView(WidgetBase):
             for r, row in enumerate(rows):
                 self._populate_row(r, self._row_to_dict(row))
         finally:
-            tw.setSortingEnabled(was_sorting)
             tw.blockSignals(blk)
             self._populating = False
+        # new rows land at the end; put them in sort order
+        self._apply_sort()
         self._apply_all_colors()
 
     def set_data(self, data):
@@ -453,19 +480,18 @@ class TableView(WidgetBase):
 
     def insert_row(self, idx, values):
         tw = self.widget
-        was_sorting = tw.isSortingEnabled()
         blk = tw.blockSignals(True)
         self._populating = True
-        tw.setSortingEnabled(False)
         try:
             tw.insertRow(idx)
             self._populate_row(idx, self._row_to_dict(values))
             if self._show_row_numbers:
                 self._renumber_rows()
         finally:
-            tw.setSortingEnabled(was_sorting)
             tw.blockSignals(blk)
             self._populating = False
+        # the new row lands where it was put; put it in sort order
+        self._apply_sort()
         self._apply_all_colors()
 
     def delete_row(self, idx):
@@ -956,12 +982,26 @@ class TableView(WidgetBase):
     # ------------------------------------------------------------------
     def set_sortable(self, tf):
         self.sortable = bool(tf)
-        self.widget.setSortingEnabled(self.sortable)
+        self.widget.horizontalHeader().setSortIndicatorShown(self.sortable)
+        if not self.sortable:
+            self._sort_col = None
+            self._show_sort_indicator()
 
     def sort_by_column(self, col, ascending=True):
-        order = (QtCore.Qt.AscendingOrder if ascending
-                 else QtCore.Qt.DescendingOrder)
-        self.widget.sortItems(col, order)
+        """Sort on column `col`.
+
+        Stays permissive: a column can be out of the header's reach and
+        still be sorted on from the application.  Fires 'sorted' when
+        this changes the active sort, as it did when Qt owned the
+        indicator.
+        """
+        changed = (self._sort_col, self._sort_ascending) != (col, ascending)
+        self._sort_col = col
+        self._sort_ascending = bool(ascending)
+        self._apply_sort()
+        if changed and 0 <= col < len(self._user_columns):
+            self.make_callback('sorted', self._user_columns[col]['key'],
+                               self._sort_ascending)
 
     def scroll_to_path(self, path):
         idx = self._resolve_to_row_index(path)
@@ -1095,12 +1135,59 @@ class TableView(WidgetBase):
         self.make_callback('cell_edited', [r], col_key, old_value, new_value)
         self.make_callback('changed')
 
-    def _sort_indicator_cb(self, logical_index, order):
-        if not (0 <= logical_index < len(self._user_columns)):
+    def _apply_sort(self):
+        """Put the rows back in sort order.
+
+        Qt's own sorting is off, so a sort is a one-shot on the model
+        and does not survive an insertion -- unlike
+        ``setSortingEnabled(True)``, which kept newly added rows in
+        place.  Call this after adding or replacing rows.
+        """
+        if self._sort_col is None:
             return
-        col_key = self._user_columns[logical_index]['key']
-        asc = (order == QtCore.Qt.AscendingOrder)
-        self.make_callback('sorted', col_key, asc)
+        order = (QtCore.Qt.AscendingOrder if self._sort_ascending
+                 else QtCore.Qt.DescendingOrder)
+        self.widget.sortItems(self._sort_col, order)
+
+    def _show_sort_indicator(self):
+        """Point the indicator at the active sort (or nowhere)."""
+        hdr = self.widget.horizontalHeader()
+        if self._sort_col is None:
+            hdr.setSortIndicator(-1, QtCore.Qt.AscendingOrder)
+        else:
+            hdr.setSortIndicator(
+                self._sort_col,
+                QtCore.Qt.AscendingOrder if self._sort_ascending
+                else QtCore.Qt.DescendingOrder)
+
+    def _header_section_clicked(self, col):
+        """The user clicked a header section.
+
+        Qt's click-to-sort and click-to-select-the-column are both off
+        (see __init__), so this is the one place that answers a header
+        click.  A sortable column sorts; anything else selects the
+        column, which is what Qt itself does on a table whose sorting
+        is off.
+
+        QHeaderView has already flipped the sort indicator by the time
+        this runs, with the toggle semantics we want (same column
+        reverses, a new one starts ascending), so read the answer off
+        it rather than recomputing it; when the click does not sort,
+        put it back where it was.
+        """
+        spec = (self._user_columns[col]
+                if 0 <= col < len(self._user_columns) else {})
+        if not treehelper.column_is_sortable(spec, self.sortable):
+            self._show_sort_indicator()
+            self.widget.selectColumn(col)
+            return
+
+        hdr = self.widget.horizontalHeader()
+        self._sort_col = col
+        self._sort_ascending = (hdr.sortIndicatorOrder() ==
+                                QtCore.Qt.AscendingOrder)
+        self._apply_sort()
+        self.make_callback('sorted', spec['key'], self._sort_ascending)
 
     def _scroll_cb(self, _value):
         h, v = self.get_scroll_position()

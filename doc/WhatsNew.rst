@@ -4,6 +4,24 @@ What's New
 
 Since 7.5.0 (unreleased)
 ========================
+- **A TreeView or TableView column can opt out of the header-click sort**
+  with ``sortable: False`` in its column descriptor, on every backend.  A
+  plain header click sorts, which is easy to do by accident and invisible
+  when every value in the column is equal -- the sort is stable, so no row
+  moves -- until a later edit to that column reshuffles its row.  The flag
+  only narrows (it cannot make a column sortable on a widget built with
+  ``sortable=False``) and it gates the user's gesture only, leaving
+  ``sort_by_column()`` / ``sort_on_column()`` available for any column;
+  ``treehelper.column_is_sortable()`` is the shared rule.  Columns without
+  the flag are unaffected.  Along the way: the qt ``TableView`` no longer
+  reports a ``sorted`` callback for header clicks on a table built with
+  ``sortable=False``, where nothing was ever sorted, and a header click
+  that is not answered by a sort selects the column, as it already did on
+  a table with sorting off.
+- The deprecated QTreeWidget-based ``TableView`` (``_TableViewQTree``) is
+  removed from ``ginga.qtw.Widgets``.  It was superseded by the
+  QTableWidget-based ``TableView`` in ``ginga.qtw._tableview``, which is
+  what the module exports, and was referenced from nowhere.
 - **A plot viewer no longer draws into a figure that has no area.**  A
   widget reports a size of zero until it has been laid out -- a web canvas
   always does -- and a figure sized from that has nothing to draw in.

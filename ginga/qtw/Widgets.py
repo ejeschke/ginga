@@ -1588,6 +1588,12 @@ class TreeView(WidgetBase):
         self._col_widgets = {}      # col index -> column spec
         self._cell_widgets = {}     # (id(item), col_key) -> control
         self._delegate = None
+        # The active sort, as (column index, ascending), or None.  Qt's
+        # own click-to-sort is switched off -- see
+        # _header_section_clicked -- so this is where it lives, and
+        # _apply_sort() is what puts it back after rows are added.
+        self._sort_col = None
+        self._sort_ascending = True
         self._cell_styles = {}      # (path, col_key) -> dict(fg, bg, bold)
         self._row_styles = {}       # path -> dict(fg, bg, bold)
         self._column_styles = {}    # col_key -> dict(fg, bg, bold)
@@ -1616,11 +1622,13 @@ class TreeView(WidgetBase):
         tv.itemExpanded.connect(self._item_expanded_cb)
         tv.itemCollapsed.connect(self._item_collapsed_cb)
         tv.itemChanged.connect(self._item_changed_cb)
-        # Fires when the user clicks a header section to (re)sort.
-        # Lets TreeViewItem.__lt__ do type-aware comparison while
-        # the higher level gets a clean "the user sorted by col N"
-        # event.
-        tv.header().sortIndicatorChanged.connect(self._sort_indicator_cb)
+        # Fires when the user clicks a header section.  Qt's own
+        # click-to-sort is off (setSortingEnabled stays False) so that a
+        # column can opt out of sorting, which QHeaderView has no way to
+        # express: its clickability is a property of the whole header.
+        # TreeViewItem.__lt__ still does the type-aware comparison; what
+        # changes is only who decides to sort.
+        tv.header().sectionClicked.connect(self._header_section_clicked)
         if self.dragable:
             tv.setDragEnabled(True)
             tv.startDrag = self._start_drag
@@ -1638,7 +1646,16 @@ class TreeView(WidgetBase):
         self.leaf_key = leaf_key
         treeview = self.widget
         treeview.setColumnCount(len(columns))
-        treeview.setSortingEnabled(self.sortable)
+        # Never Qt's own sorting; see _header_section_clicked.  The
+        # header still looks and toggles the same, because clickable
+        # sections and the indicator are what setSortingEnabled would
+        # have turned on.
+        treeview.setSortingEnabled(False)
+        header = treeview.header()
+        header.setSectionsClickable(self.sortable)
+        header.setSortIndicatorShown(self.sortable)
+        self._sort_col = None
+        self._sort_ascending = True
 
         # speeds things up a bit
         treeview.setUniformRowHeights(True)
@@ -1672,9 +1689,12 @@ class TreeView(WidgetBase):
         treeview._datatypes = datatypes
         self.leaf_idx = datakeys.index(self.leaf_key)
 
-        if self.sortable:
+        if self.sortable and treehelper.column_is_sortable(
+                specs[self.leaf_idx], True):
             # Sort increasing by default
-            treeview.sortByColumn(self.leaf_idx, QtCore.Qt.AscendingOrder)
+            self._sort_col = self.leaf_idx
+            self._sort_ascending = True
+            self._apply_sort()
 
         treeview.setHeaderLabels(headers)
 
@@ -1684,17 +1704,11 @@ class TreeView(WidgetBase):
 
     def add_tree(self, tree_dict, expand_new=False):
         """Add a tree to the TreeView"""
-        if self.sortable:
-            # NOTE: turning off sorting while adding makes the operation
-            # faster
-            self.widget.setSortingEnabled(False)
-
         self._add_subtree(1, self.shadow, self.widget, tree_dict,
                           expand_new=expand_new)
 
-        if self.sortable:
-            # re-enable sorting if needed
-            self.widget.setSortingEnabled(True)
+        # new items land at the end; put them in sort order
+        self._apply_sort()
 
         # newly created rows have no styling yet
         self._restyle_all()
@@ -1705,15 +1719,12 @@ class TreeView(WidgetBase):
 
     def update_tree(self, tree_dict, expand_new=False):
         """Update the TreeView according to the changes in `tree_dict`"""
-        if self.sortable:
-            self.widget.setSortingEnabled(False)
-
         self._del_subtree(1, self.shadow, self.widget, tree_dict)
         self._add_subtree(1, self.shadow, self.widget, tree_dict,
                           expand_new=expand_new)
 
-        if self.sortable:
-            self.widget.setSortingEnabled(True)
+        # new items land at the end; put them in sort order
+        self._apply_sort()
 
         # newly created rows have no styling yet
         self._restyle_all()
@@ -1740,8 +1751,6 @@ class TreeView(WidgetBase):
         before = [tuple(p) for p in self.get_selected_paths()]
         tv = self.widget
         tv.blockSignals(True)
-        if self.sortable:
-            tv.setSortingEnabled(False)
         tv.setUpdatesEnabled(False)
         try:
             deleted = self._delete_subtree(1, self.shadow, tv, tree_dict,
@@ -1752,8 +1761,6 @@ class TreeView(WidgetBase):
                 self._path_to_item(list(p)).setSelected(True)
         finally:
             tv.setUpdatesEnabled(True)
-            if self.sortable:
-                tv.setSortingEnabled(True)
             tv.blockSignals(False)
 
         if deleted:
@@ -2088,18 +2095,63 @@ class TreeView(WidgetBase):
         res_dict = self.get_selected()
         self.make_callback('selected', res_dict)
 
-    def _sort_indicator_cb(self, col, order):
-        """Fire when the user clicks a header section to (re)sort.
+    def _apply_sort(self):
+        """Put the rows back in sort order.
 
-        The callback carries the column *key* (a stable string),
-        not the column index — matching the pgw TableView's
-        ``sorted`` signature so a single handler works under both
-        widget sets.
+        Qt's own sorting is off, so a sort is a one-shot on the model
+        and does not survive an insertion -- unlike
+        ``setSortingEnabled(True)``, which kept newly added items in
+        place.  Call this after adding or replacing rows.
         """
-        ascending = (order == QtCore.Qt.AscendingOrder)
+        if self._sort_col is None:
+            return
+        order = (QtCore.Qt.AscendingOrder if self._sort_ascending
+                 else QtCore.Qt.DescendingOrder)
+        # with sorting disabled this sorts the model once, and sets the
+        # indicator while it is at it
+        self.widget.sortByColumn(self._sort_col, order)
+
+    def _show_sort_indicator(self):
+        """Point the indicator at the active sort (or nowhere)."""
+        header = self.widget.header()
+        if self._sort_col is None:
+            header.setSortIndicator(-1, QtCore.Qt.AscendingOrder)
+        else:
+            header.setSortIndicator(
+                self._sort_col,
+                QtCore.Qt.AscendingOrder if self._sort_ascending
+                else QtCore.Qt.DescendingOrder)
+
+    def _header_section_clicked(self, col):
+        """The user clicked a header section.
+
+        Qt's click-to-sort is off, so this is where sorting happens --
+        and where a column that opted out with ``sortable: False`` is
+        turned away.  QHeaderView has already flipped the sort
+        indicator by the time this runs, with the toggle semantics we
+        want (same column reverses, a new one starts ascending), so
+        read the answer off it rather than recomputing it; on a
+        refusal, put it back where it was.
+
+        The 'sorted' callback carries the column *key* (a stable
+        string), not the column index -- matching the gtk and pgw
+        signature so one handler works under any widget set.
+        """
+        spec = (self.col_specs[col] if 0 <= col < len(self.col_specs)
+                else {})
+        if not treehelper.column_is_sortable(spec, self.sortable):
+            self._show_sort_indicator()
+            return
+
+        header = self.widget.header()
+        self._sort_col = col
+        self._sort_ascending = (header.sortIndicatorOrder() ==
+                                QtCore.Qt.AscendingOrder)
+        self._apply_sort()
+
         col_key = (self.datakeys[col]
                    if 0 <= col < len(self.datakeys) else None)
-        self.make_callback('sorted', col_key, ascending)
+        self.make_callback('sorted', col_key, self._sort_ascending)
 
     def _item_expanded_cb(self, item):
         path = self._get_path(item)
@@ -2567,7 +2619,21 @@ class TreeView(WidgetBase):
         self.widget.scrollTo(midx, QtGui.QAbstractItemView.PositionAtBottom)
 
     def sort_on_column(self, i):
-        self.widget.sortByColumn(i, QtCore.Qt.AscendingOrder)
+        """Sort on column `i`, ascending.
+
+        Stays permissive: a column can be out of the header's reach and
+        still be sorted on from the application.  Fires 'sorted' when
+        this changes the active sort, as it did when Qt owned the
+        indicator.
+        """
+        changed = (self._sort_col, self._sort_ascending) != (i, True)
+        self._sort_col = i
+        self._sort_ascending = True
+        self._apply_sort()
+        if changed:
+            col_key = (self.datakeys[i]
+                       if 0 <= i < len(self.datakeys) else None)
+            self.make_callback('sorted', col_key, True)
 
     def set_column_width(self, i, width):
         self.widget.setColumnWidth(i, width)

@@ -124,8 +124,9 @@ def normalize_column(col, index=0):
 
     Accepts the portable ``(label, key[, type])`` tuple, a bare string,
     or the full dict form the pg backend takes -- so ``editable``,
-    ``widget`` / ``choices``, ``visible_key`` and ``enabled_key``
-    survive on their way to a desktop backend instead of being dropped.
+    ``widget`` / ``choices``, ``visible_key``, ``enabled_key`` and
+    ``sortable`` survive on their way to a desktop backend instead of
+    being dropped.
     """
     if isinstance(col, dict):
         key = col.get('key') or col.get('label') or f'col{index}'

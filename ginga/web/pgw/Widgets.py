@@ -1028,8 +1028,12 @@ class TreeView(WidgetMixin, PGW.TreeView):
         ``(label, key, type)`` tuples -- the portable form the qt/gtk
         backends also accept -- or full descriptor dicts, which pass
         through to pgwidgets untouched so that ``editable``, ``widget``,
-        ``choices``, ``halign``, ``colwidth`` and friends can be set
-        without a second ``set_columns()`` call.
+        ``choices``, ``sortable``, ``halign``, ``colwidth`` and friends
+        can be set without a second ``set_columns()`` call.
+
+        ``sortable: False`` takes a column out of the header-click
+        sort on an otherwise sortable tree -- see
+        ``treehelper.column_is_sortable``.
         """
         self.levels = levels
 

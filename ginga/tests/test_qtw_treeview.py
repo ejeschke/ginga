@@ -611,3 +611,168 @@ def test_an_interior_node_need_not_be_a_plain_dict(tree):
     assert _row(tree, ['ob1']) == ['OB-042', '', '']
     assert _row(tree, ['ob1', 'e1']) == ['e1', '', '0.6']
     assert _row(tree, ['ob1', 'e2']) == ['e2', '', '0.9']
+
+
+# ----- per-column sort gating ----------------------------------------
+#
+# A column can opt out of the header-click sort with `sortable: False`.
+# Qt has no per-section hook for this, so both widgets switch Qt's own
+# click-to-sort off and answer the click themselves; these drive real
+# header clicks to check that what the user can do is unchanged apart
+# from the columns that opted out.
+
+def _click_header(app, header, section):
+    from qtpy.QtTest import QTest
+    from qtpy import QtCore as _QtCore
+    x = (header.sectionViewportPosition(section) +
+         header.sectionSize(section) // 2)
+    QTest.mouseClick(header.viewport(), _QtCore.Qt.MouseButton.LeftButton,
+                     _QtCore.Qt.KeyboardModifier.NoModifier,
+                     _QtCore.QPoint(x, header.height() // 2))
+    app.processEvents()
+
+
+def _sort_cols(lock=()):
+    return [dict(label='Name', key='name', sortable='name' not in lock),
+            dict(label='Note', key='note', sortable='note' not in lock)]
+
+
+_SORT_ROWS = ('cherry', 'apple', 'banana')
+
+
+def _sort_tree(app, lock=(), sortable=True):
+    tree = Widgets.TreeView(sortable=sortable)
+    tree.setup_table(_sort_cols(lock), 1, 'name')
+    # 'name' is the leaf key, so a sortable tree starts sorted on it
+    tree.set_tree({k: dict(name=k, note='') for k in _SORT_ROWS})
+    tree.get_widget().resize(400, 200)
+    tree.get_widget().show()
+    app.processEvents()
+    return tree
+
+
+def _tree_order(tree):
+    w = tree.get_widget()
+    return [w.topLevelItem(i).text(0) for i in range(w.topLevelItemCount())]
+
+
+def _sort_table(app, lock=(), sortable=True, mode='single'):
+    table = Widgets.TableView(columns=_sort_cols(lock), sortable=sortable,
+                              selection_mode=mode)
+    table.set_rows([{'name': k, 'note': ''} for k in _SORT_ROWS])
+    table.get_widget().resize(400, 200)
+    table.get_widget().show()
+    app.processEvents()
+    return table
+
+
+def _table_order(table):
+    w = table.get_widget()
+    return [w.item(r, 0).text() for r in range(w.rowCount())]
+
+
+def test_tree_header_click_still_sorts(app):
+    tree = _sort_tree(app)
+    got = []
+    tree.add_callback('sorted', lambda w, key, asc: got.append((key, asc)))
+    _click_header(app, tree.get_widget().header(), 0)
+    # it started sorted ascending on the leaf column, so this reverses
+    assert _tree_order(tree) == ['cherry', 'banana', 'apple']
+    assert got == [('name', False)]
+
+
+def test_tree_locked_column_does_not_sort(app):
+    tree = _sort_tree(app, lock=('name',))
+    before = _tree_order(tree)
+    got = []
+    tree.add_callback('sorted', lambda w, key, asc: got.append((key, asc)))
+    _click_header(app, tree.get_widget().header(), 0)
+    assert _tree_order(tree) == before
+    assert got == []
+
+
+def test_tree_refused_click_leaves_the_indicator_alone(app):
+    # Qt flips the indicator before we are told about the click, so a
+    # refusal has to put it back
+    tree = _sort_tree(app, lock=('note',))
+    header = tree.get_widget().header()
+    assert header.sortIndicatorSection() == 0      # the leaf column
+    _click_header(app, header, 1)
+    assert header.sortIndicatorSection() == 0
+
+
+def test_tree_sort_survives_adding_rows(app):
+    # Qt's own sorting kept new items in place; ours is a one-shot on
+    # the model and has to be re-applied
+    tree = _sort_tree(app)
+    tree.add_tree({'aardvark': dict(name='aardvark', note='')})
+    app.processEvents()
+    assert _tree_order(tree) == ['aardvark', 'apple', 'banana', 'cherry']
+
+
+def test_tree_sort_on_column_ignores_the_lock(app):
+    # the gate is on the user's gesture, not on the application
+    tree = _sort_tree(app, lock=('note',))
+    tree.sort_on_column(1)
+    app.processEvents()
+    assert tree.get_widget().header().sortIndicatorSection() == 1
+
+
+def test_table_header_click_still_sorts(app):
+    table = _sort_table(app)
+    got = []
+    table.add_callback('sorted', lambda w, key, asc: got.append((key, asc)))
+    _click_header(app, table.get_widget().horizontalHeader(), 0)
+    assert _table_order(table) == ['apple', 'banana', 'cherry']
+    assert got == [('name', True)]
+
+
+def test_table_locked_column_does_not_sort(app):
+    table = _sort_table(app, lock=('name',))
+    got = []
+    table.add_callback('sorted', lambda w, key, asc: got.append((key, asc)))
+    _click_header(app, table.get_widget().horizontalHeader(), 0)
+    assert _table_order(table) == list(_SORT_ROWS)
+    assert got == []
+
+
+def test_table_locked_column_selects_in_cell_mode(app):
+    # a header click that is not answered by a sort selects the column,
+    # which is what the table already does when sorting is off
+    table = _sort_table(app, lock=('name',), mode='multiple-cell')
+    _click_header(app, table.get_widget().horizontalHeader(), 0)
+    sel = {i.column() for i in table.get_widget().selectedIndexes()}
+    assert sel == {0}
+
+
+def test_table_sorting_column_does_not_also_select(app):
+    table = _sort_table(app, mode='multiple-cell')
+    _click_header(app, table.get_widget().horizontalHeader(), 0)
+    assert table.get_widget().selectedIndexes() == []
+
+
+def test_table_without_sorting_reports_no_sort(app):
+    # the header is still clickable -- that is how a column gets
+    # selected -- but a click is not a sort and must not say it is
+    table = _sort_table(app, sortable=False, mode='multiple-cell')
+    got = []
+    table.add_callback('sorted', lambda w, key, asc: got.append((key, asc)))
+    _click_header(app, table.get_widget().horizontalHeader(), 0)
+    assert got == []
+    assert {i.column()
+            for i in table.get_widget().selectedIndexes()} == {0}
+
+
+def test_table_sort_survives_adding_rows(app):
+    table = _sort_table(app)
+    table.sort_by_column(0, True)
+    table.append_row({'name': 'aardvark', 'note': ''})
+    app.processEvents()
+    assert _table_order(table) == ['aardvark', 'apple', 'banana', 'cherry']
+
+
+def test_table_sort_by_column_ignores_the_lock(app):
+    table = _sort_table(app, lock=('name',))
+    table.sort_by_column(0, True)
+    app.processEvents()
+    assert _table_order(table) == ['apple', 'banana', 'cherry']
