@@ -185,6 +185,32 @@ def test_setup_table_accepts_tuples(app, sent):
     assert tree.datakeys == ['name', 'kind', 'icon']
 
 
+def test_sortable_reaches_the_browser(app, sent):
+    """A column that opted out of the header-click sort has to arrive
+    in the browser saying so -- the JS is what enforces it."""
+    tree = Widgets.TreeView(sortable=True)
+    del sent[:]
+    tree.setup_table([
+        dict(label='Name', key='name'),
+        dict(label='Note', key='note', editable=True, sortable=False),
+    ], 2, 'name')
+    columns, = _calls(sent, 'set_columns')[-1:]
+    name, note = columns[0]
+    assert 'sortable' not in name          # unflagged: follows the table
+    assert note['sortable'] is False
+
+    table = Widgets.TableView(sortable=True)
+    del sent[:]
+    # the TableView rebuilds descriptors from known keys, so the flag
+    # has to be one of them
+    table.set_columns([dict(label='Name', key='name'),
+                       dict(label='Note', key='note', sortable=False)])
+    columns, = _calls(sent, 'set_columns')[-1:]
+    name, note = columns[0]
+    assert 'sortable' not in name
+    assert note['sortable'] is False
+
+
 def test_setup_table_accepts_dict_columns(app, sent):
     """Full descriptors pass through, so editable/widget columns can be
     declared without a second set_columns() call."""

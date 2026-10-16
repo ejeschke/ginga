@@ -24,6 +24,7 @@ except Exception:                            # pragma: no cover
 # already fixed the family.
 from ginga.qtw import Widgets  # noqa: E402
 from ginga.qtw.QtHelp import QtGui  # noqa: E402
+from ginga.util import treehelper  # noqa: E402
 
 
 @pytest.fixture(scope='module')
@@ -405,6 +406,22 @@ def test_table_button_label_falls_back_to_the_column_text(app):
 
     assert button(0).text() == 'Delete'
     assert button(1).text() == 'Other'
+
+
+def test_sortable_survives_column_normalisation(app):
+    """Qt's header sorting is a whole-widget setting, so this backend
+    cannot act on a per-column flag -- but it must not swallow it
+    either, since the same descriptors get handed to other backends."""
+    table = Widgets.TableView(
+        columns=[dict(label='A', key='a'),
+                 dict(label='B', key='b', sortable=False),
+                 ('C', 'c')],
+        sortable=True)
+
+    flags = [c['sortable'] for c in table._user_columns]
+    assert flags == [True, False, True]
+    assert [treehelper.column_is_sortable(c, True)
+            for c in table._user_columns] == [True, False, True]
 
 
 def test_table_font_can_be_changed_after_construction(app):

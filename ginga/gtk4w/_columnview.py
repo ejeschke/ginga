@@ -439,7 +439,10 @@ class ColumnViewTreeMixin:
             column = Gtk.ColumnViewColumn.new(spec['label'], factory)
             column.set_resizable(True)
             column.set_expand(spec.get('colwidth') is None)
-            if self.sortable:
+            # A ColumnViewColumn with no sorter is not clickable, so a
+            # column that opted out with ``sortable: False`` simply
+            # never gets one.
+            if treehelper.column_is_sortable(spec, self.sortable):
                 column.set_sorter(self._make_column_sorter(i))
             self.cv.append_column(column)
 

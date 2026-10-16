@@ -584,6 +584,65 @@ def test_header_click_sorts_a_sortable_table_instead(app):
     assert {c['col_key'] for c in table.get_selected_cells()} == {'b'}
 
 
+def _locked_table(app, locked=('b',), mode='multiple-cell'):
+    """A sortable table where some columns opted out of the sort."""
+    table = Widgets.TableView(
+        columns=[dict(label=key.upper(), key=key,
+                      sortable=key not in locked)
+                 for key in ('a', 'b', 'c')],
+        selection_mode=mode, sortable=True, show_row_numbers=True)
+    table.set_rows([{'a': 'a%d' % i, 'b': 'b%d' % i, 'c': 'c%d' % i}
+                    for i in (1, 2, 3)])
+    return table
+
+
+def _sort_affordances(table):
+    """Per user column: has GTK been given the means to sort it?
+
+    gtk4 attaches a Gtk.Sorter per column and a column without one is
+    inert; gtk3 makes the header clickable per column.  Either way it
+    is a per-column property, so a locked column simply never gets it.
+    """
+    offset = table._col_offset()
+    if is_gtk4:
+        return [col.get_sorter() is not None
+                for col in list(table.cv.get_columns())[offset:]]
+    return [col.get_clickable()
+            for col in table.tv.get_columns()[offset:]]
+
+
+def test_a_locked_column_offers_no_sort(app):
+    table = _locked_table(app, mode='single')
+    if is_gtk4:
+        _shown(table)
+    assert _sort_affordances(table) == [True, False, True]
+
+
+def test_set_sortable_leaves_a_locked_column_locked(app):
+    # re-enabling the table must not hand the sort back to a column
+    # that opted out
+    table = _locked_table(app, mode='single')
+    if is_gtk4:
+        _shown(table)
+    table.set_sortable(False)
+    assert _sort_affordances(table) == [False, False, False]
+    table.set_sortable(True)
+    assert _sort_affordances(table) == [True, False, True]
+
+
+def test_a_locked_column_selects_in_cell_mode(app):
+    # nothing answers the click with a sort, so it falls through to the
+    # cell-mode column select, as it does on a wholly unsortable table
+    table = _locked_table(app)
+    if is_gtk4:
+        _shown(table)
+        table._on_header_clicked(_Gesture(), 1, 0, 0, 1)
+    else:
+        column = table.tv.get_columns()[table._col_offset() + 1]
+        table._on_header_clicked(column)
+    assert {c['col_key'] for c in table.get_selected_cells()} == {'b'}
+
+
 @needs_gtk4
 def test_row_selection_mode_does_not_column_select(app):
     table = _table(app, mode='single')

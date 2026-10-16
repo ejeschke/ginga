@@ -1628,8 +1628,13 @@ class TreeView(_columnview.ColumnViewTreeMixin, WidgetBase):
         shift = bool(state & Gdk.ModifierType.SHIFT_MASK)
 
         # plain click on a sortable header sorts; ColumnView does that
-        # itself, so stay out of the way
-        if self.sortable and not (ctrl or shift):
+        # itself, so stay out of the way.  A column that opted out with
+        # ``sortable: False`` has no sorter, so nothing sorts and the
+        # click selects the column instead.
+        spec = (self.col_specs[col_idx] if col_idx < len(self.col_specs)
+                else {})
+        if (treehelper.column_is_sortable(spec, self.sortable)
+                and not (ctrl or shift)):
             return
 
         anchor = getattr(self, '_col_anchor', None)
@@ -1863,10 +1868,13 @@ class TableView(TreeView):
         self.sortable = tf
         offset = self._col_offset()
         for i, column in enumerate(self.cv.get_columns()):
-            if i < offset:
+            n = i - offset
+            if not (0 <= n < len(self.col_specs)):
                 continue        # the row-number column never sorts
-            column.set_sorter(
-                self._make_column_sorter(i - offset) if tf else None)
+            allowed = treehelper.column_is_sortable(self.col_specs[n],
+                                                    self.sortable)
+            column.set_sorter(self._make_column_sorter(n) if allowed
+                              else None)
 
     def _col_offset(self):
         return 1 if self._show_row_numbers else 0

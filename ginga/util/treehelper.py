@@ -38,7 +38,7 @@ wrappers cannot drift on the question of what counts as a child.
 VALUES_KEY = '__values__'
 
 __all__ = ['VALUES_KEY', 'is_mapping', 'split_node', 'row_values',
-           'supplied_keys', 'normalize_column']
+           'supplied_keys', 'normalize_column', 'column_is_sortable']
 
 
 def is_mapping(obj):
@@ -144,3 +144,25 @@ def normalize_column(col, index=0):
     key = col[1] if len(col) > 1 else label
     dtype = col[2] if len(col) > 2 else ('icon' if key == 'icon' else 'str')
     return dict(label=label, key=key, type=dtype)
+
+
+def column_is_sortable(spec, sortable):
+    """Can the user sort by clicking this column's header?
+
+    `spec` is a normalised column descriptor and `sortable` is the
+    widget's own flag.  A column opts out with ``sortable: False``,
+    which is worth doing for a column the user has no reason to sort
+    on: a plain header click sorts, and when every value in the column
+    is equal the sort is stable, so nothing moves and nothing says it
+    happened -- until a later edit to that column reshuffles the row.
+
+    The per-column flag only ever narrows.  ``sortable: True`` on a
+    widget built with ``sortable=False`` still does not sort, so a
+    caller cannot turn sorting on one column at a time.
+
+    This gates the *user's gesture* only; ``sort_by_column()`` stays
+    available to the application for any column.
+    """
+    if not sortable:
+        return False
+    return spec.get('sortable', True) is not False

@@ -1254,9 +1254,10 @@ class TableView(WidgetMixin, PGW.TableView):
         wrapper) and return a list of dicts the underlying
         pgwidgets-js TableView understands.
 
-        Optional dict keys: ``halign``, ``editable``, ``widget``
-        (one of ``_CELL_WIDGETS`` or None) and widget-specific
-        extras: ``choices``, ``min``, ``max``, ``text``.
+        Optional dict keys: ``halign``, ``editable``, ``sortable``,
+        ``widget`` (one of ``_CELL_WIDGETS`` or None) and
+        widget-specific extras: ``choices``, ``min``, ``max``,
+        ``text``.
         """
         out = []
         for i, col in enumerate(columns):
@@ -1276,6 +1277,10 @@ class TableView(WidgetMixin, PGW.TableView):
                     d['halign'] = col['halign']
                 if 'editable' in col:
                     d['editable'] = bool(col['editable'])
+                if 'sortable' in col:
+                    # False takes the column out of the header-click
+                    # sort; see treehelper.column_is_sortable
+                    d['sortable'] = bool(col['sortable'])
                 if 'colwidth' in col:
                     d['colwidth'] = col['colwidth']
                 if widget is not None:

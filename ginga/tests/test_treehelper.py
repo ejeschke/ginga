@@ -133,3 +133,44 @@ class TestSuppliedKeys:
                 return True
 
         assert treehelper.supplied_keys(Opaque()) == set()
+
+
+class TestColumnIsSortable:
+    """Whether the user may sort by clicking a column's header.
+
+    The flag only narrows: a column can take itself out of a sortable
+    widget's header gesture, but cannot put itself into a widget that
+    is not sortable at all.
+    """
+
+    def test_an_unflagged_column_follows_the_widget(self):
+        spec = dict(label='Name', key='name')
+        assert treehelper.column_is_sortable(spec, True)
+        assert not treehelper.column_is_sortable(spec, False)
+
+    def test_a_column_can_opt_out(self):
+        spec = dict(label='Note', key='note', sortable=False)
+        assert not treehelper.column_is_sortable(spec, True)
+
+    def test_sortable_true_is_the_same_as_saying_nothing(self):
+        spec = dict(label='Name', key='name', sortable=True)
+        assert treehelper.column_is_sortable(spec, True)
+
+    def test_a_column_cannot_widen(self):
+        spec = dict(label='Name', key='name', sortable=True)
+        assert not treehelper.column_is_sortable(spec, False)
+
+    def test_a_normalized_tuple_column_sorts(self):
+        spec = treehelper.normalize_column(('Name', 'name'))
+        assert treehelper.column_is_sortable(spec, True)
+
+    def test_normalize_column_carries_the_flag(self):
+        spec = treehelper.normalize_column(
+            dict(label='Note', key='note', sortable=False))
+        assert spec['sortable'] is False
+        assert not treehelper.column_is_sortable(spec, True)
+
+    def test_an_empty_spec_is_no_opt_out(self):
+        # backends ask about the row-number column too, which has no
+        # descriptor of its own
+        assert treehelper.column_is_sortable({}, True)

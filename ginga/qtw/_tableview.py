@@ -207,6 +207,12 @@ class TableView(WidgetBase):
     # ------------------------------------------------------------------
     @staticmethod
     def _normalise_columns(columns):
+        """Normalise column descriptors to dicts.
+
+        ``sortable`` is carried through for the backends that act on
+        it -- see ``treehelper.column_is_sortable`` -- and ignored
+        here, since Qt's header sorting is a whole-widget setting.
+        """
         out = []
         for i, col in enumerate(columns):
             if isinstance(col, dict):
@@ -231,6 +237,7 @@ class TableView(WidgetBase):
                     'enabled_key': col.get('enabled_key'),
                     'visible_key': col.get('visible_key'),
                     'colwidth': col.get('colwidth'),
+                    'sortable': col.get('sortable', True),
                 }
             elif isinstance(col, (tuple, list)):
                 label = col[0]
@@ -240,13 +247,13 @@ class TableView(WidgetBase):
                      'halign': None, 'editable': False, 'widget': None,
                      'choices': None, 'min': None, 'max': None, 'text': None,
                      'enabled_key': None, 'visible_key': None,
-                     'colwidth': None}
+                     'colwidth': None, 'sortable': True}
             elif isinstance(col, str):
                 d = {'label': col, 'key': col, 'type': 'string',
                      'halign': None, 'editable': False, 'widget': None,
                      'choices': None, 'min': None, 'max': None, 'text': None,
                      'enabled_key': None, 'visible_key': None,
-                     'colwidth': None}
+                     'colwidth': None, 'sortable': True}
             else:
                 raise WidgetError(f"unrecognised column descriptor: {col!r}")
             out.append(d)

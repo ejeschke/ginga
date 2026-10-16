@@ -1391,7 +1391,10 @@ class TreeView(WidgetBase):
             header = headers[n]
             tvc = Gtk.TreeViewColumn(header, cell)
             tvc.set_resizable(True)
-            if self.sortable:
+            # GtkTreeViewColumn clickability is per column, so a
+            # column that opted out with ``sortable: False`` simply
+            # never becomes clickable.
+            if treehelper.column_is_sortable(spec, self.sortable):
                 tvc.connect('clicked', self.sort_cb, n)
                 tvc.set_clickable(True)
             fn_data = self._mkcolfnN(n, kwd, datatype)
@@ -2668,7 +2671,10 @@ class TableView(TreeView):
                      'text': col.get('text'),
                      'enabled_key': col.get('enabled_key'),
                      'visible_key': col.get('visible_key'),
-                     'colwidth': col.get('colwidth')}
+                     'colwidth': col.get('colwidth'),
+                     # False takes the column out of the header-click
+                     # sort; see treehelper.column_is_sortable
+                     'sortable': col.get('sortable', True)}
             elif isinstance(col, (tuple, list)):
                 label = col[0]
                 key = col[1] if len(col) > 1 else label
@@ -2678,14 +2684,14 @@ class TableView(TreeView):
                      'widget': None, 'choices': None,
                      'min': None, 'max': None, 'text': None,
                      'enabled_key': None, 'visible_key': None,
-                     'colwidth': None}
+                     'colwidth': None, 'sortable': True}
             elif isinstance(col, str):
                 d = {'label': col, 'key': col, 'type': 'string',
                      'halign': None, 'editable': False,
                      'widget': None, 'choices': None,
                      'min': None, 'max': None, 'text': None,
                      'enabled_key': None, 'visible_key': None,
-                     'colwidth': None}
+                     'colwidth': None, 'sortable': True}
             else:
                 raise WidgetError(
                     f"unrecognised column descriptor: {col!r}")
@@ -2763,10 +2769,18 @@ class TableView(TreeView):
             self.tv.connect('button-press-event',
                             self._on_tv_button_press_for_widget_cells)
             self._widget_btn_handler = True
-        # cell-mode: a header click selects the whole column (only on
-        # non-sortable tables; sortable ones keep header-click-to-sort)
-        if self._is_cell_mode() and not self.sortable:
-            for tvc in self.tv.get_columns():
+        # cell-mode: a header click selects the whole column, wherever
+        # the click is not already answered by a sort -- the whole
+        # table when it is not sortable, and otherwise the columns that
+        # opted out with ``sortable: False``.
+        if self._is_cell_mode():
+            offset = self._col_offset()
+            for i, tvc in enumerate(self.tv.get_columns()):
+                n = i - offset
+                spec = (self._user_columns[n]
+                        if 0 <= n < len(self._user_columns) else {})
+                if treehelper.column_is_sortable(spec, self.sortable):
+                    continue
                 if not getattr(tvc, '_ginga_hdr_sel', False):
                     tvc.set_clickable(True)
                     tvc.connect('clicked', self._on_header_clicked)
@@ -3109,8 +3123,13 @@ class TableView(TreeView):
 
     def set_sortable(self, tf):
         self.sortable = bool(tf)
-        for tvc in self.tv.get_columns():
-            tvc.set_clickable(self.sortable)
+        offset = self._col_offset()
+        for i, tvc in enumerate(self.tv.get_columns()):
+            n = i - offset
+            if not (0 <= n < len(self._user_columns)):
+                continue        # the row-number column never sorts
+            tvc.set_clickable(treehelper.column_is_sortable(
+                self._user_columns[n], self.sortable))
 
     def sort_by_column(self, col, ascending=True):
         n = col + self._col_offset()
