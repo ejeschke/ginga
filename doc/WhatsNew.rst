@@ -4,6 +4,27 @@ What's New
 
 Since 7.5.0 (unreleased)
 ========================
+- **``Thumbs`` renders thumbnails one at a time, off the GUI thread.**  The
+  thumb generator is a single stateful viewer -- set an image on it, then
+  read the rendered pixels back -- and it was driven both by the GUI thread
+  (as images arrived in a channel) and by the autoload worker, with nothing
+  serializing them.  Interleaving those two steps publishes one thumb's
+  pixels under another thumb's name, with nothing raised to say so, and a
+  render that threw took the whole thumb with it: generation used to run
+  *before* the thumb was registered, so the image never appeared in the
+  pane at all even though ``Contents`` listed it.  Rendering is now queued
+  and performed by a single drain (a pool task when there are threads, a
+  coroutine that yields to the event loop when there are not, as under
+  Pyodide), the thumb is registered before its image is asked for, and a
+  failed render leaves a placeholder that the autoload pass retries.  New
+  setting ``gen_yield_interval`` tunes the yield rate in the single-threaded
+  case.  ``add_visible_thumbs()`` also no longer re-enters itself through
+  the ``update_pending()`` call at its end.
+- ``ImageViewBase`` gained ``snapshot_attributes()`` / ``apply_attributes()``
+  and the ``get_attribute_keys()`` they share with ``copy_attributes()``.
+  The snapshot holds setting values only, so a caller that must read a live
+  viewer's appearance on the GUI thread can apply it to another viewer
+  later, or elsewhere.  ``copy_attributes()`` is unchanged.
 - **A TreeView or TableView column can opt out of the header-click sort**
   with ``sortable: False`` in its column descriptor, on every backend.  A
   plain header click sorts, which is easy to do by accident and invisible

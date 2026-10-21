@@ -51,6 +51,8 @@ import math
 import time
 import threading
 import bisect
+import asyncio
+from collections import deque
 
 import numpy as np
 
@@ -77,6 +79,17 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         # For thumbnail pane
         self.thumblock = threading.RLock()
+        # Thumbnail rendering is serialized through this queue.  The thumb
+        # generator is a single stateful viewer: set the image, then read
+        # the rendered pixels back out.  Two callers interleaving those two
+        # steps get each other's pixels, so exactly one request may be
+        # rendering at a time.  See _submit_gen_request().
+        self._gen_queue = deque()
+        self._gen_lock = threading.Lock()
+        self._gen_busy = False
+        # guards against add_visible_thumbs() re-entering itself
+        self._updating_visible = False
+        self._update_again = False
         self.thumb_dict = {}
         self.thumb_list = []
         self.thumb_num_cols = 1
@@ -111,6 +124,7 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                                    autoload_visible_thumbs=False,
                                    autoload_interval=0.25,
                                    update_interval=0.25,
+                                   gen_yield_interval=0.05,
                                    closeable=not spec.get('hidden', False),
                                    transfer_attrs=['transforms',
                                                    'cutlevels', 'rgbmap',
@@ -147,6 +161,10 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         self.autoload_visible = self.settings.get('autoload_visible_thumbs',
                                                   False)
         self.autoload_serial = time.time()
+        # how often the thumb generator yields to the event loop when it is
+        # sharing a single thread with the GUI (async/browser mode)
+        self.gen_yield_interval = self.settings.get('gen_yield_interval',
+                                                    0.05)
 
         # timer that controls how quickly we attempt to rebuild thumbs after
         # a pan/scroll operation
@@ -342,14 +360,18 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         text = self._mk_tooltip_text(metadata)
         extras.tooltip = text
 
-        if 'rgbimg' not in extras:
-            # since we have full size image in hand, generate a thumbnail
-            # now, and cache it for when the thumb is added to the canvas
-            thumb_image = self._regen_thumb_image(self.thumb_generator,
-                                                  image, extras, channel.viewer)
-            extras.rgbimg = thumb_image
-
+        # Register the thumb *before* asking for its image.  Generation is
+        # queued and can fail, and a thumb missing from the pane entirely
+        # is a worse outcome than one still showing a placeholder.
         self._add_image_info(fv, channel, info)
+
+        if 'rgbimg' not in extras and not extras.get('pending', False):
+            # we have the full size image in hand, so queue a thumbnail
+            # from it rather than make the GUI wait for the render
+            thumbkey = self.get_thumb_key(chname, info.name, info.path)
+            self._submit_gen_request(
+                self._mk_gen_request(thumbkey, image, extras, channel.viewer,
+                                     metadata=metadata))
         return True
 
     def add_image_info_cb(self, fv, channel, info):
@@ -585,40 +607,55 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             with self.thumblock:
                 bnch = self.thumb_dict.get(thumbkey, None)
             if bnch is None:
-                return
+                # removed under us; the others may still be good
+                continue
 
             # Get any previously stored thumb information in the image info
             extras = bnch.extras
 
             placeholder = extras.get('placeholder', True)
             ignore = extras.get('ignore', False)
+            # already queued for the generator--don't ask twice
+            pending = extras.get('pending', False)
             path = bnch.info.path
-            if placeholder and path is not None and not ignore:
+            if placeholder and path is not None and not ignore and not pending:
                 self.force_load_for_thumb(thumbkey, path, bnch, extras)
 
     def force_load_for_thumb(self, thumbkey, path, bnch, extras):
-        """Called by _autoload_thumbs() to load a file if the pane is
-        currently showing a placeholder for a thumb.
+        """Called by _autoload_thumbs() to find an image for a thumb that
+        the pane is currently showing a placeholder for.
+
+        Runs off the GUI thread.  It finds the *data*; turning that into a
+        thumbnail is the generator's job, so the result is handed back to
+        the GUI thread, which queues the render (see _submit_gen_request).
         """
         self.logger.debug("autoload missing [%s]" % (path))
         info = bnch.info
         chname = thumbkey[0]
         channel = self.fv.get_channel(chname)
         try:
-            thumb_image = self._get_thumb_image(channel, info, None, extras,
-                                                no_placeholder=True)
-            if thumb_image is not None:
-                self.fv.gui_do(self.update_thumbnail, thumbkey, thumb_image,
-                               None)
+            # [A] is there a thumbnail cached on disk from a past session?
+            image, needs_render = self.load_cached_thumb(info)
+            if image is not None and not needs_render:
+                self.fv.gui_do(self._publish_thumb, thumbkey, extras, image)
                 return
 
-            # <-- No easy thumb to load.  Forced to load the full image
-            #     if we want a thumbnail
-            if not self.autoload_visible:
-                return
+            # [B] is the full image still in the channel's memory?
+            if image is None:
+                try:
+                    image = channel.get_loaded_image(info.name)
 
-            image = self.fv.load_image(path, show_error=False)
-            self.logger.debug("loaded [%s]" % (path))
+                except KeyError:
+                    pass
+
+            # [C] <-- No easy thumb to load.  Forced to load the full image
+            #         if we want a thumbnail
+            if image is None:
+                if not self.autoload_visible:
+                    return
+
+                image = self.fv.load_image(path, show_error=False)
+                self.logger.debug("loaded [%s]" % (path))
 
             ## self.fv.gui_do(channel.add_image_update, image, info,
             ##                update_viewer=False)
@@ -628,7 +665,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                            save_thumb=self.save_thumbs)
 
         except Exception:
-            self.logger.error("autoload missing [%s] failed:" % (path))
+            self.logger.error("autoload missing [%s] failed:" % (path),
+                              exc_info=True)
             # load errors will be reported in self.fv.load_image()
             # Just ignore autoload errors for now...
             extras.ignore = True
@@ -799,11 +837,9 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             return
 
         self.logger.debug("redoing thumbnail ...")
+        self.fv.assert_gui_thread()
         if save_thumb is None:
             save_thumb = self.save_thumbs
-
-        # Get any previously stored thumb information in the image info
-        extras = bnch.extras
 
         # Get metadata for mouse-over tooltip
         info = bnch.info
@@ -819,23 +855,15 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
             bnch = self.thumb_dict[thumbkey]
 
-            # Generate new thumbnail
-            self.logger.debug("generating new thumbnail")
-            thumb_image = self._regen_thumb_image(self.thumb_generator,
-                                                  image, extras, viewer)
+            # Get any previously stored thumb information in the image info
+            extras = bnch.extras
 
-            # Save a thumbnail for future browsing
-            if save_thumb and info.path is not None:
-                try:
-                    self._save_thumb(thumb_image, bnch)
-                except Exception as e:
-                    # if we can't persist the thumbnail, don't let that
-                    # stop everything
-                    self.logger.error("Couldn't persist thumbnail: {}".format(e))
-
-            self.update_thumbnail(thumbkey, thumb_image, metadata)
-
-        self.fv.update_pending()
+        # Queue the thumbnail.  _gen_complete() will save and display it.
+        self._submit_gen_request(
+            self._mk_gen_request(thumbkey, image, extras, viewer,
+                                 save_thumb=(save_thumb and
+                                             info.path is not None),
+                                 metadata=metadata))
 
     def delete_channel_cb(self, fv, channel):
         """Called when a channel is deleted from the main interface.
@@ -964,111 +992,316 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             tt = self.make_tt(self.c_view, canvas, text, pt, obj)
             canvas.add(tt, tag=tag)
 
-    def _regen_thumb_image(self, tg, image, extras, viewer):
-        self.logger.debug("generating new thumbnail")
+    #############################################################
+    # Thumbnail generation.
+    #
+    # `self.thumb_generator` is one stateful viewer shared by every
+    # thumbnail: _render_thumb() sets an image on it and then reads the
+    # rendered pixels back.  Those two steps have to be atomic with
+    # respect to each other, or one caller publishes another caller's
+    # pixels -- silently, since nothing raises.  So all rendering is
+    # funnelled through _submit_gen_request() and performed by a single
+    # drain at a time.
+    #
+    # The split of work is deliberate: anything that has to touch a live
+    # channel viewer happens on the GUI thread in _mk_gen_request(), the
+    # render itself happens off the GUI thread in _render_thumb(), and
+    # the result is published back on the GUI thread by _gen_complete().
+    #############################################################
+
+    def _mk_gen_request(self, thumbkey, image, extras, viewer,
+                        save_thumb=False, metadata=None):
+        """Make a thumbnail generation request for `image`.
+
+        Must be called on the GUI thread: the request captures everything
+        the generator will need from the live channel viewer (`viewer`,
+        which may be `None`), because the generator runs where it cannot
+        safely be touched.  Pass the result to _submit_gen_request().
+        """
+        self.fv.assert_gui_thread()
+
+        req = Bunch.Bunch(thumbkey=thumbkey, image=image, extras=extras,
+                          metadata=metadata, save_thumb=save_thumb,
+                          attrs=None, rgb_array=None, ignore=False)
 
         if isinstance(viewer, (PlotViewBase, TableViewBase)):
-            # if a viewer was passed, and there is an image loaded there,
-            # then grab a screenshot of the viewer and resize it to a
-            # thumbnail
-            cur_obj = viewer.get_dataobj()
-            if cur_obj == image:
-                vwr_img = viewer.get_rgb_array()
-                ht, wd = vwr_img.shape[:2]
-                length = self.settings.get('thumb_length', 128)
-                aspect = min(wd, ht) / max(wd, ht)
-                if ht > wd:
-                    new_ht, new_wd = length, int(aspect * length)
-                else:
-                    new_wd, new_ht = length, int(aspect * length)
-                rgb_img, scales = trcalc.get_scaled_cutout_wdht(vwr_img,
-                                                                0, 0, wd, ht,
-                                                                new_wd, new_ht,
-                                                                interpolation='basic',
-                                                                logger=None,
-                                                                dtype=np.uint8)
-                thumb_image = RGBImage.RGBImage(rgb_img, order='RGB')
-                extras.setvals(rgbimg=thumb_image, placeholder=False,
-                               time_update=time.time())
-                return thumb_image
+            # a plot or table thumb is a screenshot of the viewer, and only
+            # the GUI thread may take one -- so take it now
+            if viewer.get_dataobj() == image:
+                req.rgb_array = viewer.get_rgb_array()
+
+        elif isinstance(viewer, ImageViewBase):
+            # the thumb should look like the image does in the channel, so
+            # snapshot the viewer's settings for the generator to apply
+            if viewer.get_image() is not None:
+                req.attrs = viewer.snapshot_attributes(self.transfer_attrs)
+
+        return req
+
+    def _submit_gen_request(self, req):
+        """Queue `req` for rendering, starting a drain if none is running.
+
+        Safe to call from any thread.  A request already queued for the
+        same thumb is replaced, so a burst of adjustments to one image
+        (dragging cut levels, say) collapses to a single render of its
+        final state instead of a backlog.
+        """
+        # mark the thumb as spoken for, so _autoload_thumbs() does not
+        # queue it a second time while this request is in flight
+        req.extras.setvals(pending=True)
+
+        with self._gen_lock:
+            for i, queued in enumerate(self._gen_queue):
+                if queued.thumbkey == req.thumbkey:
+                    self._gen_queue[i] = req
+                    break
+            else:
+                self._gen_queue.append(req)
+
+            if self._gen_busy:
+                # the drain already running will pick this up
+                return
+            self._gen_busy = True
+
+        if self.fv.get_taskpool_type() == 'async':
+            # single event loop (e.g. Pyodide/the browser): the drain is a
+            # coroutine that yields between renders
+            self.fv.nongui_do(self._gen_drain_async)
+        else:
+            self.fv.nongui_do(self._gen_drain)
+
+    def _next_gen_request(self):
+        """Take the next request off the queue, or `None` if it is empty.
+
+        Clears the busy flag, under the lock, in the same breath as
+        finding the queue empty.  A producer that takes the lock after
+        this therefore always either sees us still busy (and leaves the
+        work to us, because we have not yet looked) or sees us idle (and
+        starts a new drain) -- never neither, which would strand the
+        request.
+        """
+        with self._gen_lock:
+            if len(self._gen_queue) == 0:
+                self._gen_busy = False
+                return None
+            return self._gen_queue.popleft()
+
+    def _gen_drain(self):
+        """Render queued thumbnails off the GUI thread, one at a time.
+
+        Returns as soon as the queue is empty rather than parking on it:
+        the worker belongs to a shared pool, and a task that never
+        returns holds its thread for good.
+        """
+        self.fv.assert_nongui_thread()
+
+        while not self.fv.ev_quit.is_set():
+            req = self._next_gen_request()
+            if req is None:
+                return
+            self._render_and_publish(req)
+
+    async def _gen_drain_async(self):
+        """_gen_drain() for single-threaded (async) operation.
+
+        Here the "worker" shares the one thread with the GUI, so the drain
+        hands control back to the event loop between renders -- otherwise
+        a run of thumbnails would stall the UI exactly as rendering them
+        inline used to.  Serialization is free in this mode (there is
+        nothing to preempt us mid-render), but the queue is still what
+        guarantees it: the yields below are the only points at which
+        another drain could interleave, and the busy flag means there is
+        never another drain.
+        """
+        t_last = time.monotonic()
+
+        while not self.fv.ev_quit.is_set():
+            req = self._next_gen_request()
+            if req is None:
+                return
+            self._render_and_publish(req)
+
+            if time.monotonic() - t_last >= self.gen_yield_interval:
+                await asyncio.sleep(0)
+                t_last = time.monotonic()
+
+    def _render_and_publish(self, req):
+        """Render one request and hand the result to the GUI thread."""
+        try:
+            thumb_image = self._render_thumb(req)
+
+        except Exception as e:
+            self.logger.error("Error generating thumbnail for %s: %s" % (
+                str(req.thumbkey), str(e)), exc_info=True)
+            # let the autoload pass have another go at it
+            self.fv.gui_do(self._gen_failed, req)
+            return
+
+        self.fv.gui_do(self._gen_complete, req, thumb_image)
+
+    def _render_thumb(self, req):
+        """Render the thumbnail image for `req`.
+
+        The only user of `self.thumb_generator`, and the only part of
+        thumbnail generation that runs off the GUI thread.  It touches no
+        widgets: everything it needs to know about the channel viewer was
+        captured by _mk_gen_request() while that was still possible.
+        """
+        self.logger.debug("generating new thumbnail")
+
+        if req.rgb_array is not None:
+            # a plot or table viewer screenshot: only needs scaling down
+            return self._scale_rgb_thumb(req.rgb_array)
+
+        tg = self.thumb_generator
+        image = req.image
 
         if not tg.viewable(image):
             # this is not something we know how to open
-            image = self.placeholder_image
-            extras.setvals(rgbimg=image, placeholder=False,
-                           ignore=True, time_update=time.time())
-            return image
+            req.ignore = True
+            return self.placeholder_image
 
         tg.set_image(image)
-        if isinstance(viewer, ImageViewBase):
-            # if a viewer was passed, and there is an image loaded there,
-            # then copy the viewer attributes to the thumbnail generator
-            v_img = viewer.get_image()
-            if v_img is not None:
-                # this should force thumb generator to redraw as needed
-                viewer.copy_attributes(tg, self.transfer_attrs)
+        if req.attrs:
+            # make the thumb look like the image does in the channel
+            tg.apply_attributes(req.attrs)
 
         order = tg.rgb_order
         rgb_img = tg.get_image_as_array(order=order)
-        thumb_image = RGBImage.RGBImage(rgb_img, order=order)
-        extras.setvals(rgbimg=thumb_image, placeholder=False,
-                       time_update=time.time())
-        return thumb_image
+        return RGBImage.RGBImage(rgb_img, order=order)
 
-    def _get_thumb_image(self, channel, info, image, extras,
-                         no_placeholder=False):
-        """Get a thumb image for the image `image` (can be `None`) that
-        is associated with channel `channel` and image information `info`.
+    def _scale_rgb_thumb(self, vwr_img):
+        """Scale a viewer screenshot down to thumbnail size."""
+        ht, wd = vwr_img.shape[:2]
+        length = self.settings.get('thumb_length', 128)
+        aspect = min(wd, ht) / max(wd, ht)
+        if ht > wd:
+            new_ht, new_wd = length, int(aspect * length)
+        else:
+            new_wd, new_ht = length, int(aspect * length)
+        rgb_img, scales = trcalc.get_scaled_cutout_wdht(vwr_img,
+                                                        0, 0, wd, ht,
+                                                        new_wd, new_ht,
+                                                        interpolation='basic',
+                                                        logger=None,
+                                                        dtype=np.uint8)
+        return RGBImage.RGBImage(rgb_img, order='RGB')
+
+    def _gen_complete(self, req, thumb_image):
+        """Publish a rendered thumbnail.  Invoked on the GUI thread."""
+        self.fv.assert_gui_thread()
+
+        if req.ignore:
+            # nothing we can render: don't come back for this one
+            req.extras.setvals(ignore=True)
+
+        self._publish_thumb(req.thumbkey, req.extras, thumb_image,
+                            metadata=req.metadata, time_update=time.time())
+
+        if req.save_thumb:
+            self._try_save_thumb(req.thumbkey, thumb_image)
+
+    def _gen_failed(self, req):
+        """Note that a render failed.  Invoked on the GUI thread."""
+        self.fv.assert_gui_thread()
+        req.extras.setvals(pending=False)
+
+    def _publish_thumb(self, thumbkey, extras, thumb_image, metadata=None,
+                       time_update=None):
+        """Make `thumb_image` the thumbnail for `thumbkey`."""
+        self.fv.assert_gui_thread()
+
+        extras.setvals(rgbimg=thumb_image, placeholder=False, pending=False,
+                       time_update=time_update)
+        self.update_thumbnail(thumbkey, thumb_image, metadata)
+
+    def _try_save_thumb(self, thumbkey, thumb_image):
+        """Persist a thumbnail for future browsing, if we can."""
+        with self.thumblock:
+            bnch = self.thumb_dict.get(thumbkey, None)
+
+        if bnch is None or bnch.info.path is None:
+            return
+        try:
+            self._save_thumb(thumb_image, bnch)
+
+        except Exception as e:
+            # if we can't persist the thumbnail, don't let that stop
+            # everything
+            self.logger.error("Couldn't persist thumbnail: {}".format(e))
+
+    def load_cached_thumb(self, info):
+        """Load a thumbnail saved on disk by an earlier session, if there
+        is one for the data item described by `info`.
+
+        Returns a 2-tuple of the image (or `None` if there is nothing
+        usable) and whether it still has to go through the generator to
+        be rescaled to the thumbnail size in force now.
+
+        Only reads a file, so it is safe to call off the GUI thread.
         """
+        thumbpath = self.get_thumbpath(info.path)
+        if thumbpath is None or not os.path.exists(thumbpath):
+            return None, False
+
+        try:
+            thumb_image = self.rgb_opener.load_file(thumbpath)
+
+        except Exception as e:
+            self.logger.warning("Error loading thumbnail: %s" % (str(e)))
+            return None, False
+
+        wd, ht = thumb_image.get_size()[:2]
+        if max(wd, ht) > self.thumb_width:
+            # <-- thumb size does not match our expected size
+            return thumb_image, True
+
+        thumb_image.set(name=info.name)
+        return thumb_image, False
+
+    def _get_thumb_image(self, channel, info, image, extras):
+        """Get something to draw for this thumb right now.
+
+        Returns the best image available without rendering anything: a
+        thumbnail made earlier, one cached on disk at the right size, or
+        the placeholder.  Rendering needs the thumb generator and so
+        cannot happen here (see _submit_gen_request) -- when there is an
+        image to render, a request is queued and the placeholder stands in
+        until it lands.
+
+        Runs on the GUI thread.
+        """
+        self.fv.assert_gui_thread()
 
         # Choice [A]: is there a thumb image attached to the image info?
         if 'rgbimg' in extras:
             # yes
             return extras.rgbimg
 
-        thumbpath = self.get_thumbpath(info.path)
+        # Choice [B]: is there a cached thumbnail on disk we can use as-is?
+        cached, needs_render = self.load_cached_thumb(info)
+        if cached is not None and not needs_render:
+            self._publish_extras(extras, cached)
+            return cached
 
-        # Choice [B]: is the full image available to make a thumbnail?
+        # Choice [C]: is there something we can render a thumbnail from?
+        #             If so, queue it -- the placeholder below stands in
+        #             until the generator gets to it.
         if image is None:
             try:
                 image = channel.get_loaded_image(info.name)
 
             except KeyError:
-                pass
+                # fall back to rescaling the mis-sized cached thumb
+                image = cached
 
-        if image is not None:
-            try:
-                thumb_image = self._regen_thumb_image(self.thumb_generator,
-                                                      image, extras,
-                                                      channel.viewer)
-                extras.setvals(rgbimg=thumb_image, placeholder=False,
-                               time_update=None)
-                return thumb_image
-
-            except Exception as e:
-                self.logger.warning("Error generating thumbnail: %s" % (str(e)))
-
-        # Choice [C]: is there a cached thumbnail image on disk we can use?
-        if (thumbpath is not None) and os.path.exists(thumbpath):
-            try:
-                # try to load the thumbnail image
-                thumb_image = self.rgb_opener.load_file(thumbpath)
-                wd, ht = thumb_image.get_size()[:2]
-                if max(wd, ht) > self.thumb_width:
-                    # <-- thumb size does not match our expected size
-                    thumb_image = self._regen_thumb_image(self.thumb_generator,
-                                                          thumb_image, extras,
-                                                          None)
-                thumb_image.set(name=info.name)
-                extras.setvals(rgbimg=thumb_image, placeholder=False,
-                               time_update=None)
-                return thumb_image
-
-            except Exception as e:
-                self.logger.warning("Error loading thumbnail: %s" % (str(e)))
-
-        if no_placeholder:
-            return None
+        if image is not None and not extras.get('pending', False):
+            thumbkey = self.get_thumb_key(channel.name, info.name, info.path)
+            # a rescale of a cached thumb has no business taking its
+            # appearance from the channel viewer
+            viewer = None if image is cached else channel.viewer
+            self._submit_gen_request(
+                self._mk_gen_request(thumbkey, image, extras, viewer))
 
         # Choice [D]: use a placeholder image
         data_np = self.placeholder_image.get_data()
@@ -1077,6 +1310,11 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         extras.setvals(placeholder=True, time_update=None)
 
         return thumb_image
+
+    def _publish_extras(self, extras, thumb_image):
+        """Record `thumb_image` as this thumb's image, without redrawing."""
+        extras.setvals(rgbimg=thumb_image, placeholder=False, pending=False,
+                       time_update=None)
 
     def get_thumbpath(self, path, makedir=True):
         """Return the path for the thumbnail location on disk based on the
@@ -1172,6 +1410,29 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             return
         self.fv.assert_gui_thread()
 
+        if self._updating_visible:
+            # Re-entered from the update_pending() at the end of this
+            # method: that services the GUI queue and lets backend timers
+            # fire, and timer_update firing there queues another pass of
+            # this one.  Rebuilding the canvas underneath the pass already
+            # in flight would interleave the two -- and thumblock, being
+            # reentrant, would not notice.  Ask for another pass instead.
+            self._update_again = True
+            return
+
+        self._updating_visible = True
+        try:
+            self._add_visible_thumbs()
+
+        finally:
+            self._updating_visible = False
+
+        if self._update_again:
+            self._update_again = False
+            self.timer_update.set(self.update_interval)
+
+    def _add_visible_thumbs(self):
+        # invoked via add_visible_thumbs(), which serializes us
         canvas = self.c_view.get_canvas()
 
         with self.thumblock:

@@ -2831,26 +2831,31 @@ class ImageViewBase(ViewerBase):
         state = (self.t_['flip_x'], self.t_['flip_y'], self.t_['swap_xy'])
         self.renderer.transform_2d(state)
 
-    def copy_attributes(self, dst_fi, attrlist, share=False, whence=0):
-        """Copy interesting attributes of our configuration to another
-        image view.
+    @staticmethod
+    def get_attribute_keys(attrlist, whence=0):
+        """Return the setting names behind the attribute names in `attrlist`.
 
         Parameters
         ----------
-        dst_fi : subclass of `ImageViewBase`
-            Another instance of image view.
-
         attrlist : list
-            A list of attribute names to copy. They can be ``'transforms'``,
+            A list of attribute names. They can be ``'transforms'``,
             ``'rotation'``, ``'cutlevels'``, ``'rgbmap'``, ``'zoom'``,
             ``'pan'``, ``'autocuts'``, ``'limits'``, ``'icc'`` or
             ``'interpolation'``.
 
-        share : bool
-            If True, the designated settings will be shared, otherwise the
-            values are simply copied.
+        whence : float
+            Lower bound on the rendering stage affected (see `redraw`).
+            Attributes that only affect an earlier stage are skipped.
+
+        Returns
+        -------
+        keylist, whence : (list of str, float)
+            The setting names, and the earliest rendering stage they touch.
+
+        This is the single place that maps attribute names to setting
+        names; `copy_attributes` and `snapshot_attributes` both go through
+        it, so the two cannot drift apart.
         """
-        # TODO: change API to just go with settings names?
         keylist = []
         _whence = 3.0
 
@@ -2905,7 +2910,25 @@ class ImageViewBase(ViewerBase):
                 keylist.extend(['rot_deg'])
                 _whence = min(_whence, 2.6)
 
-        whence = max(_whence, whence)
+        return keylist, max(_whence, whence)
+
+    def copy_attributes(self, dst_fi, attrlist, share=False, whence=0):
+        """Copy interesting attributes of our configuration to another
+        image view.
+
+        Parameters
+        ----------
+        dst_fi : subclass of `ImageViewBase`
+            Another instance of image view.
+
+        attrlist : list
+            A list of attribute names to copy -- see `get_attribute_keys`.
+
+        share : bool
+            If True, the designated settings will be shared, otherwise the
+            values are simply copied.
+        """
+        keylist, whence = self.get_attribute_keys(attrlist, whence=whence)
 
         with dst_fi.suppress_redraw:
             if share:
@@ -2914,6 +2937,45 @@ class ImageViewBase(ViewerBase):
             else:
                 self.t_.copy_settings(dst_fi.get_settings(),
                                       keylist=keylist)
+
+    def snapshot_attributes(self, attrlist, whence=0):
+        """Capture the attributes named in `attrlist` as a plain dict.
+
+        The counterpart to `copy_attributes` for a caller that cannot
+        reach the destination viewer at the moment it can reach this one --
+        notably a worker that renders off the GUI thread, which must read a
+        live viewer's state while it is still on the GUI thread and apply
+        it later.  The result holds only setting values (numbers, strings,
+        tuples), so it is safe to hand to another thread; pass it to
+        `apply_attributes` on the destination.
+
+        Parameters
+        ----------
+        attrlist : list
+            A list of attribute names -- see `get_attribute_keys`.
+
+        whence : float
+            Lower bound on the rendering stage affected (see `redraw`).
+
+        Returns
+        -------
+        dct : dict
+            Setting name -> value, for the settings this viewer has set.
+        """
+        keylist, whence = self.get_attribute_keys(attrlist, whence=whence)
+        keylist = [key for key in keylist if key in self.t_]
+        return self.t_.get_dict(keylist=keylist)
+
+    def apply_attributes(self, dct):
+        """Apply a `snapshot_attributes` result to this viewer.
+
+        Parameters
+        ----------
+        dct : dict
+            Setting name -> value, as returned by `snapshot_attributes`.
+        """
+        with self.suppress_redraw:
+            self.t_.set_dict(dct)
 
     def get_rotation(self):
         """Get image rotation angle.
