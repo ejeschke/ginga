@@ -228,5 +228,27 @@ class TestPlotThumbnail:
                                                 (240, 240)) is None
 
 
+# ---------------------------------------------- the vestigial get_thumbnail
+
+@pytest.mark.parametrize('mk_obj, name', [
+    (lambda: AstroTable.AstroTable(logger=mk_logger()), 'AstroTable'),
+    pytest.param(
+        lambda: __import__('ginga.plot.Plotable', fromlist=['Plotable']
+                           ).Plotable(logger=mk_logger()),
+        'Plotable',
+        marks=pytest.mark.skipif(not HAVE_MPL,
+                                 reason="matplotlib is required")),
+])
+def test_the_old_get_thumbnail_warns_that_it_is_going(mk_obj, name):
+    """It returns an identity matrix -- a diagonal line, not a thumbnail."""
+    obj = mk_obj()
+
+    with pytest.warns(PendingDeprecationWarning, match='get_thumbnail'):
+        arr = obj.get_thumbnail(8)
+
+    # behaviour is unchanged for anyone still calling it
+    assert np.array_equal(arr, np.eye(8))
+
+
 if __name__ == '__main__':
     pytest.main([__file__])

@@ -4,6 +4,12 @@ What's New
 
 Since 7.5.0 (unreleased)
 ========================
+- ``AstroTable.get_thumbnail()`` and ``Plotable.get_thumbnail()`` raise a
+  ``PendingDeprecationWarning``.  Neither has ever produced a thumbnail:
+  both return an identity matrix, which draws as a diagonal line.  They
+  will be removed in a future version; a viewer's
+  ``get_thumbnail_array()`` is what produces a thumbnail of a table or a
+  plot.  ``BaseImage.get_thumbnail()`` is unaffected.
 - **Plot and table viewers draw their own thumbnails.**  Neither is
   something the ``Thumbs`` thumbnail generator can render, so both were
   handled by screenshotting the viewer's widget.  That only ever worked on

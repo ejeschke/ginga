@@ -4,6 +4,8 @@
 # This is open-source software licensed under a BSD license.
 # Please see the file LICENSE.txt for details.
 #
+import warnings
+
 import numpy as np
 
 from ginga.BaseImage import ViewerObjectBase, Header
@@ -148,5 +150,19 @@ class AstroTable(ViewerObjectBase):
         self.io.load_file(filespec, dstobj=self, **kwargs)
 
     def get_thumbnail(self, length):
+        """Deprecated: do not use.  Will be removed in a future version.
+
+        This has never produced a thumbnail of anything: it returns an
+        identity matrix of the requested size, which draws as a diagonal
+        line.  It is kept only so that existing callers, if there are
+        any, keep working until it goes.
+
+        To get a thumbnail of a table, ask a viewer that can draw one --
+        see `~ginga.util.viewer.ViewerBase.get_thumbnail_array`.
+        """
+        warnings.warn("AstroTable.get_thumbnail() does not produce a "
+                      "thumbnail and will be removed in a future version; "
+                      "use a viewer's get_thumbnail_array() instead",
+                      PendingDeprecationWarning, stacklevel=2)
         thumb_np = np.eye(length)
         return thumb_np
