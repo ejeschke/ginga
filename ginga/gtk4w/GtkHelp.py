@@ -7,6 +7,7 @@
 import sys
 import os.path
 import math
+from io import BytesIO
 import random
 import time
 
@@ -1986,44 +1987,57 @@ def pixbuf_new_from_file(file_path):
 
 
 def get_rgb_array(widget):
-    """Get a numpy RGB array corresponding to a widget."""
+    """Get a numpy RGB array corresponding to a widget.
 
-    # Ensure layout is computed
+    NOTE: the widget must be realized and have been given a size by the
+    layout; a widget that is not in a presented window has neither, and
+    there is nothing to capture.  Prefer drawing a viewer's contents to
+    capturing its widget where that is possible at all -- see
+    `~ginga.util.viewer.ViewerBase.get_thumbnail_array`.
+    """
     widget.realize()
-    widget.allocate(widget.get_width(), widget.get_height(), -1)
 
-    width = widget.get_width()
-    height = widget.get_height()
+    width, height = widget.get_width(), widget.get_height()
     if width == 0 or height == 0:
-        raise RuntimeError("Widget has zero width or height")
+        raise RuntimeError("Widget has not been allocated a size "
+                           "(not in a presented window?)")
+
+    native = widget.get_native()
+    if native is None:
+        raise RuntimeError("Widget is not attached to a native surface")
 
     # --- 1. Snapshot the widget ---
+    # NOTE: Gtk.WidgetPaintable is the supported way to draw a widget's
+    # current contents; Gtk.Widget.snapshot() is a vfunc, and
+    # snapshot_child() wants an actual child, not the widget itself.
+    paintable = Gtk.WidgetPaintable.new(widget)
     snapshot = Gtk.Snapshot()
-    # widget.snapshot(snapshot)
-    widget.snapshot_child(widget, snapshot)
+    paintable.snapshot(snapshot, width, height)
     node = snapshot.to_node()
     if node is None:
-        raise Exception("Failed to capture widget screenshot")
+        # nothing drawn (an empty or fully clipped widget)
+        raise RuntimeError("Failed to capture widget screenshot")
 
-    # --- 2. Create renderer and render the node ---
-    renderer = Gsk.Renderer()
-    renderer.realize(widget.get_native())   # Uses display backend
+    # --- 2. Render the node to a texture ---
+    # NOTE: Gsk.Renderer is abstract -- take the one the surface already
+    # has rather than trying to construct one.
+    renderer = native.get_renderer()
+    if renderer is None:
+        raise RuntimeError("Native surface has no renderer")
 
-    # Render into a Gdk.Texture
-    texture = renderer.render_texture(node, width, height)
+    texture = renderer.render_texture(node, None)
 
-    # --- 3. Download raw pixel bytes from the texture ---
-    # Format is GUARANTEED rgba8 (unpremultiplied)
-    bytes_obj = texture.download_bytes()
-    pixel_bytes = bytes_obj.get_data()
+    # --- 3. Get the pixels out of the texture ---
+    # NOTE: gdk_texture_download() hands back GDK_MEMORY_DEFAULT, whose
+    # channel order and premultiplication vary with platform and GTK
+    # version, and download_bytes() is not available on every version we
+    # support.  Going via PNG is unambiguous on all of them, and this is
+    # not a hot path.
+    png_bytes = texture.save_to_png_bytes()
 
-    raw = np.frombuffer(pixel_bytes, dtype=np.uint8)
-
-    # --- 4. Reshape and drop alpha ---
-    arr = raw.reshape((height, width, 4))   # RGBA
-    rgb = arr[:, :, :3]                     # RGB only
-
-    return rgb.copy()
+    from PIL import Image as PILImage
+    with PILImage.open(BytesIO(png_bytes.get_data())) as img:
+        return np.asarray(img.convert('RGB'), dtype=np.uint8)
 
 
 def make_cursor(widget, iconpath, x, y, size=None):

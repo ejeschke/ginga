@@ -453,6 +453,93 @@ def test_add_visible_thumbs_does_not_re_enter_itself(tmp_path):
     thumbs.timer_update.stop()
 
 
+# ---------------------------------------------- viewers that draw their own
+
+
+def test_a_table_gets_a_real_thumbnail_even_when_not_displayed(tmp_path):
+    """Plots and tables are not something the thumb generator can draw.
+
+    They used to be handled by screenshotting the viewer's widget, which
+    is only possible while the table is the viewer's current object -- so
+    any later regeneration gave up and left a permanently-ignored
+    placeholder.  The viewer draws its own thumbnail now, from whichever
+    table it is handed.
+    """
+    pytest.importorskip('astropy.table')
+    from astropy.table import Table
+    from ginga.table import AstroTable
+    from ginga.table.TableView import TableViewBase
+
+    thumbs, fv, gen = mk_thumbs(tmp_path)
+
+    def mk_table(seed):
+        rng = np.random.default_rng(seed)
+        return AstroTable.AstroTable(
+            logger=thumbs.logger,
+            data_ap=Table({'x': np.arange(20), 'f': rng.random(20)}))
+
+    showing, wanted = mk_table(1), mk_table(2)
+    viewer = TableViewBase(logger=thumbs.logger)
+    viewer.set_table(showing)          # the viewer is on a *different* table
+
+    req = thumbs._mk_gen_request(('Ch', 'tbl', None), wanted,
+                                 Bunch.Bunch(), viewer)
+    assert req.rgb_array is not None, "no thumbnail was obtained"
+
+    thumb_image = thumbs._render_thumb(req)
+
+    assert not req.ignore, "the table was written off as undrawable"
+    assert thumb_image is not thumbs.placeholder_image
+    arr = thumb_image.get_data()
+    assert arr.shape[2] == 3
+    assert arr.min() != arr.max(), "the thumbnail is blank"
+
+
+def test_an_undrawable_object_still_falls_back_to_the_placeholder(tmp_path):
+    thumbs, fv, gen = mk_thumbs(tmp_path)
+
+    class SilentViewer:
+        def get_thumbnail_array(self, dataobj, size):
+            return None
+
+    req = thumbs._mk_gen_request(('Ch', 'x', None),
+                                 mk_image('x', unviewable=True),
+                                 Bunch.Bunch(), SilentViewer())
+    assert req.rgb_array is None
+
+    assert thumbs._render_thumb(req) is thumbs.placeholder_image
+    assert req.ignore
+
+
+def test_a_viewer_that_raises_does_not_lose_the_thumb(tmp_path):
+    thumbs, fv, gen = mk_thumbs(tmp_path)
+
+    class BrokenViewer:
+        def get_thumbnail_array(self, dataobj, size):
+            raise RuntimeError("viewer exploded")
+
+    # the request is still made; the thumb falls back to a placeholder
+    req = thumbs._mk_gen_request(('Ch', 'x', None), mk_image('x'),
+                                 Bunch.Bunch(), BrokenViewer())
+    assert req.rgb_array is None
+
+
+def test_an_rgba_rendering_is_not_mislabelled_as_rgb(tmp_path):
+    """A four-channel array used to be handed to RGBImage as order=RGB."""
+    thumbs, fv, gen = mk_thumbs(tmp_path)
+
+    rgba = np.zeros((40, 60, 4), dtype=np.uint8)
+    rgba[..., 0] = 200        # red
+    rgba[..., 3] = 255        # opaque
+
+    thumb_image = thumbs._scale_rgb_thumb(rgba)
+    arr = thumb_image.get_data()
+
+    assert arr.shape[2] == 3, "alpha was carried into an RGB image"
+    r, g, b = arr[..., 0].max(), arr[..., 1].max(), arr[..., 2].max()
+    assert r > g and r > b, "channels came out in the wrong order"
+
+
 # ------------------------------------------------------------------- async
 
 def test_async_mode_renders_everything_on_one_thread(tmp_path):

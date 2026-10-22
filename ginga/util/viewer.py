@@ -95,6 +95,41 @@ class ViewerBase(Callback.Callbacks):
         """
         pass
 
+    def get_thumbnail_array(self, dataobj, size):
+        """Render a thumbnail of `dataobj` as this viewer would show it.
+
+        Parameters
+        ----------
+        dataobj : subclass of `~ginga.BaseImage.ViewerObjectBase`
+            The data to draw.  Not necessarily the object this viewer is
+            currently showing -- a thumbnail is wanted precisely when it
+            is not.
+
+        size : tuple of (int, int)
+            The (width, height) bounding box, in pixels.  The result may
+            come back smaller in either axis, since an implementation
+            keeps its own aspect ratio, but not larger.
+
+        Returns
+        -------
+        arr_np : ndarray or `None`
+            An RGB array of shape (ht, wd, 3) and dtype uint8, or `None`
+            if this viewer cannot render a thumbnail of `dataobj` -- in
+            which case the caller should fall back to a placeholder.
+
+        A viewer that can draw its data should override this.  Doing so
+        is much to be preferred over screenshotting the viewer's widget:
+        a widget can only be captured while it exists and is on screen,
+        which is backend-specific and false in exactly the case a
+        thumbnail is for, and what comes back is a picture of whatever
+        the widget happens to be scrolled to.
+
+        Called on the GUI thread, since an implementation may need to
+        reach a toolkit-owned object such as a matplotlib figure.  It
+        must not require the viewer's widget to be realized or mapped.
+        """
+        return None
+
     def set_allowed_modes(self, mode_list: list or None):
         if mode_list is None:
             mode_list = []

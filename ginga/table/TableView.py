@@ -5,15 +5,187 @@
 # Please see the file LICENSE.txt for details.
 #
 from collections import OrderedDict
-import os.path
 import numbers
 
 import numpy as np
 
 from ginga.util.viewer import ViewerBase
-from ginga.util.paths import icondir
 from ginga.table import AstroTable
-from ginga.util.io import io_rgb
+
+
+def _thumb_font(px=9):
+    """The smallest legible font we can count on being present."""
+    from PIL import ImageFont
+    try:
+        return ImageFont.load_default(size=px)
+
+    except TypeError:
+        # Pillow older than 10.1 takes no size here
+        return ImageFont.load_default()
+
+
+def _fit_text(draw, text, font, max_wd):
+    """Shorten `text` with an ellipsis until it fits in `max_wd` pixels."""
+    if draw.textlength(text, font=font) <= max_wd:
+        return text
+
+    ellipsis = '\u2026'
+    while len(text) > 0:
+        text = text[:-1]
+        if draw.textlength(text + ellipsis, font=font) <= max_wd:
+            return text + ellipsis
+
+    return ''
+
+
+def _fmt_cell(val):
+    """Render one table value short enough to be worth drawing."""
+    if isinstance(val, (float, np.floating)):
+        return '%.4g' % (val,)
+
+    text = str(val)
+    return text if len(text) <= 24 else text[:24]
+
+
+def table_preview(tbl, max_rows, max_cols):
+    """Pull the top-left corner out of a table, as strings.
+
+    Returns a 4-tuple of the column names used, a list of rows of
+    formatted cell values, and the table's full row and column counts.
+    Tolerant of a table it cannot read, in which case the counts come
+    back as 0 and there are no cells: a thumbnail is not worth raising
+    over.
+    """
+    try:
+        a_tab = tbl.get_data()
+
+    except Exception:
+        a_tab = None
+
+    colnames = list(getattr(a_tab, 'colnames', None) or
+                    getattr(tbl, 'colnames', None) or [])
+    try:
+        n_rows = len(a_tab)
+
+    except Exception:
+        n_rows = 0
+
+    use_cols = colnames[:max_cols]
+    cells = []
+    for i in range(min(n_rows, max_rows)):
+        try:
+            row = a_tab[i]
+            cells.append([_fmt_cell(row[name]) for name in use_cols])
+
+        except Exception:
+            cells.append([''] * len(use_cols))
+
+    return use_cols, cells, n_rows, len(colnames)
+
+
+def draw_table_thumbnail(tbl, size, logger=None):
+    """Draw a thumbnail showing what is in the table `tbl`.
+
+    Parameters
+    ----------
+    tbl : `~ginga.table.AstroTable.AstroTable` or `None`
+        The table to draw.
+
+    size : tuple of (int, int)
+        The (width, height) of the thumbnail, in pixels.
+
+    Returns
+    -------
+    arr_np : ndarray
+        An RGB array of shape (ht, wd, 3) and dtype uint8.
+
+    A photograph of a table widget shrunk to thumbnail size is a few grey
+    stripes, and taking one needs the widget to exist and be on screen --
+    which is backend-specific, and false exactly when the table is not
+    what the user is looking at.  Drawing the table instead gives
+    something that says which table this is, on every backend, whether or
+    not it is on screen.
+    """
+    from PIL import Image as PILImage, ImageDraw
+
+    wd, ht = max(24, int(size[0])), max(24, int(size[1]))
+
+    c_page = (250, 250, 251)
+    c_border = (138, 154, 168)
+    c_header = (74, 103, 133)
+    c_header_fg = (255, 255, 255)
+    c_row = ((255, 255, 255), (237, 241, 246))
+    c_grid = (214, 221, 228)
+    c_text = (48, 56, 64)
+    c_footer = (226, 230, 235)
+    c_footer_fg = (90, 100, 112)
+
+    img = PILImage.new('RGB', (wd, ht), c_page)
+    draw = ImageDraw.Draw(img)
+    font = _thumb_font()
+    asc, desc = font.getmetrics()
+    line_ht = max(7, asc + desc)
+    row_ht = line_ht + 2
+    band_ht = line_ht + 4
+
+    # how many columns can be drawn before they stop meaning anything
+    min_col_wd = 30
+    max_cols = max(1, (wd - 2) // min_col_wd)
+    body_ht = max(0, ht - 2 - band_ht * 2)
+    max_rows = max(0, body_ht // row_ht)
+
+    use_cols, cells, n_rows, n_cols = table_preview(tbl, max_rows, max_cols)
+    if logger is not None:
+        logger.debug("table thumb: %dx%d, drawing %d col(s), %d row(s)" % (
+            n_rows, n_cols, len(use_cols), len(cells)))
+
+    n_draw_cols = max(1, len(use_cols))
+    col_wd = (wd - 2) / n_draw_cols
+    pad = 2
+
+    # header band: the column names
+    draw.rectangle([0, 0, wd - 1, band_ht], fill=c_header)
+    for j, name in enumerate(use_cols):
+        x = 1 + j * col_wd
+        draw.text((x + pad, 2),
+                  _fit_text(draw, str(name), font, col_wd - 2 * pad),
+                  font=font, fill=c_header_fg)
+
+    # body: alternating rows of values, with column rules
+    y = band_ht + 1
+    for i in range(max_rows):
+        if y + row_ht > ht - band_ht:
+            break
+        draw.rectangle([1, y, wd - 2, y + row_ht - 1], fill=c_row[i % 2])
+        if i < len(cells):
+            for j, text in enumerate(cells[i]):
+                x = 1 + j * col_wd
+                draw.text((x + pad, y + 1),
+                          _fit_text(draw, text, font, col_wd - 2 * pad),
+                          font=font, fill=c_text)
+        y += row_ht
+
+    for j in range(1, n_draw_cols):
+        x = int(1 + j * col_wd)
+        draw.line([x, band_ht + 1, x, y - 1], fill=c_grid)
+
+    # footer band: the shape of the whole table, which the corner we drew
+    # gives no clue about
+    y_foot = ht - band_ht - 1
+    draw.rectangle([0, y_foot, wd - 1, ht - 1], fill=c_footer)
+    # the corner we drew says nothing about how big the table is.
+    # NOTE: stay in ASCII -- Pillow's default bitmap font has no glyph for
+    # 'x' as a multiplication sign, and draws a hollow box instead.
+    avail = wd - 2 * pad
+    shape = '%d rows x %d cols' % (n_rows, n_cols)
+    if draw.textlength(shape, font=font) > avail:
+        shape = '%d x %d' % (n_rows, n_cols)
+    draw.text((pad, y_foot + 2), _fit_text(draw, shape, font, avail),
+              font=font, fill=c_footer_fg)
+
+    draw.rectangle([0, 0, wd - 1, ht - 1], outline=c_border)
+
+    return np.asarray(img, dtype=np.uint8)
 
 
 class TableViewBase(ViewerBase):
@@ -71,6 +243,25 @@ class TableViewBase(ViewerBase):
     get_dataobj = get_table
     set_dataobj = set_table
 
+    def get_thumbnail_array(self, dataobj, size):
+        """Draw a thumbnail of the table `dataobj`.  See
+        `~ginga.util.viewer.ViewerBase.get_thumbnail_array`.
+
+        Drawn from the table rather than captured from the table widget,
+        so it works on every backend and for any table -- not only the
+        one this viewer happens to be showing.
+        """
+        if not isinstance(dataobj, AstroTable.AstroTable):
+            return None
+
+        try:
+            return draw_table_thumbnail(dataobj, size, logger=self.logger)
+
+        except Exception as e:
+            self.logger.warning("Error drawing table thumbnail: %s" % (
+                str(e)))
+            return None
+
 
 class TableViewGw(TableViewBase):
     """A Ginga viewer for displaying tables of FITS data.
@@ -88,11 +279,6 @@ class TableViewGw(TableViewBase):
         self.widget = Widgets.TreeView(auto_expand=True,
                                        sortable=True,
                                        use_alt_row_color=color_alternate)
-
-        rgb_opener = io_rgb.RGBFileHandler(self.logger)
-        tmp_path = os.path.join(icondir, 'fits.png')
-        placeholder_image = rgb_opener.load_file(tmp_path)
-        self._rgb_array_placeholder = placeholder_image.get_data()
 
     def get_widget(self):
         return self.widget
@@ -190,7 +376,16 @@ class TableViewGw(TableViewBase):
         return self.widget.get_size()
 
     def get_rgb_array(self):
-        if not hasattr(self.widget, 'get_rgb_array'):
-            return self._rgb_array_placeholder
+        """Get a numpy RGB array depicting this table.
 
-        return self.widget.get_rgb_array()
+        Drawn, not captured from the table widget: see
+        `draw_table_thumbnail`.
+        """
+        try:
+            size = self.get_window_size()
+
+        except Exception:
+            size = (240, 240)
+
+        return draw_table_thumbnail(self.get_table(), size,
+                                    logger=self.logger)

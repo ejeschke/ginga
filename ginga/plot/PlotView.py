@@ -1227,11 +1227,73 @@ class PlotViewBase(ViewerBase):
         height *= self.figure.dpi
         return (width, height)
 
+    def _render_figure(self, size=None):
+        """Render our matplotlib figure to an RGB array.
+
+        Rendered from the figure itself rather than by screenshotting the
+        plot widget.  The figure draws the same way on every backend, and
+        it does not need the widget to be realized or on screen -- where a
+        widget capture is backend-specific and, on some of them, only
+        possible while the plot is actually visible.
+
+        `size` is an optional (width, height) bounding box in pixels; the
+        figure keeps its own aspect ratio within it.  If omitted, the
+        figure renders at its own dpi.
+
+        Returns `None` if there is nothing renderable.
+        """
+        fig = self.get_figure()
+        if fig is None:
+            return None
+
+        fig_wd_in, fig_ht_in = fig.get_size_inches()
+        if fig_wd_in <= 0 or fig_ht_in <= 0:
+            # a figure sized from a widget that has not been laid out yet
+            return None
+
+        if size is None:
+            dpi = fig.get_dpi()
+        else:
+            wd, ht = size
+            dpi = max(1.0, min(wd / fig_wd_in, ht / fig_ht_in))
+
+        buf = BytesIO()
+        # NOTE: savefig() on a figure owned by a GUI canvas is safe -- it
+        # renders through a temporary Agg canvas and puts back what it
+        # found.  This is the same route save_rgb_image_as_file() takes.
+        fig.savefig(buf, format='png', dpi=dpi)
+        buf.seek(0)
+
+        from PIL import Image as PILImage
+        with PILImage.open(buf) as img:
+            return np.asarray(img.convert('RGB'), dtype=np.uint8)
+
     def get_rgb_array(self):
-        canvas = self.get_widget()
-        # force a draw
-        canvas.draw()
-        return self.plot_w.get_rgb_array()
+        """Get a numpy RGB array of the plot as currently drawn."""
+        arr = self._render_figure()
+        if arr is None:
+            raise ValueError("No renderable figure in this plot viewer")
+        return arr
+
+    def get_thumbnail_array(self, dataobj, size):
+        """Render a thumbnail of the plot `dataobj`.  See
+        `~ginga.util.viewer.ViewerBase.get_thumbnail_array`.
+
+        Only the plot currently set in this viewer can be drawn: a
+        `Plotable` is rendered into this viewer's figure when it is set,
+        and the figure is where the picture lives.  For any other plot
+        this returns `None` and the caller shows a placeholder.
+        """
+        if dataobj is not self.get_dataobj():
+            return None
+
+        try:
+            return self._render_figure(size=size)
+
+        except Exception as e:
+            self.logger.warning("Error rendering plot thumbnail: %s" % (
+                str(e)))
+            return None
 
     def get_rgb_image_as_buffer(self, output=None, format='png',
                                 quality=90):

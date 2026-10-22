@@ -4,6 +4,30 @@ What's New
 
 Since 7.5.0 (unreleased)
 ========================
+- **Plot and table viewers draw their own thumbnails.**  Neither is
+  something the ``Thumbs`` thumbnail generator can render, so both were
+  handled by screenshotting the viewer's widget.  That only ever worked on
+  Qt: the gtk3 capture needs the widget mapped and on screen, the gtk4 one
+  could not work at all (it tried to instantiate the abstract
+  ``Gsk.Renderer``), and the web and tk backends have no capture at all.
+  It also only worked while the object happened to be the one the viewer
+  was showing, so any later regeneration left a placeholder that was then
+  marked as not worth retrying.  New ``ViewerBase.get_thumbnail_array()``
+  lets a viewer render its own data instead -- ``PlotViewBase`` renders its
+  matplotlib figure, and ``TableViewBase`` draws a miniature of the table
+  showing its first rows and columns and its full shape.  Both work on
+  every backend, with no widget, realized or otherwise.  ``Thumbs`` now
+  asks the viewer rather than testing its type, so a new viewer class gets
+  thumbnails without changing the plugin.
+- ``PlotViewBase.get_rgb_array()`` renders the figure rather than capturing
+  the plot widget, and ``TableViewGw.get_rgb_array()`` draws the table
+  rather than capturing the table widget.  The table viewer no longer
+  returns the FITS placeholder icon, a 4-channel RGBA array that callers
+  were treating as RGB.
+- ``ginga.gtk4w.GtkHelp.get_rgb_array()`` works.  It now renders through
+  ``Gtk.WidgetPaintable`` and the native surface's own renderer, and reads
+  the texture back in a way that does not depend on the GTK version's
+  pixel-format defaults.
 - **``Thumbs`` renders thumbnails one at a time, off the GUI thread.**  The
   thumb generator is a single stateful viewer -- set an image on it, then
   read the rendered pixels back -- and it was driven both by the GUI thread

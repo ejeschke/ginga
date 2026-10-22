@@ -62,7 +62,6 @@ from ginga.misc import Bunch
 from ginga.util import iohelper
 from ginga.gw import Widgets, Viewers
 from ginga.plot.PlotView import PlotViewBase
-from ginga.table.TableView import TableViewBase
 from ginga.ImageView import ImageViewBase
 from ginga.util.paths import icondir
 from ginga.pilw.ImageViewPil import CanvasView
@@ -1024,17 +1023,24 @@ class Thumbs(GingaPlugin.GlobalPlugin):
                           metadata=metadata, save_thumb=save_thumb,
                           attrs=None, rgb_array=None, ignore=False)
 
-        if isinstance(viewer, (PlotViewBase, TableViewBase)):
-            # a plot or table thumb is a screenshot of the viewer, and only
-            # the GUI thread may take one -- so take it now
-            if viewer.get_dataobj() == image:
-                req.rgb_array = viewer.get_rgb_array()
-
-        elif isinstance(viewer, ImageViewBase):
+        if isinstance(viewer, ImageViewBase):
             # the thumb should look like the image does in the channel, so
             # snapshot the viewer's settings for the generator to apply
             if viewer.get_image() is not None:
                 req.attrs = viewer.snapshot_attributes(self.transfer_attrs)
+
+        elif viewer is not None:
+            # Anything the image-based thumb generator cannot draw -- a
+            # plot, a table -- renders its own thumbnail.  Ask for it
+            # here, on the GUI thread, where the viewer may be touched.
+            length = self.thumb_width
+            try:
+                req.rgb_array = viewer.get_thumbnail_array(image,
+                                                           (length, length))
+            except Exception as e:
+                self.logger.warning(
+                    "Error getting a thumbnail from %s: %s" % (
+                        str(viewer), str(e)))
 
         return req
 
@@ -1171,7 +1177,12 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         return RGBImage.RGBImage(rgb_img, order=order)
 
     def _scale_rgb_thumb(self, vwr_img):
-        """Scale a viewer screenshot down to thumbnail size."""
+        """Scale a viewer's own thumbnail rendering to thumbnail size."""
+        vwr_img = np.asarray(vwr_img)
+        if vwr_img.ndim == 3 and vwr_img.shape[2] > 3:
+            # we build an RGB image below, so drop any alpha now rather
+            # than relabel the channels
+            vwr_img = vwr_img[:, :, :3]
         ht, wd = vwr_img.shape[:2]
         length = self.settings.get('thumb_length', 128)
         aspect = min(wd, ht) / max(wd, ht)
