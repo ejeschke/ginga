@@ -4,6 +4,12 @@ What's New
 
 Since 7.5.0 (unreleased)
 ========================
+- ``Thumbs`` "Auto scroll" follows a newly arrived thumb only.  It used to
+  re-apply the scroll whenever anything asked for a thumb list update, so
+  pausing or releasing the mouse mid-scroll snapped the pane back to the
+  end, as did resizing the pane or removing a thumb.  The scroll is now a
+  one-shot request made when a thumb is added and consumed by the next
+  update.
 - ``AstroTable.get_thumbnail()`` and ``Plotable.get_thumbnail()`` raise a
   ``PendingDeprecationWarning``.  Neither has ever produced a thumbnail:
   both return an identity matrix, which draws as a diagonal line.  They

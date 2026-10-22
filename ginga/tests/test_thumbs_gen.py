@@ -83,6 +83,7 @@ class FakeShell:
                                           logger=logger)
         self.tfact = Timer.TimerFactory(logger=logger)
         self.gui_queue = []
+        self.gui_oneshot = {}
         self.gui_lock = threading.Lock()
         self.threads = []
         self.aio_tasks = []
@@ -123,6 +124,11 @@ class FakeShell:
         with self.gui_lock:
             self.gui_queue.append((method, args, kwargs))
 
+    def gui_do_oneshot(self, name, method, *args, **kwargs):
+        with self.gui_lock:
+            # one pending call per name, as GwMain's deque(maxlen=1) does
+            self.gui_oneshot[name] = (method, args, kwargs)
+
     def nongui_do(self, method, *args, **kwargs):
         if self.async_mode:
             res = method(*args, **kwargs)
@@ -152,9 +158,13 @@ class FakeShell:
         """Run the queued gui_do calls, as the GUI thread would."""
         while True:
             with self.gui_lock:
-                if not self.gui_queue:
+                if len(self.gui_queue) > 0:
+                    method, args, kwargs = self.gui_queue.pop(0)
+                elif len(self.gui_oneshot) > 0:
+                    _name, (method, args,
+                            kwargs) = self.gui_oneshot.popitem()
+                else:
                     return
-                method, args, kwargs = self.gui_queue.pop(0)
             method(*args, **kwargs)
 
 
@@ -446,7 +456,9 @@ def test_add_visible_thumbs_does_not_re_enter_itself(tmp_path):
     thumbs.add_visible_thumbs()
 
     assert calls == ['enter', 'exit'], "the nested pass ran the body"
-    assert thumbs.timer_update.is_set(), "the deferred pass was dropped"
+    assert 'thumbs-visible' in fv.gui_oneshot, "the deferred pass was dropped"
+    assert not thumbs.timer_update.is_set(), \
+        "the deferred pass went onto the thumb-list timer, which auto-scrolls"
     assert not thumbs._updating_visible
     assert not thumbs._update_again
 
@@ -538,6 +550,143 @@ def test_an_rgba_rendering_is_not_mislabelled_as_rgb(tmp_path):
     assert arr.shape[2] == 3, "alpha was carried into an RGB image"
     r, g, b = arr[..., 0].max(), arr[..., 1].max(), arr[..., 2].max()
     assert r > g and r > b, "channels came out in the wrong order"
+
+
+# ------------------------------------------------------------ auto scroll
+
+
+class FakeThumbsViewer:
+    """The slice of the thumbs pane viewer that update_thumbs() touches."""
+
+    def __init__(self):
+        self.pan = (0.0, 0.0)
+        self.limits = None
+
+    def set_limits(self, limits, coord='data'):
+        self.limits = limits
+
+    def get_pan(self):
+        return self.pan
+
+    def panset_xy(self, x, y):
+        self.pan = (x, y)
+
+
+class FakeCheckbutton:
+    def __init__(self, state):
+        self.state = state
+
+    def get_state(self):
+        return self.state
+
+
+def mk_scrollable_thumbs(tmp_path, auto_scroll=True, n=30):
+    thumbs, fv, gen = mk_thumbs(tmp_path)
+    thumbs.gui_up = True
+    thumbs.c_view = FakeThumbsViewer()
+    thumbs.w.auto_scroll = FakeCheckbutton(auto_scroll)
+    thumbs.thumb_num_cols = 3
+    # there is no canvas here; the scroll decision is what is under test
+    thumbs._add_visible_thumbs = lambda: None
+    for i in range(n):
+        insert_lazy_thumb(thumbs, 'img%02d' % i)
+    return thumbs, fv
+
+
+def insert_lazy_thumb(thumbs, name):
+    path = '/nonexistent/%s.fits' % name
+    thumbkey = ('Ch', name, path)
+    thumbs._insert_lazy_thumb(thumbkey, 'Ch',
+                              Bunch.Bunch(name=name, path=path), None)
+    return thumbkey
+
+
+def test_a_newly_arrived_thumb_scrolls_the_pane(tmp_path):
+    """What "Auto scroll" is for: keep the newest frame in view."""
+    thumbs, fv = mk_scrollable_thumbs(tmp_path)
+    thumbs.c_view.pan = (0.0, 0.0)
+
+    thumbs.update_thumbs()
+
+    assert thumbs.c_view.get_pan() != (0.0, 0.0), "did not scroll"
+    thumbs.timer_update.stop()
+
+
+def test_the_scroll_request_is_consumed_not_standing(tmp_path):
+    """A second pass must not re-apply the scroll of the last arrival.
+
+    Several things set timer_update -- a resize, a removal, a clear -- and
+    all of them land in update_thumbs().  Only an arrival may scroll.
+    """
+    thumbs, fv = mk_scrollable_thumbs(tmp_path)
+    thumbs.update_thumbs()
+
+    # the user scrolls back up to look at an earlier frame
+    thumbs.c_view.pan = (0.0, 0.0)
+    thumbs.update_thumbs()
+
+    assert thumbs.c_view.get_pan() == (0.0, 0.0), \
+        "scrolled with no new thumb"
+    thumbs.timer_update.stop()
+
+
+def test_a_resize_does_not_scroll_the_pane(tmp_path):
+    thumbs, fv = mk_scrollable_thumbs(tmp_path)
+    thumbs.update_thumbs()
+    thumbs.c_view.pan = (0.0, 0.0)
+
+    thumbs._resized(600, 400)
+    fv.flush_gui()
+    thumbs.update_thumbs()
+
+    assert thumbs.c_view.get_pan() == (0.0, 0.0), \
+        "a resize scrolled to the end"
+    thumbs.timer_update.stop()
+
+
+def test_the_next_arrival_scrolls_again(tmp_path):
+    """Consuming the request must not switch auto scroll off for good."""
+    thumbs, fv = mk_scrollable_thumbs(tmp_path)
+    thumbs.update_thumbs()
+    thumbs.c_view.pan = (0.0, 0.0)
+
+    insert_lazy_thumb(thumbs, 'img99')
+    thumbs.update_thumbs()
+
+    assert thumbs.c_view.get_pan() != (0.0, 0.0), "stopped following"
+    thumbs.timer_update.stop()
+
+
+def test_a_pan_during_an_update_does_not_scroll_to_the_end(tmp_path):
+    """The reported bug: stop scrolling, and the pane jumps to the end.
+
+    A pan re-enters add_visible_thumbs() through the update_pending() at
+    the end of the pass in flight, and the deferred second pass used to be
+    scheduled on timer_update -- which means "the thumb list changed", and
+    carries the auto-scroll with it.
+    """
+    thumbs, fv = mk_scrollable_thumbs(tmp_path)
+    thumbs.update_thumbs()
+    thumbs.c_view.pan = (0.0, 0.0)
+    thumbs.timer_update.stop()
+
+    def body():
+        # stands in for update_pending() servicing a queued pan
+        thumbs.add_visible_thumbs()
+
+    thumbs._add_visible_thumbs = body
+    thumbs.add_visible_thumbs()
+
+    assert not thumbs.timer_update.is_set(), \
+        "a pan asked for a thumb-list update"
+
+    # let the deferred pass run, without re-entering it a second time
+    thumbs._add_visible_thumbs = lambda: None
+    fv.flush_gui()
+
+    assert thumbs.c_view.get_pan() == (0.0, 0.0), \
+        "the pane scrolled itself back to the end"
+    thumbs.timer_update.stop()
 
 
 # ------------------------------------------------------------------- async

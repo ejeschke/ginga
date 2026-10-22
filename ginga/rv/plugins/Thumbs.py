@@ -171,7 +171,9 @@ class Thumbs(GingaPlugin.GlobalPlugin):
         self.timer_update.add_callback('expired', self.timer_update_cb)
         self.update_interval = 0.25
         self._to_build = set([])
-        self._latest_thumb = None
+        # set to a thumbkey by _insert_lazy_thumb(); consumed by the next
+        # update_thumbs().  Only a newly arrived thumb may scroll the pane.
+        self._scroll_to_thumb = None
         self.save_thumbs = self.settings.get('cache_thumbs', False)
 
         # this will hold the thumbnails pane viewer
@@ -1440,7 +1442,11 @@ class Thumbs(GingaPlugin.GlobalPlugin):
 
         if self._update_again:
             self._update_again = False
-            self.timer_update.set(self.update_interval)
+            # NOTE: another pass of *this*, not timer_update -- that timer
+            # means "the thumb list changed" and update_thumbs() honors a
+            # pending auto-scroll request, which would yank the pane to the
+            # end every time the user stopped scrolling.
+            self.fv.gui_do_oneshot('thumbs-visible', self.add_visible_thumbs)
 
     def _add_visible_thumbs(self):
         # invoked via add_visible_thumbs(), which serializes us
@@ -1517,11 +1523,14 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             row = n // self.thumb_num_cols
             col = n % self.thumb_num_cols
 
-            thumbkey = None
-            if self._latest_thumb in self.thumb_dict:
-                thumbkey = self._latest_thumb
-            else:
-                self._latest_thumb = None
+            # Consume any pending auto-scroll request.  Only a thumb
+            # that has just arrived gets one: a resize, a removal, a clear
+            # or another pass over the visible thumbs must leave the user's
+            # scroll position where they put it.
+            thumbkey = self._scroll_to_thumb
+            self._scroll_to_thumb = None
+            if thumbkey not in self.thumb_dict:
+                thumbkey = None
 
         # update the visible limits (e.g. scroll bars)
         xm, ym, x_, y_ = self._calc_thumb_pos(0, 0)
@@ -1568,7 +1577,8 @@ class Thumbs(GingaPlugin.GlobalPlugin):
             else:
                 self.thumb_list.append(thumbkey)
 
-        self._latest_thumb = thumbkey
+        # a new thumb has appeared: ask for the auto-scroll
+        self._scroll_to_thumb = thumbkey
 
         self.timer_update.cond_set(self.update_interval)
         #self.timer_update.set(self.update_interval)
