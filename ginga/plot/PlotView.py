@@ -232,10 +232,33 @@ class PlotViewBase(ViewerBase):
     def get_ginga_widget(self):
         return self.plot_w
 
+    def get_device_pixel_ratio(self):
+        """Return the canvas' ratio of physical pixels to logical ones.
+
+        On a HiDPI display (a Retina screen, say) a backend that can use
+        the extra pixels tells matplotlib so, and matplotlib *scales the
+        figure's dpi* by the ratio -- the figure keeps its size in inches
+        and gets more pixels.  Every window size that reaches this viewer,
+        from a widget or from a resize event, is in logical pixels, so the
+        ratio has to be put back when converting between the two.
+
+        Backends that do not scale report 1.0, as does a figure with no
+        canvas yet, so this is a no-op everywhere but Qt on a HiDPI
+        screen.
+        """
+        fig = self.get_figure()
+        if fig is None:
+            return 1.0
+        dpr = getattr(fig.canvas, 'device_pixel_ratio', 1.0)
+        if dpr is None or not np.isfinite(dpr) or dpr <= 0.0:
+            return 1.0
+        return float(dpr)
+
     def get_window_size(self):
+        """Return the size of the plot window in logical pixels."""
         fig = self.get_figure()
         fig_wd_in, fig_ht_in = fig.get_size_inches()
-        fig_dpi = fig.get_dpi()
+        fig_dpi = fig.get_dpi() / self.get_device_pixel_ratio()
         wd_px = int(fig_wd_in * fig_dpi)
         ht_px = int(fig_ht_in * fig_dpi)
         return (wd_px, ht_px)
@@ -330,7 +353,15 @@ class PlotViewBase(ViewerBase):
                     wd_px, ht_px))
                 return
 
-            fig.set_size_inches(float(wd_px) / fig.dpi, float(ht_px) / fig.dpi)
+            # NOTE: wd_px/ht_px are logical pixels, and on a HiDPI
+            # display fig.dpi has already been scaled by the canvas' device
+            # pixel ratio -- so scale the size by it as well, exactly as
+            # matplotlib's own Qt resize handler does.  Dividing by the
+            # scaled dpi alone would make the figure 1/dpr of the size of
+            # the widget holding it.
+            dpr = self.get_device_pixel_ratio()
+            fig.set_size_inches(float(wd_px) * dpr / fig.dpi,
+                                float(ht_px) * dpr / fig.dpi)
             self.logger.debug("figure resized to %dx%d" % (wd_px, ht_px))
 
             self.make_callback('configure', wd_px, ht_px)

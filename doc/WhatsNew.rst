@@ -4,6 +4,15 @@ What's New
 
 Since 7.5.0 (unreleased)
 ========================
+- Plots are drawn at full size on HiDPI displays.  On a Retina screen (or
+  any display where the backend reports a device pixel ratio above one)
+  matplotlib scales the figure's dpi by that ratio, but
+  ``PlotViewBase.set_window_size()`` divided the window size, in logical
+  pixels, by the scaled dpi -- so the figure came out at ``1/ratio`` of the
+  size of the widget holding it, and compounded on every resize.
+  ``get_window_size()`` had the matching error, reporting physical rather
+  than logical pixels, which oversized the plot fonts.  Reported against
+  PypeIt, which carried a workaround for it.
 - ``Thumbs`` "Auto scroll" follows a newly arrived thumb only.  It used to
   re-apply the scroll whenever anything asked for a thumb list update, so
   pausing or releasing the mouse mid-scroll snapped the pane back to the

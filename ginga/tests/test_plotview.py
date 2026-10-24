@@ -25,14 +25,22 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg  # noqa: E402
 from ginga.plot.PlotView import PlotViewBase              # noqa: E402
 
 
-def _viewer(wd_in=8.0, ht_in=6.0, dpi=100):
+def _viewer(wd_in=8.0, ht_in=6.0, dpi=100, dpr=1.0):
     """A PlotViewBase with just the attributes these methods touch.
 
     Built without __init__ on purpose: the real constructor makes a widget,
     which needs a live GUI session.
+
+    `dpr` stands in for a HiDPI screen.  A backend that can use the extra
+    pixels announces the ratio exactly this way, and matplotlib responds by
+    scaling the figure's dpi -- so this is the real thing, not a mock-up of
+    it, and it does not need a Retina display to run on.
     """
     fig = Figure(figsize=(wd_in, ht_in), dpi=dpi, layout='constrained')
-    FigureCanvasAgg(fig)
+    canvas = FigureCanvasAgg(fig)
+    if dpr != 1.0:
+        canvas._set_device_pixel_ratio(dpr)
+        assert fig.dpi == dpi * dpr, "matplotlib did not scale the dpi"
     ax = fig.add_subplot(111)
     ax.plot(np.arange(50), np.arange(50))
     ax.set_title('t')
@@ -135,3 +143,66 @@ def test_a_real_resize_is_applied():
     wd_in, ht_in = pv.figure.get_size_inches()
     assert (wd_in * pv.figure.dpi, ht_in * pv.figure.dpi) == (800, 600)
     assert pv.made == [('configure', (800, 600))]
+
+
+# ------------------------------------------------------------- HiDPI --
+#
+# On a HiDPI display matplotlib scales the figure's dpi by the canvas'
+# device pixel ratio: the figure keeps its size in inches and is drawn
+# with more pixels.  The sizes that reach the viewer -- from the widget,
+# and from matplotlib's own resize event -- stay in logical pixels, so
+# dividing one by the other made the figure 1/dpr of the size of the
+# widget holding it, and the plot filled a corner of its panel.
+
+
+@pytest.mark.parametrize('dpr', [1.0, 1.5, 2.0, 3.0])
+def test_a_resize_fills_the_widget_whatever_the_pixel_ratio(dpr):
+    pv = _viewer(dpi=100, dpr=dpr)
+
+    pv.set_window_size(800, 600)
+
+    # the figure covers 800x600 logical pixels...
+    wd_in, ht_in = pv.figure.get_size_inches()
+    assert (wd_in, ht_in) == (8.0, 6.0)
+    # ...which it draws with dpr times as many real ones
+    assert tuple(pv.figure.bbox.size) == (800 * dpr, 600 * dpr)
+
+
+@pytest.mark.parametrize('dpr', [1.0, 1.5, 2.0, 3.0])
+def test_the_window_size_is_reported_in_logical_pixels(dpr):
+    """What the callers of get_window_size() are sizing fonts against."""
+    pv = _viewer(wd_in=8.0, ht_in=6.0, dpi=100, dpr=dpr)
+
+    assert pv.get_window_size() == (800, 600)
+
+
+@pytest.mark.parametrize('dpr', [1.0, 2.0, 3.0])
+def test_a_matplotlib_resize_event_does_not_shrink_the_figure(dpr):
+    """The loop that shrank the plot, end to end.
+
+    matplotlib sizes the figure from its widget and then hands us a
+    ResizeEvent carrying the same size -- in logical pixels, which is what
+    ResizeEvent.width is.  Taking that back in has to be a no-op, or every
+    resize costs another factor of dpr.
+
+    Note this goes through matplotlib's own numbers rather than our
+    get_window_size(): the two mistakes cancelled each other, so a round
+    trip through our own API could not see either one.
+    """
+    from matplotlib.backend_bases import ResizeEvent
+
+    pv = _viewer(dpi=100, dpr=dpr)
+    canvas = pv.figure.canvas
+
+    for _ in range(3):
+        ev = ResizeEvent('resize_event', canvas)
+        pv.set_window_size(ev.width, ev.height)
+
+    assert tuple(pv.figure.get_size_inches()) == (8.0, 6.0)
+
+
+def test_a_figure_with_no_canvas_has_a_ratio_of_one():
+    pv = _viewer()
+    pv.figure.canvas = None
+
+    assert pv.get_device_pixel_ratio() == 1.0
