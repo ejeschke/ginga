@@ -571,3 +571,41 @@ def test_text_bg_box_constant_under_zoom_in_3d(viewer):
 
     assert s1[0] > 0 and s1[1] > 0                # the box rendered
     assert s1 == s3                              # constant pixel size at any zoom
+
+
+def _render_scaled_canvas_image(n, obj_scale, zoom, pan):
+    """Render an n x n checkerboard drawn as a NormImage at canvas scale
+    `obj_scale`, centered on the origin; return the window as an array."""
+    v = VulkanView(logger=logger)
+    v.enable_autozoom('off')
+    v.enable_autocuts('off')
+    v.set_desired_size(300, 300)
+    v.configure(300, 300)
+    yy, xx = np.indices((n, n))
+    # 10 x 10 checkerboard, with one off-center marked cell
+    data = ((xx * 10 // n + yy * 10 // n) % 2).astype(np.float32) * 0.5
+    data[(yy * 10 // n == 7) & (xx * 10 // n == 2)] = 1.0
+    img = AstroImage.AstroImage(logger=logger)
+    img.set_data(data)
+    NormImage = v.get_canvas().get_draw_class('normimage')
+    half = n * obj_scale * 0.5
+    v.get_canvas().add(NormImage(-half, -half, img,
+                                 scale_x=obj_scale, scale_y=obj_scale))
+    v.set_limits(((-half, -half), (half, half)))
+    v.cut_levels(0.0, 1.0)
+    v.scale_to(zoom, zoom)
+    v.set_pan(*pan)
+    v.redraw_now(whence=0)
+    return v.renderer.get_surface_as_array('RGB')[..., 0].astype(int)
+
+
+def test_scaled_canvas_image_zoomed_in(viewer):
+    """A canvas image drawn with scale_x/scale_y looks the same as an
+    unscaled image of the same extent, at any zoom and pan (the CPU
+    pipeline used to misplace it once zoomed in)."""
+    for zoom in (0.2, 0.5, 1.0, 3.0):
+        for pan in ((0.0, 0.0), (250.0, -400.0)):
+            ref = _render_scaled_canvas_image(1000, 1, zoom, pan)
+            res = _render_scaled_canvas_image(200, 5, zoom, pan)
+            assert len(np.unique(ref)) >= 2, (zoom, pan)
+            assert np.mean(ref != res) < 0.02, (zoom, pan)

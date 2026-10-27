@@ -402,16 +402,24 @@ class Scale(Stage):
         img = cvs_img
         dst_x, dst_y = img.crdmap.to_data((img.x, img.y))
 
+        # a canvas image can be scaled, so that each of its pixels covers
+        # img.scale_x by img.scale_y data units: express the visible extent
+        # in the image's own (unscaled) pixel frame, anchored at the image's
+        # corner, before clipping the image against it
+        obj_sx, obj_sy = img.scale_x, img.scale_y
+        x1 = int(np.floor(dst_x + (xmin - dst_x) / obj_sx))
+        y1 = int(np.floor(dst_y + (ymin - dst_y) / obj_sy))
+        x2 = int(np.ceil(dst_x + (xmax - dst_x) / obj_sx))
+        y2 = int(np.ceil(dst_y + (ymax - dst_y) / obj_sy))
+
         ht, wd = data_np.shape[:2]
-        # TODO: think we need to apply scaling factors to wd/ht
-        # BEFORE we calculate merge clip
         a1, b1, a2, b2 = 0, 0, wd - 1, ht - 1
 
         # calculate the cutout that we can make and scale to merge
         # onto the final image--by only cutting out what is necessary
         # this speeds scaling greatly at zoomed in sizes
-        ((dst_x, dst_y), (a1, b1), (a2, b2)) = \
-            trcalc.calc_image_merge_clip((xmin, ymin), (xmax, ymax),
+        ((clip_x, clip_y), (a1, b1), (a2, b2)) = \
+            trcalc.calc_image_merge_clip((x1, y1), (x2, y2),
                                          (dst_x, dst_y),
                                          (a1, b1), (a2, b2))
 
@@ -425,11 +433,15 @@ class Scale(Stage):
 
         cache.visible = True
 
+        # location of the cutout, back in data coordinates
+        dst_x = dst_x + (clip_x - dst_x) * obj_sx
+        dst_y = dst_y + (clip_y - dst_y) * obj_sy
+
         # cutout and scale the piece appropriately by the viewer scale
         scale_x, scale_y = self.viewer.get_scale_xy()
         # scale additionally by scale specified in canvas image
-        _scale_x, _scale_y = (scale_x * img.scale_x,
-                              scale_y * img.scale_y)
+        _scale_x, _scale_y = (scale_x * obj_sx,
+                              scale_y * obj_sy)
 
         interp = img.interpolation
         if interp is None:

@@ -4,6 +4,12 @@ What's New
 
 Since 7.5.0 (unreleased)
 ========================
+- Canvas images drawn with ``scale_x``/``scale_y`` other than 1 are placed
+  correctly when zoomed in.  The CPU render pipeline cuts out only the
+  visible part of an image, but clipped it as if the image were unscaled,
+  so once a scaled image overflowed the window it was drawn shifted (or not
+  at all) and appeared to jump while zooming.  The Vulkan and OpenGL
+  renderers were not affected.
 - Plots are drawn at full size on HiDPI displays.  On a Retina screen (or
   any display where the backend reports a device pixel ratio above one)
   matplotlib scales the figure's dpi by that ratio, but

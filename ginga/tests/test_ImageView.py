@@ -93,3 +93,41 @@ class TestImageView:
         result = np.array([(x1, y1), (x2, y2)])
         expected = np.array([[376., 482.25], [426., 519.75]])
         assert np.all(np.isclose(expected, result))
+
+    def _render_canvas_image(self, n, obj_scale, zoom, pan):
+        """Render an n x n checkerboard drawn as a NormImage at canvas scale
+        `obj_scale`, centered on the origin; return the window as an array.
+        """
+        viewer = CanvasView(logger=self.logger)
+        viewer.configure_surface(300, 300)
+        viewer.enable_autozoom('off')
+        viewer.enable_autocuts('off')
+        yy, xx = np.indices((n, n))
+        # 10 x 10 checkerboard, with one off-center marked cell
+        data = ((xx * 10 // n + yy * 10 // n) % 2).astype(np.float32) * 0.5
+        data[(yy * 10 // n == 7) & (xx * 10 // n == 2)] = 1.0
+        image = AstroImage.AstroImage(logger=self.logger)
+        image.set_data(data)
+        NormImage = viewer.get_canvas().get_draw_class('normimage')
+        half = n * obj_scale * 0.5
+        viewer.get_canvas().add(NormImage(-half, -half, image,
+                                          scale_x=obj_scale,
+                                          scale_y=obj_scale))
+        viewer.set_limits(((-half, -half), (half, half)))
+        viewer.cut_levels(0.0, 1.0)
+        viewer.scale_to(zoom, zoom)
+        viewer.set_pan(*pan)
+        viewer.redraw_now(whence=0)
+        return viewer.renderer.get_surface_as_array('RGB')[..., 0].astype(int)
+
+    def test_scaled_canvas_image_zoomed_in(self):
+        # A canvas image drawn with scale_x/scale_y must look the same as an
+        # unscaled image of the same extent, including when zoomed in far
+        # enough that only part of it is cut out for rendering (this used to
+        # clip the image as if it were unscaled, misplacing it).
+        for zoom in (0.2, 0.5, 1.0, 3.0):
+            for pan in ((0.0, 0.0), (250.0, -400.0)):
+                ref = self._render_canvas_image(1000, 1, zoom, pan)
+                res = self._render_canvas_image(200, 5, zoom, pan)
+                # allow for differences of a pixel at cell edges
+                assert np.mean(ref != res) < 0.02, (zoom, pan)
