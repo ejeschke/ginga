@@ -2,8 +2,8 @@
 What's New
 ++++++++++
 
-Since 7.5.0 (unreleased)
-========================
+ver 7.6.0 (2026.10.27)
+======================
 - Canvas images drawn with ``scale_x``/``scale_y`` other than 1 are placed
   correctly when zoomed in.  The CPU render pipeline cuts out only the
   visible part of an image, but clipped it as if the image were unscaled,
