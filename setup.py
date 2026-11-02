@@ -50,5 +50,5 @@ class build_py(_build_py):
         super().run()
 
 
-setup(use_scm_version={'write_to': 'ginga/version.py'},
+setup(use_scm_version={'version_file': 'ginga/version.py'},
       cmdclass={'build_py': build_py})
