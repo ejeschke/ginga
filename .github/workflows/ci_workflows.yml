@@ -18,96 +18,47 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   tests:
-    name: ${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
-    strategy:
+    uses: OpenAstronomy/github-actions-workflows/.github/workflows/tox.yml@1285b95e32c783cfa40eb2ffbd6ca4cd023fb884  # v3.2.2
+    with:
+      submodules: false
+      coverage: ''
       fail-fast: true
-      matrix:
-        include:
-          # Make sure that packaging will work
-          - name: Lint with flake8
-            os: ubuntu-latest
-            python: 3.x
-            toxenv: codestyle
-          - name: PEP 517 build
-            os: ubuntu-latest
-            python: 3.x
-            toxenv: twine
-          - name: Security audit
-            os: ubuntu-latest
-            python: 3.x
-            toxenv: bandit
+      envs: |
+        # Make sure that packaging will work
+        - name: Lint with flake8
+          python-version: '3.14'
+          linux: codestyle
+        - name: PEP 517 build
+          python-version: '3.14'
+          linux: twine
+        - name: Security audit
+          python-version: '3.14'
+          linux: bandit
 
-          # Basic tests
-          - name: Test with Python 3.11 on OSX
-            os: macos-latest
-            python: '3.11'
-            toxenv: py311-test
-            toxposargs: -sv
-          - name: Test with Python 3.12 on Windows
-            os: windows-latest
-            python: '3.12'
-            toxenv: py312-test
-            toxposargs: -sv
-          - name: Test with Python 3.13 on Linux
-            os: ubuntu-latest
-            python: '3.13'
-            toxenv: py313-test
-            toxposargs: -sv
-          - name: Test with Python 3.14 on Linux
-            os: ubuntu-latest
-            python: '3.14'
-            toxenv: py314-test
-            toxposargs: -sv
+        # Basic tests
+        - name: Test with Python 3.12 on Windows
+          windows: py312-test
+          posargs: -sv
+        - name: Test with Python 3.13 on OSX
+          macos: py313-test
+          posargs: -sv
+        - name: Test with Python 3.14 on Linux
+          linux: py314-test
+          posargs: -sv
 
-          - name: Test with old dependencies
-            os: ubuntu-latest
-            python: '3.11'
-            toxenv: py311-test-oldestdeps
-            toxposargs: -sv
+        - name: Test with old dependencies
+          linux: py311-test-oldestdeps
+          posargs: -sv
 
-          - name: Test with dev dependencies
-            os: ubuntu-latest
-            python: '3.14'
-            toxenv: py314-test-devdeps
-            toxposargs: -sv
+        - name: Test with dev dependencies
+          linux: py315-test-devdeps
+          posargs: -sv
 
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-      with:
-        fetch-depth: 0
-    - name: Set up Python
-      uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
-      with:
-        python-version: ${{ matrix.python }}
-    - name: Install Python dependencies
-      run: |
-        python -m pip install --upgrade pip tox
-    - name: Run tests
-      run: tox -e ${{ matrix.toxenv }} -- ${{ matrix.toxposargs }}
-
-  # tox does not play well with conda
-  conda_linux_tests:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-      with:
-        fetch-depth: 0
-    - name: Set up Python
-      uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
-      with:
-        python-version: '3.x'
-    - name: Install and build
-      run: |
-        # $CONDA is an environment variable pointing to the root of the miniconda directory
-        $CONDA/bin/conda update -n base -c defaults conda
-        $CONDA/bin/conda install pip setuptools setuptools_scm
-        $CONDA/bin/conda install qtpy pyqt matplotlib
-        $CONDA/bin/conda install attrs "astropy>=5.2" pytest-astropy-header pytest-doctestplus pytest-remotedata -c conda-forge
-        $CONDA/bin/pip install -e .
-    - name: Run tests
-      run: $CONDA/bin/pytest --pyargs ginga doc -sv
+        - name: Test with conda
+          linux: py314-test-conda
+          posargs: -sv
