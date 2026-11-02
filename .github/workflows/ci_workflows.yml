@@ -31,13 +31,13 @@ jobs:
       envs: |
         # Make sure that packaging will work
         - name: Lint with flake8
-          python-version: '3.x'
+          python-version: '3.14'
           linux: codestyle
         - name: PEP 517 build
-          python-version: '3.x'
+          python-version: '3.14'
           linux: twine
         - name: Security audit
-          python-version: '3.x'
+          python-version: '3.14'
           linux: bandit
 
         # Basic tests
