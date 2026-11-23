@@ -88,26 +88,3 @@ jobs:
         python -m pip install --upgrade pip tox
     - name: Run tests
       run: tox -e ${{ matrix.toxenv }} -- ${{ matrix.toxposargs }}
-
-  # tox does not play well with conda
-  conda_linux_tests:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-      with:
-        fetch-depth: 0
-    - name: Set up Python
-      uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
-      with:
-        python-version: '3.x'
-    - name: Install and build
-      run: |
-        # $CONDA is an environment variable pointing to the root of the miniconda directory
-        $CONDA/bin/conda update -n base -c defaults conda
-        $CONDA/bin/conda install pip setuptools setuptools_scm
-        $CONDA/bin/conda install qtpy pyqt matplotlib
-        $CONDA/bin/conda install attrs "astropy>=5.2" pytest-astropy-header pytest-doctestplus pytest-remotedata -c conda-forge
-        $CONDA/bin/pip install -e .
-    - name: Run tests
-      run: $CONDA/bin/pytest --pyargs ginga doc -sv
