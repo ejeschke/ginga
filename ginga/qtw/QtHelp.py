@@ -688,8 +688,13 @@ def get_painter(surface):
 def get_scroll_event_source(event):
     """Return the source of the scroll event: 'wheel' or 'touchpad'."""
 
+    # A touchpad scroll carries pixel deltas.  A mouse wheel may have none
+    # (pixelDelta() is null), even if Qt labels its device as a touchpad,
+    # as the Wayland platform plugin does (QTBUG-112432).
+    if event.pixelDelta().isNull():
+        return 'wheel'
+
     # Differentiate using the device type (if available)
-    # if QInputDevice is not None:
     if hasattr(event, 'device'):
         # <-- Qt6
         if event.device().type() == QInputDevice.DeviceType.TouchPad:

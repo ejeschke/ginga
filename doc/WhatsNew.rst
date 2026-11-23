@@ -16,6 +16,11 @@ since 7.6.0 (unreleased)
   ``sharpen`` stage would fail to load.
 - Removed the conda CI job: GitHub-hosted Ubuntu runners no longer ship
   Miniconda, and the tox-based Linux jobs already run the same tests.
+- Fixed mouse wheel scrolling under Qt with Wayland (e.g. Ubuntu 26.04).
+  Qt's Wayland plugin labels mouse wheel events as coming from a
+  touchpad (QTBUG-112432), so the wheel was handled as a touchpad pan
+  with zero pixel deltas and did nothing.  A scroll event without pixel
+  deltas is now always treated as a mouse wheel.
 
 ver 7.6.0 (2026.10.27)
 ======================
