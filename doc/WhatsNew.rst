@@ -2,6 +2,21 @@
 What's New
 ++++++++++
 
+since 7.6.0 (unreleased)
+========================
+- ``IQCalc.find_bright_peaks()`` works with SciPy 2.0, which no longer
+  accepts numpy masked arrays.  A masked array is now handed to SciPy as a
+  plain array with its masked pixels filled with ``-inf`` and then kept out
+  of the result.  As a side effect, a bright masked pixel can no longer
+  hide a real peak within ``radius`` of it (#1156).
+- ``AutoCuts`` and the ``sharpen`` pipeline stage import ``median_filter``
+  from ``scipy.ndimage`` rather than the deprecated
+  ``scipy.ndimage.filters`` module, which is due to be removed.  Once it
+  is gone, the ``median`` autocuts method would silently disappear and the
+  ``sharpen`` stage would fail to load.
+- Removed the conda CI job: GitHub-hosted Ubuntu runners no longer ship
+  Miniconda, and the tox-based Linux jobs already run the same tests.
+
 ver 7.6.0 (2026.10.27)
 ======================
 - Canvas images drawn with ``scale_x``/``scale_y`` other than 1 are placed

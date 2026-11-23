@@ -926,11 +926,22 @@ class IQCalc:
             self.logger.debug("threshold defaults to %f (sigma=%f)" % (
                 threshold, sigma))
 
+        # scipy (>= 2.0) no longer accepts numpy masked arrays, so hand it
+        # a plain array in which masked pixels can never be a maximum, and
+        # keep them out of the result explicitly.
+        mask = None
+        if np.ma.isMaskedArray(data):
+            mask = np.ma.getmaskarray(data)
+            data = np.ma.filled(data.astype(float, copy=False), -np.inf)
+        else:
+            data = np.asarray(data)
+
         #self.logger.debug("filtering")
         data_max = maximum_filter(data, radius)
         maxima = (data == data_max)
-        diff = data_max > threshold
-        maxima[diff == 0] = 0
+        maxima[data_max <= threshold] = False
+        if mask is not None:
+            maxima[mask] = False
 
         #self.logger.debug("finding")
         labeled, num_objects = ndimage.label(maxima)

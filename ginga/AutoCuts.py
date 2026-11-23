@@ -15,7 +15,7 @@ from astropy.visualization import ZScaleInterval
 have_scipy = True
 autocut_methods = ['minmax', 'median', 'histogram', 'stddev', 'zscale']
 try:
-    import scipy.ndimage.filters
+    import scipy.ndimage
 except ImportError:
     have_scipy = False
     autocut_methods = ['minmax', 'histogram', 'stddev', 'zscale']
@@ -745,7 +745,7 @@ class MedianFilter(AutoCutsBase):
         if length is None:
             length = 5
 
-        xout = scipy.ndimage.filters.median_filter(data, size=length)
+        xout = scipy.ndimage.median_filter(data, size=length)
         loval = np.nanmin(xout)
         hival = np.nanmax(xout)
 

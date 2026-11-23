@@ -4,7 +4,7 @@
 import numpy as np
 
 ## from PIL import Image, ImageFilter
-from scipy.ndimage.filters import median_filter
+from scipy.ndimage import median_filter
 import cv2
 
 from ginga import trcalc
