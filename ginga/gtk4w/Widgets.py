@@ -9,6 +9,7 @@ import contextlib
 import uuid
 import pathlib
 import os
+import traceback
 from functools import reduce
 
 from ginga.gtk4w import GtkHelp
@@ -3067,9 +3068,12 @@ class TopLevelMixin:
         try:
             self.close()
 
-        finally:
-            # don't automatically destroy window
-            return True
+        except Exception:
+            # report, but don't let the exception escape the signal handler
+            traceback.print_exc()
+
+        # don't automatically destroy window
+        return True
 
     def _window_event(self, widget, event):
         if ((event.changed_mask & Gdk.WindowState.FULLSCREEN) or

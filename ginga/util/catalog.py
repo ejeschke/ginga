@@ -601,7 +601,7 @@ class AstroqueryImageServer:
             self.logger.info("Found %d images in %.2f sec" % (
                 numsources, time_elapsed))
             if numsources == 0:
-                self.logger.warning("Found no images in this area" % len(results))
+                self.logger.warning("Found no images in this area")
                 return None
 
         # For now, we pick the first one found

@@ -17,8 +17,10 @@ target-version = "py311"
 extend-exclude = ["*.ipynb", "ginga/examples/pg/pyscript"]
 
 [tool.ruff.lint]
-# match flake8's coverage: pycodestyle (E/W) + pyflakes (F)
-select = ["E", "F", "W"]
+# match flake8's coverage: pycodestyle (E/W) + pyflakes (F), plus B012
+select = ["E", "F", "W",
+          "B012",  # return/break/continue in finally (PEP 765)
+          ]
 ignore = [
     "E265",  # block comment should start with '# '
     "E266",  # too many leading '#' for block comment
