@@ -198,6 +198,10 @@ class TextModel(Callback.Callbacks):
         self._redo_stack = []
         self._undo_limit = 500
         self._in_undo_redo = False
+        # True when the newest undo entry is a run of typed characters (or
+        # of single-character deletions) that the next such keystroke may
+        # extend; see _push_undo.
+        self._undo_mergeable = False
 
         for name in ('changed', 'cursor-moved'):
             self.enable_callback(name)
@@ -258,6 +262,7 @@ class TextModel(Callback.Callbacks):
         self._tags = []
         self._undo_stack = []
         self._redo_stack = []
+        self._undo_mergeable = False
         self._invalidate_all_refs()
         self._named_refs.clear()
         self._icon_refs.clear()
@@ -551,7 +556,21 @@ class TextModel(Callback.Callbacks):
     def can_redo(self):
         return len(self._redo_stack) > 0
 
+    def break_undo_group(self):
+        """Make the next edit start a new undo step, even if it would
+        otherwise extend the current run of typing."""
+        self._undo_mergeable = False
+
     def undo(self):
+        """Undo the most recent undo step; return False if there is none.
+
+        Consecutive typed characters within a word (plus the whitespace
+        after it) form one step, as do runs of Backspace or Delete; every
+        other edit is a step of its own.  Only the text and the cursor are
+        restored: tags that were removed along with deleted text are not
+        put back (GtkSourceView behaves the same way).
+        """
+        self._undo_mergeable = False
         if not self._undo_stack:
             return False
         start, old_text, new_text, cursor_before, cursor_after = \
@@ -569,6 +588,8 @@ class TextModel(Callback.Callbacks):
         return True
 
     def redo(self):
+        """Redo the most recently undone step; return False if none."""
+        self._undo_mergeable = False
         if not self._redo_stack:
             return False
         start, old_text, new_text, cursor_before, cursor_after = \
@@ -709,15 +730,61 @@ class TextModel(Callback.Callbacks):
             self._batch_region = (min(self._batch_region[0], *region),
                                   max(self._batch_region[1], *region))
 
+    def _push_undo(self, start, old_text, new_text, cursor_before,
+                   cursor_after, coalesce):
+        """Record an edit on the undo stack, merging it into the previous
+        entry when both are part of one run of typing.
+
+        Only edits with ``coalesce`` set (keystrokes typed into the widget)
+        are merged, and only into an entry that was itself made that way:
+
+        - a typed character directly after the previous one, except that a
+          non-space character after a space starts a new step (so a step is
+          a word plus the spaces that follow it);
+        - Backspace directly before the previous deletion;
+        - Delete at the same position as the previous deletion.
+
+        A newline, a multi-character edit (paste, replacing a selection) or
+        any programmatic edit always starts a new step.
+        """
+        mergeable = (coalesce and len(old_text) + len(new_text) == 1 and
+                     '\n' not in old_text + new_text)
+        if mergeable and self._undo_mergeable and self._undo_stack:
+            l_start, l_old, l_new, l_before, _l_after = self._undo_stack[-1]
+            merged = None
+            if old_text == '' and l_old == '':
+                # typing
+                if (start == l_start + len(l_new) and
+                        not (l_new[-1].isspace() and not new_text.isspace())):
+                    merged = (l_start, '', l_new + new_text)
+            elif new_text == '' and l_new == '':
+                if start + 1 == l_start:
+                    # Backspace
+                    merged = (start, old_text + l_old, '')
+                elif start == l_start:
+                    # Delete
+                    merged = (l_start, l_old + old_text, '')
+            if merged is not None:
+                self._undo_stack[-1] = merged + (l_before, cursor_after)
+                return
+        self._undo_stack.append((start, old_text, new_text, cursor_before,
+                                 cursor_after))
+        self._undo_mergeable = mergeable
+        if len(self._undo_stack) > self._undo_limit:
+            self._undo_stack.pop(0)
+
     def _replace_range(self, start, end, new_text, tags=None,
-                       selection_after=None, sync_editor=True, push_undo=True):
+                       selection_after=None, sync_editor=True, push_undo=True,
+                       coalesce_undo=False):
         """Replace ``[start, end)`` in the model and synchronize the view.
 
         All ref and tag shifting happens here so every edit path shares the
         same semantics.  ``sync_editor`` is disabled only when the edit
         originated from the native widget (which already reflects the new
         text).  ``push_undo`` is disabled when the edit is itself the result
-        of an undo/redo replay.
+        of an undo/redo replay.  ``coalesce_undo`` marks a keystroke typed
+        into the widget, which may be merged into the previous undo step
+        (see _push_undo).
         """
         old_text = self._text[start:end]
         if old_text == new_text:
@@ -747,10 +814,9 @@ class TextModel(Callback.Callbacks):
             self._cursor, self._sel_start, self._sel_end = selection_after
 
         if not self._in_undo_redo and push_undo:
-            self._undo_stack.append((start, old_text, new_text, cursor_before,
-                                     (self._cursor, self._sel_start, self._sel_end)))
-            if len(self._undo_stack) > self._undo_limit:
-                self._undo_stack.pop(0)
+            self._push_undo(start, old_text, new_text, cursor_before,
+                            (self._cursor, self._sel_start, self._sel_end),
+                            coalesce_undo)
             self._redo_stack = []
 
         if sync_editor:

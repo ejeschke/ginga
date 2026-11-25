@@ -30,6 +30,19 @@ since 7.6.0 (unreleased)
 - ``TextSource`` line lookups (``set_line``, line numbers of refs) use a
   cached index of line starts instead of rescanning the text, and
   reformatting large ranges of tags is much faster.
+- Undo and redo work in the Qt ``TextSource``.  Ctrl+Z/Ctrl+Y (and the
+  platform's other Undo/Redo keys) and the Undo/Redo items of the context
+  menu were inert, because Qt's own undo is disabled in favour of the
+  widget's model-level undo; they now drive the model's undo/redo.
+  Typing is undone a word at a time, and runs of Backspace or Delete as
+  one step, rather than one keystroke at a time.  ``break_undo_group()``
+  forces the next edit to start a new undo step.
+- Fixed typed edits in the Qt ``TextSource`` being recorded at the wrong
+  offset next to a run of equal characters (e.g. typing a space before
+  a space), which shifted refs, tags and undo steps by a character.
+- Copying or cutting from the Qt ``TextSource`` puts plain text only on
+  the clipboard, so tag colors no longer carry over when pasting into
+  rich-text applications.
 
 ver 7.6.0 (2026.10.27)
 ======================

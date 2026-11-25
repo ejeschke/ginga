@@ -1052,6 +1052,18 @@ class QEnhancedTextEdit(QtGui.QTextEdit):
         self._caret_brush = None
         self.cursorPositionChanged.connect(self._caret_moved_cb)
 
+    def createMimeDataFromSelection(self):
+        """Copy, cut and drag the selection as plain text only.
+
+        By default QTextEdit also puts an HTML rendering of the selection
+        on the clipboard, which carries tag colors (syntax/execution
+        highlighting) into rich-text targets such as mail or word
+        processors.  The text, not its highlighting, is what is copied.
+        """
+        mime = QtCore.QMimeData()
+        mime.setText(self.textCursor().selection().toPlainText())
+        return mime
+
     def _caret_moved_cb(self):
         if self._caret_color is not None:
             self.viewport().update()
@@ -1192,6 +1204,40 @@ class QTextSource(QtGui.QFrame, TextModel):
         self.tw.textChanged.connect(self._on_editor_text_changed)
         self.tw.cursorPositionChanged.connect(self._on_cursor_position_changed)
 
+    # ------------------------------------------------------------------
+    # Undo/redo in the UI.  Qt's own undo stack is disabled (see
+    # QEnhancedTextEdit), which leaves its Ctrl+Z/Ctrl+Y handling and the
+    # Undo/Redo items of its standard context menu permanently inert; both
+    # are routed to the TextModel undo stack here instead.
+    # ------------------------------------------------------------------
+    def _undo_redo_key(self, event):
+        """Handle the platform Undo/Redo key sequences; True if handled."""
+        if event.matches(QKeySequence.StandardKey.Undo):
+            if not self.tw.isReadOnly():
+                self.undo()
+            return True
+        if event.matches(QKeySequence.StandardKey.Redo):
+            if not self.tw.isReadOnly():
+                self.redo()
+            return True
+        return False
+
+    def _show_context_menu(self, event):
+        """Show Qt's standard edit menu, with Undo/Redo wired to the model."""
+        pos = event.globalPos()
+        menu = self.tw.createStandardContextMenu(pos)
+        editable = not self.tw.isReadOnly()
+        for action in menu.actions():
+            name = action.objectName()
+            if name == 'edit-undo':
+                action.setEnabled(editable and self.can_undo())
+                action.triggered.connect(lambda *args: self.undo())
+            elif name == 'edit-redo':
+                action.setEnabled(editable and self.can_redo())
+                action.triggered.connect(lambda *args: self.redo())
+        menu.exec(pos)
+        menu.deleteLater()
+
     def get_number_bar(self):
         return self.nb
 
@@ -1208,6 +1254,12 @@ class QTextSource(QtGui.QFrame, TextModel):
                     # key was handled, so we consume the event.
                     if self.make_callback('key-press', kev):
                         return True
+                if self._undo_redo_key(event):
+                    return True
+            elif (etype == QEvent.ContextMenu and
+                  obj is self.tw.viewport()):
+                self._show_context_menu(event)
+                return True
             elif (etype == QEvent.MouseButtonPress and
                   obj is self.tw.viewport()):
                 # Report the clicked line (0-based); does not consume the
@@ -1498,10 +1550,29 @@ class QTextSource(QtGui.QFrame, TextModel):
             old_end -= 1
             new_end -= 1
         cursor = self.tw.textCursor()
-        selection_after = (cursor.position(), cursor.anchor(), cursor.position())
+        pos = cursor.position()
+        # A diff is ambiguous where the edit touches a run of equal
+        # characters: typing a space before " world" or deleting one 'l' of
+        # "ll" can be placed at several offsets, and the scans above pick
+        # the rightmost.  Slide a pure insertion or deletion left towards
+        # the cursor (where a typed edit actually happened) so refs, tags
+        # and undo grouping see the true position.
+        if old_end == start:
+            while (start > 0 and new_end > pos and
+                   new_text[start - 1] == new_text[new_end - 1]):
+                start -= 1
+                old_end -= 1
+                new_end -= 1
+        elif new_end == start:
+            while (start > 0 and start > pos and
+                   old_text[start - 1] == old_text[old_end - 1]):
+                start -= 1
+                old_end -= 1
+                new_end -= 1
+        selection_after = (pos, cursor.anchor(), pos)
         self._replace_range(start, old_end, new_text[start:new_end],
                             selection_after=selection_after,
-                            sync_editor=False)
+                            sync_editor=False, coalesce_undo=True)
 
     def _on_cursor_position_changed(self):
         """Capture cursor and selection state after user interaction."""
