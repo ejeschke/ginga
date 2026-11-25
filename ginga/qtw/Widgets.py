@@ -620,6 +620,16 @@ class TextSource(WidgetBase):
     def apply_tag(self, name, start_ref, end_ref):
         return self.widget.apply_tag(name, start_ref, end_ref)
 
+    def begin_batch(self):
+        return self.widget.begin_batch()
+
+    def end_batch(self):
+        return self.widget.end_batch()
+
+    def batch_update(self):
+        """Context manager: coalesce tag/format changes into one repaint."""
+        return self.widget.batch_update()
+
     def remove_tag(self, name, start_ref, end_ref):
         return self.widget.remove_tag(name, start_ref, end_ref)
 

@@ -23,7 +23,31 @@ small set of *render hooks* to reflect model changes in a native widget:
 
 The default implementations are no-ops, so a bare ``TextModel`` is usable
 headless (e.g. for tests or a non-visual buffer).
+
+Batched formatting
+------------------
+Every tag operation (``apply_tag``, ``remove_tag``, ``create_tag`` of an
+applied tag, ...) normally calls ``_apply_all_formats`` straight away.  On a
+native widget each of those calls can be expensive (Qt, for example, relays
+out the document), so applying thousands of tags one by one -- such as when
+syntax-coloring a large file -- can freeze the GUI for seconds.
+
+Wrap such bulk work in a batch::
+
+    with widget.batch_update():
+        for ...:
+            widget.apply_tag(name, start_ref, end_ref)
+
+Inside the batch the model (text, refs, tag intervals) is still updated
+immediately, so queries such as ``get_tags_at`` stay correct; only the push
+of formats into the widget is deferred.  When the outermost batch ends, a
+single ``_apply_all_formats`` call covers everything that changed.  Batches
+nest, and ``begin_batch``/``end_batch`` are available when a ``with`` block
+does not fit.  A batch should start and end in the same GUI-thread call:
+while it is open the widget's formatting lags behind the model.
 """
+import bisect
+import contextlib
 import weakref
 
 from ginga.misc import Callback
@@ -143,6 +167,20 @@ class TextModel(Callback.Callbacks):
         Callback.Callbacks.__init__(self)
 
         self._text = ''
+        # Lazily built list of line-start offsets (see _get_line_starts);
+        # reset to None whenever self._text changes.
+        self._line_starts = None
+        # Batched reformatting (see batch_update): while _batch_depth > 0,
+        # format requests are accumulated in _batch_region instead of being
+        # pushed to the widget one at a time.  _batch_region is one of:
+        #   None            -- nothing has been requested yet in this batch
+        #   (start, end)    -- the union of all requested spans so far
+        #   'all'           -- reformat the whole buffer at the end
+        # Note that 'all' is only ever a value of _batch_region; it is not a
+        # valid ``region`` argument to _request_format/_apply_all_formats,
+        # where the whole buffer is spelled ``None``.
+        self._batch_depth = 0
+        self._batch_region = None
         self._refs = weakref.WeakSet()
         self._named_refs = {}
         self._tag_defs = {}
@@ -213,6 +251,7 @@ class TextModel(Callback.Callbacks):
         refs are invalidated and applied tag intervals are cleared.
         """
         self._text = '' if text is None else str(text)
+        self._line_starts = None
         self._cursor = 0
         self._sel_start = 0
         self._sel_end = 0
@@ -223,7 +262,7 @@ class TextModel(Callback.Callbacks):
         self._named_refs.clear()
         self._icon_refs.clear()
         self._set_editor_text(self._text)
-        self._apply_all_formats()
+        self._request_format()
         self._refresh_icon_gutter()
         self._mark_clean()
 
@@ -327,13 +366,13 @@ class TextModel(Callback.Callbacks):
         # Defining a brand-new (unapplied) tag needs no reformat, which keeps
         # bulk tag creation (e.g. one tag per AST node) cheap.
         if self.has_tag(name):
-            self._apply_all_formats()
+            self._request_format()
 
     def remove_tag_def(self, name):
         if name in self._tag_defs:
             del self._tag_defs[name]
         self._tags = [tag for tag in self._tags if tag['name'] != name]
-        self._apply_all_formats()
+        self._request_format()
 
     def has_tag(self, name):
         return any(tag['name'] == name for tag in self._tags)
@@ -349,7 +388,7 @@ class TextModel(Callback.Callbacks):
         if start == end:
             return
         self._add_tag_interval(name, start, end)
-        self._apply_all_formats(region=(start, end))
+        self._request_format(region=(start, end))
 
     def remove_tag(self, name, start_ref, end_ref):
         """Clip a tag out of the given buffer range."""
@@ -367,7 +406,7 @@ class TextModel(Callback.Callbacks):
             if tag['end'] > end:
                 next_tags.append(dict(tag, start=end))
         self._tags = next_tags
-        self._apply_all_formats(region=(start, end))
+        self._request_format(region=(start, end))
 
     def get_tags_at(self, ref):
         offset = self._offset_of(ref)
@@ -565,19 +604,110 @@ class TextModel(Callback.Callbacks):
             raise ValueError("TextBufferRef has been invalidated")
         return self._clamp_offset(ref._offset)
 
+    def _get_line_starts(self):
+        """Return the offsets at which each line begins (cached)."""
+        if self._line_starts is None:
+            starts = [0]
+            text = self._text
+            find = text.find
+            pos = find('\n')
+            while pos >= 0:
+                starts.append(pos + 1)
+                pos = find('\n', pos + 1)
+            self._line_starts = starts
+        return self._line_starts
+
     def _line_of_offset(self, offset):
-        return self._text[:self._clamp_offset(offset)].count('\n')
+        offset = self._clamp_offset(offset)
+        return bisect.bisect_right(self._get_line_starts(), offset) - 1
 
     def _offset_of_line_start(self, lineno):
         if lineno <= 0:
             return 0
-        offset = 0
-        for _idx in range(lineno):
-            nl = self._text.find('\n', offset)
-            if nl < 0:
-                return len(self._text)
-            offset = nl + 1
-        return offset
+        starts = self._get_line_starts()
+        if lineno >= len(starts):
+            return len(self._text)
+        return starts[lineno]
+
+    # ------------------------------------------------------------------
+    # Batched formatting
+    # ------------------------------------------------------------------
+    def begin_batch(self):
+        """Start deferring tag reformatting until the matching end_batch.
+
+        Tag/text bookkeeping still happens immediately; only the (expensive)
+        push of formats into the native widget is coalesced into one pass.
+        Calls nest.
+        """
+        self._batch_depth += 1
+
+    def end_batch(self):
+        """End a batch started by begin_batch.
+
+        When the outermost batch ends, the accumulated region (if any) is
+        reformatted in one ``_apply_all_formats`` call.  An unmatched call
+        is ignored.
+        """
+        if self._batch_depth <= 0:
+            return
+        self._batch_depth -= 1
+        if self._batch_depth > 0:
+            return
+        region, self._batch_region = self._batch_region, None
+        if region is None:
+            return
+        self._apply_all_formats(region=None if region == 'all' else region)
+
+    @contextlib.contextmanager
+    def batch_update(self):
+        """Context manager form of begin_batch/end_batch."""
+        self.begin_batch()
+        try:
+            yield self
+        finally:
+            self.end_batch()
+
+    def _request_format(self, region=None):
+        """Reformat ``region`` now, or record it for the end of the batch.
+
+        This is the single entry point the model uses to ask for tag
+        styling to be (re)applied; code in this class calls it rather than
+        ``_apply_all_formats`` directly so that batching works everywhere.
+
+        ``region`` is either:
+
+        - ``None``: the whole buffer.  Used when a change can affect
+          formatting anywhere, e.g. ``set_text``, ``remove_tag_def``, or
+          redefining a tag that is already applied.
+        - a pair of character offsets ``(start, end)`` into the current
+          text: only that span needs reformatting.  The two may come in
+          either order (the smaller is taken as the start) and ``start ==
+          end`` is allowed (an empty span, as after a deletion).  Used by
+          ``apply_tag``/``remove_tag`` and by edits, which pass the span of
+          the inserted text.
+
+        Outside a batch the request is passed to ``_apply_all_formats``
+        unchanged.  Inside a batch it is merged into ``_batch_region``: an
+        offset pair widens the pending span to cover both, and ``None``
+        turns the pending request into ``'all'`` (a whole-buffer reformat).
+        Merging spans into one covering span can reformat text between them
+        that did not change; that is harmless (formatting is rebuilt from the
+        tag model) and still far cheaper than one widget update per call.
+
+        Pending offsets are only meaningful while the text does not change,
+        so ``_replace_range`` turns a pending span into ``'all'`` when it
+        edits the text inside a batch.
+        """
+        if self._batch_depth <= 0:
+            self._apply_all_formats(region=region)
+            return
+        if region is None or self._batch_region == 'all':
+            self._batch_region = 'all'
+        elif self._batch_region is None:
+            self._batch_region = (min(region), max(region))
+        else:
+            self._batch_region = (min(self._batch_region[0], *region),
+                                  max(self._batch_region[1], *region))
 
     def _replace_range(self, start, end, new_text, tags=None,
                        selection_after=None, sync_editor=True, push_undo=True):
@@ -598,6 +728,7 @@ class TextModel(Callback.Callbacks):
         cursor_before = (self._cursor, self._sel_start, self._sel_end)
 
         self._text = self._text[:start] + new_text + self._text[end:]
+        self._line_starts = None
         if end > start:
             self._update_refs_on_delete(start, end)
             self._update_tags_on_delete(start, end)
@@ -630,7 +761,12 @@ class TextModel(Callback.Callbacks):
         # Only the inserted span needs (re)formatting: on an incremental edit
         # the toolkit keeps the formatting of the surrounding text, which has
         # merely shifted.  This keeps appends O(edit) rather than O(buffer).
-        self._apply_all_formats(region=(start, start + len(new_text)))
+        if self._batch_depth > 0 and self._batch_region is not None:
+            # A span already pending in this batch was measured against the
+            # old text, and this edit may have shifted it.  Rather than
+            # track the shift, reformat the whole buffer when the batch ends.
+            self._batch_region = 'all'
+        self._request_format(region=(start, start + len(new_text)))
         self._refresh_icon_gutter()
 
         self.make_callback('changed')
@@ -699,26 +835,38 @@ class TextModel(Callback.Callbacks):
 
         Returns a list of ``(seg_start, seg_end, [tag_name, ...])`` with the
         tag names ordered by application sequence (so later tags win)."""
+        # Sweep-line over the clipped tag intervals: O((T + S) log T) rather
+        # than testing every tag against every segment, which matters when a
+        # whole document's worth of tags is (re)formatted in one pass.
         points = {start, end}
         active = []
         for tag in self._tags:
-            if tag['end'] <= start or tag['start'] >= end:
+            t_start = max(tag['start'], start)
+            t_end = min(tag['end'], end)
+            if t_start >= t_end:
                 continue
-            active.append(tag)
-            points.add(max(tag['start'], start))
-            points.add(min(tag['end'], end))
+            active.append((t_start, t_end, tag['seq'], tag['name']))
+            points.add(t_start)
+            points.add(t_end)
         sorted_points = sorted(points)
+        by_start = sorted(active)
+        n_tags = len(by_start)
+        i_tag = 0
+        live = {}      # seq -> (t_end, name)
         segments = []
         for idx in range(len(sorted_points) - 1):
             seg_start = sorted_points[idx]
             seg_end = sorted_points[idx + 1]
-            if seg_start >= seg_end:
-                continue
-            in_seg = [tag for tag in active
-                      if tag['start'] <= seg_start and tag['end'] >= seg_end]
-            in_seg.sort(key=lambda item: item['seq'])
+            while i_tag < n_tags and by_start[i_tag][0] <= seg_start:
+                t_start, t_end, seq, name = by_start[i_tag]
+                live[seq] = (t_end, name)
+                i_tag += 1
+            if live:
+                for seq in [seq for seq, (t_end, _n) in live.items()
+                            if t_end <= seg_start]:
+                    del live[seq]
             segments.append((seg_start, seg_end,
-                             [tag['name'] for tag in in_seg]))
+                             [live[seq][1] for seq in sorted(live)]))
         return segments
 
     def _merged_attrs(self, tag_names):

@@ -1368,24 +1368,37 @@ class QTextSource(QtGui.QFrame, TextModel):
             else:
                 r_start = max(0, min(region[0], region[1]))
                 r_end = min(len(self._text), max(region[0], region[1]))
-            self._reset_document_format(r_start, r_end)
-            for seg_start, seg_end, tag_names in self._segments_for_range(r_start, r_end):
-                if not tag_names:
-                    continue
-                # Formatting is applied with a QTextCursor selection because
-                # QTextEdit/QTextDocument do not provide a simpler range-style
-                # API for plain-text documents.
-                cursor = QTextCursor(self.tw.document())
-                cursor.setPosition(seg_start)
-                cursor.setPosition(seg_end, QTextCursor.KeepAnchor)
-                cursor.setCharFormat(self._merged_format(tag_names))
+            # Formatting is applied with a QTextCursor selection because
+            # QTextEdit/QTextDocument do not provide a simpler range-style
+            # API for plain-text documents.  All of it goes in one edit block
+            # so the document is relaid out once at the end, not after every
+            # setCharFormat (which dominated the cost of coloring a large
+            # file).
+            cursor = QTextCursor(doc)
+            cursor.beginEditBlock()
+            try:
+                self._reset_document_format(r_start, r_end, cursor=cursor)
+                formats = {}
+                for seg_start, seg_end, tag_names in self._segments_for_range(r_start, r_end):
+                    if not tag_names:
+                        continue
+                    key = tuple(tag_names)
+                    fmt = formats.get(key)
+                    if fmt is None:
+                        fmt = formats[key] = self._merged_format(tag_names)
+                    cursor.setPosition(seg_start)
+                    cursor.setPosition(seg_end, QTextCursor.KeepAnchor)
+                    cursor.setCharFormat(fmt)
+            finally:
+                cursor.endEditBlock()
         finally:
             self._applying_formats = False
             doc.setModified(was_modified)
 
-    def _reset_document_format(self, start=None, end=None):
+    def _reset_document_format(self, start=None, end=None, cursor=None):
         """Restore a range (default: whole document) to the base text format."""
-        cursor = QTextCursor(self.tw.document())
+        if cursor is None:
+            cursor = QTextCursor(self.tw.document())
         if start is None:
             cursor.select(QTextCursor.Document)
         else:

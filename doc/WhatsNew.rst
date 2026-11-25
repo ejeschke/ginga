@@ -21,6 +21,15 @@ since 7.6.0 (unreleased)
   touchpad (QTBUG-112432), so the wheel was handled as a touchpad pan
   with zero pixel deltas and did nothing.  A scroll event without pixel
   deltas is now always treated as a mouse wheel.
+- ``TextSource`` has ``batch_update()`` (and ``begin_batch()``/
+  ``end_batch()``): tag changes made inside the batch are pushed to the
+  widget in one pass when it ends, instead of one reformat per tag.
+  Coloring a 3,000-line file with ~2,000 tags dropped from ~3s to well
+  under 0.1s under Qt.  The pg backend accepts the calls but does nothing
+  with them.
+- ``TextSource`` line lookups (``set_line``, line numbers of refs) use a
+  cached index of line starts instead of rescanning the text, and
+  reformatting large ranges of tags is much faster.
 
 ver 7.6.0 (2026.10.27)
 ======================

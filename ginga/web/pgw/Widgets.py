@@ -551,6 +551,18 @@ class TextSource(WidgetMixin, PGW.TextSource):
         if autoscroll:
             self.scroll_to_end()
 
+    # Batched formatting: the Qt widget coalesces format pushes inside a
+    # batch; here changes are already shipped as messages, so these are
+    # accepted for API parity and do nothing.
+    def begin_batch(self):
+        pass
+
+    def end_batch(self):
+        pass
+
+    def batch_update(self):
+        return contextlib.nullcontext(self)
+
     @staticmethod
     def _wrap_mode(kind):
         """Translate ginga's wrap value to a pgwidgets wrap mode."""
